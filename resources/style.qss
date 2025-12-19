@@ -1,0 +1,88 @@
+/* Global Styles */
+QWidget {
+    font-family: 'Segoe UI', Arial, sans-serif;
+    background-color: white;
+    color: #333;
+}
+
+/* Main Window */
+QMainWindow {
+    background-color: white;
+}
+
+/* Open Button - Modern Blue Gradient */
+QPushButton#openButton {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #4A90E2, stop:1 #357ABD);
+    color: white;
+    border: none;
+    padding: 8px 20px;
+    border-radius: 6px;
+    font-weight: bold;
+    font-size: 14px;
+}
+
+QPushButton#openButton:hover {
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, stop:0 #5DA1F1, stop:1 #4A90E2);
+}
+
+QPushButton#openButton:pressed {
+    background: #2D639B;
+}
+
+/* Control Buttons (Play, Pause, Stop, Volume) */
+QPushButton.controlButton {
+    background-color: #333333; /* Dark background for visibility */
+    border: 1px solid #555;
+    border-radius: 4px;
+    padding: 8px;
+    min-width: 40px;
+    min-height: 40px;
+}
+
+QPushButton.controlButton:hover {
+    background-color: #444444;
+    border-color: #666;
+}
+
+QPushButton.controlButton:pressed {
+    background-color: #222222;
+    border-color: #888;
+}
+
+/* Slider Custom Styling */
+QSlider::groove:horizontal {
+    border: 1px solid #bbb;
+    height: 6px;
+    background: #e5e5e5;
+    margin: 2px 0;
+    border-radius: 3px;
+}
+
+QSlider::handle:horizontal {
+    background: #357ABD;
+    border: 1px solid #2D639B;
+    width: 14px;
+    height: 14px;
+    margin: -5px 0;
+    border-radius: 7px;
+}
+
+/* Specific Style for Volume Slider handled via object name potentially or generic */
+QSlider#volumeSlider::handle:horizontal {
+    background: #666;
+    border: 1px solid #444;
+}
+
+/* Video Container Border */
+QFrame#videoContainer {
+    border: 1px solid #ddd;
+    background-color: #000;
+    border-radius: 4px;
+}
+
+/* Time Label */
+QLabel#timeLabel {
+    font-size: 12px;
+    font-weight: 500;
+    color: #666;
+}

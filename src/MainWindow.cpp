@@ -55,56 +55,51 @@ void MainWindow::setupUi() {
   // 1. Header Removed - Open Button moved to toolbar
   // ...
 
-  // 2. Video Area with Overlay
+  // 2. Video Area with Manual Overlay Positioning
   QFrame *videoFrame = new QFrame(this);
   videoFrame->setObjectName("videoFrame");
   videoFrame->setFrameStyle(QFrame::NoFrame);
   videoFrame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-  QVBoxLayout *videoAreaLayout = new QVBoxLayout(videoFrame);
-  videoAreaLayout->setContentsMargins(0, 0, 0, 0);
-
+  // VideoWidget as direct child, no layout (manual positioning)
   m_videoWidget = new VideoWidget(videoFrame);
-  videoAreaLayout->addWidget(m_videoWidget);
+  m_videoWidget->show();
 
-  // Wrapper Layout for Video + Rythmo (Glued together)
+  // Wrapper Layout for the video frame
   QVBoxLayout *playerContainerLayout = new QVBoxLayout();
   playerContainerLayout->setContentsMargins(0, 0, 0, 0);
-  playerContainerLayout->setSpacing(
-      0); // GLUED: No space between video and rythmo
+  playerContainerLayout->setSpacing(0);
 
-  playerContainerLayout->addWidget(videoFrame,
-                                   1); // Video takes all available space
+  playerContainerLayout->addWidget(videoFrame, 1);
 
-  // Editor is now integrated into RythmoWidget
-  m_rythmoWidget->setFixedHeight(70); // Compact Height
+  // RythmoWidget as overlay on top of VideoWidget
+  m_rythmoWidget->setParent(videoFrame);
+  m_rythmoWidget->setFixedHeight(70);
+  m_rythmoWidget->raise(); // Bring to front
   m_rythmoWidget->show();
 
-  playerContainerLayout->addWidget(m_rythmoWidget);
+  mainLayout->addLayout(playerContainerLayout, 1);
 
-  mainLayout->addLayout(playerContainerLayout,
-                        1); // The container takes the main stretch
-
-  // Watch for resize to keep RythmoWidget at the bottom of the video
-  // videoFrame->installEventFilter(this); // No longer needed as it's in layout
+  // Watch for resize to reposition both VideoWidget and RythmoWidget
+  videoFrame->installEventFilter(this);
 
   // 3. Position Slider
-  m_positionSlider = new QSlider(Qt::Horizontal, this);
+  m_positionSlider = new ClickableSlider(Qt::Horizontal, this);
   m_positionSlider->setRange(0, 0);
   mainLayout->addWidget(m_positionSlider);
 
   // 4. Compact Control Bar
   QString iconButtonStyle =
-      "QPushButton { border: 1px solid #444; background: #333; "
+      "QPushButton { border: 1px solid #ccc; background: #f5f5f5; "
       "border-radius: 3px; min-width: 24px; max-width: 24px; min-height: 24px; "
-      "max-height: 24px; }"
-      "QPushButton:hover { background: #444; border-color: #666; }"
-      "QPushButton:pressed { background: #222; border-color: #e57e00; }";
+      "max-height: 24px; color: #333; padding: 0px; }"
+      "QPushButton:hover { background: #e5e5e5; border-color: #bbb; }"
+      "QPushButton:pressed { background: #ddd; border-color: #0078d7; }";
 
   m_openButton = new QPushButton(this);
-  m_openButton->setIcon(style()->standardIcon(QStyle::SP_DirOpenIcon));
+  m_openButton->setIcon(QIcon(":/resources/icons/folder_open.svg"));
   m_openButton->setToolTip("Ouvrir une vidéo");
-  m_openButton->setFixedSize(24, 24);
+  m_openButton->setFixedSize(32, 32);
   m_openButton->setStyleSheet(iconButtonStyle);
   m_openButton->setObjectName("openButtonToolbar");
 
@@ -119,13 +114,15 @@ void MainWindow::setupUi() {
   QHBoxLayout *controlsLayout = new QHBoxLayout();
 
   m_playPauseButton = new QPushButton(this);
-  m_playPauseButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
-  m_playPauseButton->setFixedSize(24, 24);
+  m_playPauseButton->setIcon(QIcon(":/resources/icons/play.svg"));
+  m_playPauseButton->setIconSize(QSize(20, 20));
+  m_playPauseButton->setFixedSize(32, 32);
   m_playPauseButton->setStyleSheet(iconButtonStyle);
 
   m_stopButton = new QPushButton(this);
-  m_stopButton->setIcon(style()->standardIcon(QStyle::SP_MediaStop));
-  m_stopButton->setFixedSize(24, 24);
+  m_stopButton->setIcon(QIcon(":/resources/icons/stop.svg"));
+  m_stopButton->setIconSize(QSize(20, 20));
+  m_stopButton->setFixedSize(32, 32);
   m_stopButton->setStyleSheet(iconButtonStyle);
 
   m_timeLabel = new QLabel("00:00 / 00:00", this);
@@ -133,27 +130,25 @@ void MainWindow::setupUi() {
   m_timeLabel->setStyleSheet(
       "font-size: 11px; font-weight: bold; margin: 0 5px;");
 
-  m_recordButton = new QPushButton("RECORD", this);
+  m_recordButton = new QPushButton("REC", this);
   m_recordButton->setObjectName("recordButton");
+  m_recordButton->setIcon(QIcon(":/resources/icons/record.svg"));
+  m_recordButton->setIconSize(QSize(16, 16));
   m_recordButton->setCheckable(true);
-  m_recordButton->setFixedSize(80, 24); // Compact pro size
-  // Let's keep specific color for Record but match shape
-  m_recordButton->setStyleSheet(
-      "QPushButton { background-color: #333; color: #eee; border: 1px solid "
-      "#555; border-radius: 3px; font-weight: bold; font-size: 10px; padding: "
-      "0px; }"
-      "QPushButton:checked { background-color: #d00; border-color: #f00; "
-      "color: white; }"
-      "QPushButton:hover { border-color: #888; }");
+  m_recordButton->setFixedSize(90, 32); // Pill size
+  // Updated style later in QSS
+  m_recordButton->setStyleSheet("");
 
   m_volumeButton = new QPushButton(this);
-  m_volumeButton->setIcon(style()->standardIcon(QStyle::SP_MediaVolume));
-  m_volumeButton->setFixedSize(24, 24);
+  m_volumeButton->setIcon(QIcon(":/resources/icons/volume.svg"));
+  m_volumeButton->setIconSize(QSize(20, 20));
+  m_volumeButton->setFixedSize(32, 32);
   m_volumeButton->setStyleSheet(iconButtonStyle);
-  m_volumeSlider = new QSlider(Qt::Horizontal, this);
+  m_volumeSlider = new ClickableSlider(Qt::Horizontal, this);
   m_volumeSlider->setRange(0, 100);
   m_volumeSlider->setValue(100);
   m_volumeSlider->setFixedWidth(80);
+  m_volumeSlider->setObjectName("volumeSlider");
 
   m_volumeSpinBox = new QSpinBox(this);
   m_volumeSpinBox->setRange(0, 100);
@@ -189,7 +184,7 @@ void MainWindow::setupUi() {
     m_inputDeviceCombo->addItem(dev.description(), QVariant::fromValue(dev));
   }
 
-  m_micVolumeSlider = new QSlider(Qt::Horizontal, this);
+  m_micVolumeSlider = new ClickableSlider(Qt::Horizontal, this);
   m_micVolumeSlider->setRange(0, 100);
   m_micVolumeSlider->setValue(100);
   m_micVolumeSlider->setFixedWidth(100);
@@ -233,16 +228,22 @@ void MainWindow::setupUi() {
   bottomControlsLayout->addStretch();
   bottomControlsLayout->addWidget(new QLabel("Vitesse:", this));
 
-  QPushButton *speedDownBtn = new QPushButton("-", this);
-  speedDownBtn->setFixedWidth(30);
+  QPushButton *speedDownBtn = new QPushButton(this);
+  speedDownBtn->setIcon(QIcon(":/resources/icons/arrow_left.svg"));
+  speedDownBtn->setFixedWidth(32);
+  speedDownBtn->setFixedHeight(32);
+  speedDownBtn->setStyleSheet(iconButtonStyle);
   connect(speedDownBtn, &QPushButton::clicked, this,
           [this]() { m_speedSpinBox->setValue(m_speedSpinBox->value() - 10); });
   bottomControlsLayout->addWidget(speedDownBtn);
 
   bottomControlsLayout->addWidget(m_speedSpinBox);
 
-  QPushButton *speedUpBtn = new QPushButton("+", this);
-  speedUpBtn->setFixedWidth(30);
+  QPushButton *speedUpBtn = new QPushButton(this);
+  speedUpBtn->setIcon(QIcon(":/resources/icons/arrow_right.svg"));
+  speedUpBtn->setFixedWidth(32);
+  speedUpBtn->setFixedHeight(32);
+  speedUpBtn->setStyleSheet(iconButtonStyle);
   connect(speedUpBtn, &QPushButton::clicked, this,
           [this]() { m_speedSpinBox->setValue(m_speedSpinBox->value() + 10); });
   bottomControlsLayout->addWidget(speedUpBtn);
@@ -275,6 +276,10 @@ void MainWindow::setupConnections() {
           &MainWindow::updateDuration);
   connect(m_playerController, &PlayerController::playbackStateChanged, this,
           &MainWindow::updatePlayPauseButton);
+  connect(m_playerController, &PlayerController::playbackStateChanged, this,
+          [this](QMediaPlayer::PlaybackState state) {
+            m_rythmoWidget->setPlaying(state == QMediaPlayer::PlayingState);
+          });
 
   connect(m_playerController, &PlayerController::positionChanged, this,
           [this](qint64 pos) { m_rythmoWidget->sync(pos); });
@@ -413,7 +418,8 @@ void MainWindow::toggleRecording() {
     m_recordingTimer.start();
 
     m_isRecording = true;
-    m_recordButton->setText("STOP");
+    m_recordButton->setText("STOP"); // Icon is sufficient or change icon?
+    // Let's keep it simple: Pressed state = Recording.
     m_exportProgressBar->setVisible(false);
     m_openButton->setEnabled(false);
 
@@ -424,7 +430,7 @@ void MainWindow::toggleRecording() {
 
     m_isRecording = false;
     m_recordButton->setChecked(false);
-    m_recordButton->setText("RECORD");
+    m_recordButton->setText("REC");
     m_openButton->setEnabled(true);
 
     QString currentVideo = property("currentVideoPath").toString();
@@ -480,9 +486,9 @@ void MainWindow::updateDuration(qint64 duration) {
 
 void MainWindow::updatePlayPauseButton(QMediaPlayer::PlaybackState state) {
   if (state == QMediaPlayer::PlayingState) {
-    m_playPauseButton->setIcon(style()->standardIcon(QStyle::SP_MediaPause));
+    m_playPauseButton->setIcon(QIcon(":/resources/icons/pause.svg"));
   } else {
-    m_playPauseButton->setIcon(style()->standardIcon(QStyle::SP_MediaPlay));
+    m_playPauseButton->setIcon(QIcon(":/resources/icons/play.svg"));
   }
 }
 
@@ -501,10 +507,17 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
   if (watched->objectName() == "videoFrame" &&
       event->type() == QEvent::Resize) {
     QFrame *frame = qobject_cast<QFrame *>(watched);
-    if (frame) {
-      int ry = frame->height() - m_rythmoWidget->height() - 20;
-      m_rythmoWidget->setGeometry(0, ry, frame->width(),
-                                  m_rythmoWidget->height());
+    if (frame && m_videoWidget) {
+      // Position VideoWidget to fill the entire frame
+      m_videoWidget->setGeometry(0, 0, frame->width(), frame->height());
+
+      // Get the actual video content rectangle (respects aspect ratio)
+      QRect videoRect = m_videoWidget->videoRect();
+      // Position rythmo at the bottom of the actual video, not the container
+      int ry = videoRect.bottom() - m_rythmoWidget->height();
+      int rx = videoRect.left();
+      int rw = videoRect.width();
+      m_rythmoWidget->setGeometry(rx, ry, rw, m_rythmoWidget->height());
     }
   }
   return QMainWindow::eventFilter(watched, event);

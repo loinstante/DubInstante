@@ -2,6 +2,7 @@
 #define MAINWINDOW_H
 
 #include "AudioRecorderManager.h"
+#include "ClickableSlider.h"
 #include "Exporter.h"
 #include "PlayerController.h"
 #include "RythmoWidget.h"
@@ -57,8 +58,8 @@ private:
   QPushButton *m_openButton;
   QPushButton *m_playPauseButton;
   QPushButton *m_stopButton;
-  QSlider *m_positionSlider;
-  QSlider *m_volumeSlider;
+  ClickableSlider *m_positionSlider; // Changed type
+  ClickableSlider *m_volumeSlider;   // Changed type
   QPushButton *m_volumeButton;
   QSpinBox *m_volumeSpinBox; // Added
   QLabel *m_timeLabel;
@@ -66,7 +67,7 @@ private:
 
   // Audio / Export Elements
   QComboBox *m_inputDeviceCombo;
-  QSlider *m_micVolumeSlider;
+  ClickableSlider *m_micVolumeSlider; // Changed type
   QPushButton *m_recordButton;
   // QLineEdit *m_textEditField; // Removed - editing is now in RythmoWidget
   QSpinBox *m_speedSpinBox;

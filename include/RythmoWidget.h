@@ -26,6 +26,7 @@ public:
 
 public slots:
   void sync(qint64 positionMs);
+  void setPlaying(bool playing);
 
 signals:
   void speedChanged(int speed);
@@ -36,6 +37,7 @@ protected:
   void paintEvent(QPaintEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
   void mousePressEvent(QMouseEvent *event) override;
+  void mouseMoveEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
 
@@ -51,11 +53,16 @@ private:
   qint64 m_currentPosition; // Current video time in ms
   QString m_text;
 
+  // Interaction State
+  int m_lastMouseX;
+
   // Visual parameters
   int m_fontSize;
   int m_verticalPadding;
   QColor m_textColor;
   QColor m_barColor;
+  QColor m_playingBarColor;
+  bool m_isPlaying;
 };
 
 #endif // RYTHMOWIDGET_H

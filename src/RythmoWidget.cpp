@@ -8,13 +8,11 @@
 
 RythmoWidget::RythmoWidget(QWidget *parent)
     : QWidget(parent), m_speed(100), m_currentPosition(0), m_text(""),
-      m_fontSize(16), m_verticalPadding(4), m_textColor(QColor(240, 240, 240)),
-      m_barColor(QColor(0, 0, 0, 180)) {
-  setAutoFillBackground(true);
-  QPalette pal = palette();
-  pal.setColor(QPalette::Window, QColor(30, 30, 30));
-  setPalette(pal);
-  setFocusPolicy(Qt::StrongFocus);
+      m_fontSize(16), m_verticalPadding(4), m_textColor(QColor(34, 34, 34)),
+      m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
+      m_isPlaying(false), m_lastMouseX(0) {
+  setAutoFillBackground(false);
+  setAttribute(Qt::WA_TranslucentBackground);
 }
 
 // ============================================================================
@@ -82,6 +80,13 @@ void RythmoWidget::sync(qint64 positionMs) {
   }
 }
 
+void RythmoWidget::setPlaying(bool playing) {
+  if (m_isPlaying != playing) {
+    m_isPlaying = playing;
+    update();
+  }
+}
+
 // ============================================================================
 // Resize
 // ============================================================================
@@ -105,12 +110,13 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   int bandY = (height() - bandHeight) / 2;
   QRect bandRect(0, bandY, width(), bandHeight);
 
-  // 2. Draw Band Background
-  painter.fillRect(bandRect, m_barColor);
+  // 2. Draw Band Background (purple when playing)
+  QColor bgColor = m_isPlaying ? m_playingBarColor : m_barColor;
+  painter.fillRect(bandRect, bgColor);
 
   // 3. Draw Target Line (Playhead position - 20% from left)
   int targetX = width() / 5;
-  QPen targetPen(QColor(0, 255, 255), 2);
+  QPen targetPen(QColor(0, 120, 215), 2);
   targetPen.setStyle(Qt::DashLine);
   painter.setPen(targetPen);
   painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
@@ -129,7 +135,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.drawText(QPointF(textStartX, textY), m_text);
 
   // 5. Draw Band Border
-  painter.setPen(QPen(Qt::white, 1));
+  painter.setPen(QPen(QColor(0, 120, 215), 2));
   painter.drawRect(bandRect);
 
   // 6. Draw Edit Cursor (Orange Playhead)
@@ -139,7 +145,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
     double cursorScreenX = textStartX + (idx * cw);
 
     // Vertical Line
-    QPen cursorPen(QColor(255, 140, 0), 2);
+    QPen cursorPen(QColor(0, 120, 215), 2);
     painter.setPen(cursorPen);
     painter.drawLine(cursorScreenX, bandY - 5, cursorScreenX,
                      bandY + bandHeight + 5);
@@ -149,7 +155,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
     tri << QPoint(cursorScreenX, bandY - 5)
         << QPoint(cursorScreenX - 4, bandY - 10)
         << QPoint(cursorScreenX + 4, bandY - 10);
-    painter.setBrush(QColor(255, 140, 0));
+    painter.setBrush(QColor(0, 120, 215));
     painter.drawPolygon(tri);
 
     // Timestamp Label
@@ -161,7 +167,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
                           .arg(ss, 2, 10, QChar('0'))
                           .arg(ms, 3, 10, QChar('0'));
 
-    painter.setPen(Qt::white);
+    painter.setPen(QColor(34, 34, 34));
     QFont smallFont("Segoe UI", 8, QFont::Bold);
     painter.setFont(smallFont);
     int tw = painter.fontMetrics().horizontalAdvance(timeStr);
@@ -177,29 +183,44 @@ void RythmoWidget::mousePressEvent(QMouseEvent *event) {
   if (event->button() != Qt::LeftButton)
     return;
 
+  m_lastMouseX = event->pos().x();
+
   int targetX = width() / 5;
   int clickX = event->pos().x();
 
-  // Calculate where the text currently starts on screen
-  double pixelOffset = (double(m_currentPosition) / 1000.0) * m_speed;
-  double textStartX = targetX - pixelOffset;
+  // Pixel-perfect seek
+  // The text is shifted by pixelOffset = (currentPosition / 1000) * speed
+  // Visually: character at 'time' is at: targetX - pixelOffset + (time/1000 *
+  // speed) Actually simpler: Visual X = targetX - (currentPos - time) *
+  // (speed/1000) We want to find 'time' such that Visual X = clickX. clickX -
+  // targetX = -(currentPos - time) * (speed/1000) (clickX - targetX) /
+  // (speed/1000) = time - currentPos time = currentPos + (clickX - targetX) *
+  // 1000 / speed
 
-  // Find which character index was clicked
-  int cw = charWidth();
-  if (cw <= 0)
+  double timeDeltaMs = (double(clickX - targetX) * 1000.0) / m_speed;
+  qint64 newTime = m_currentPosition + static_cast<qint64>(timeDeltaMs);
+
+  emit scrubRequested(std::max(qint64(0), newTime));
+  setFocus();
+}
+
+void RythmoWidget::mouseMoveEvent(QMouseEvent *event) {
+  if (!(event->buttons() & Qt::LeftButton))
     return;
 
-  int clickedCharIndex = static_cast<int>((clickX - textStartX) / cw);
-  if (clickedCharIndex < 0)
-    clickedCharIndex = 0;
+  int currentX = event->pos().x();
+  int deltaX = currentX - m_lastMouseX;
+  m_lastMouseX = currentX;
 
-  // Calculate the time for that character index
-  // time = (charIndex * charWidth) / speed * 1000
-  qint64 timeForChar =
-      static_cast<qint64>((double(clickedCharIndex) * cw / m_speed) * 1000.0);
+  // Dragging logic:
+  // If I drag mouse to the right (positive delta), I am pulling the "paper" to
+  // the right. This means I am seeing earlier time (rewinding). Visual shift =
+  // deltaX. Time shift = (deltaX / speed) * 1000. changing time by -TimeShift.
 
-  emit scrubRequested(timeForChar);
-  setFocus();
+  double timeDeltaMs = (double(deltaX) * 1000.0) / m_speed;
+  qint64 newTime = m_currentPosition - static_cast<qint64>(timeDeltaMs);
+
+  emit scrubRequested(std::max(qint64(0), newTime));
 }
 
 void RythmoWidget::mouseDoubleClickEvent(QMouseEvent *event) {

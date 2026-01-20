@@ -17,6 +17,7 @@ public:
   ~VideoWidget() override = default;
 
   QVideoSink *videoSink() const;
+  QRect videoRect() const; // Returns the actual video content bounds
 
   QSize sizeHint() const override;
   bool hasHeightForWidth() const override;

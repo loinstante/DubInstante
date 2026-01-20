@@ -23,8 +23,9 @@ add_executable(DUBSync
     include/Exporter.h
     include/AudioRecorderManager.h
     include/RythmoWidget.h
-     include/VideoWidget.h
+    include/VideoWidget.h
     include/PlayerController.h
+    include/ClickableSlider.h
     resources.qrc
 )
 

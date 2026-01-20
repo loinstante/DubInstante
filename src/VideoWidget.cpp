@@ -17,6 +17,29 @@ bool VideoWidget::hasHeightForWidth() const { return true; }
 
 int VideoWidget::heightForWidth(int width) const { return width * 9 / 16; }
 
+QRect VideoWidget::videoRect() const {
+  if (m_currentImage.isNull()) {
+    return rect();
+  }
+
+  QSize imageSize = m_currentImage.size();
+  QSize widgetSize = size();
+
+  float imageRatio = static_cast<float>(imageSize.width()) / imageSize.height();
+  float widgetRatio =
+      static_cast<float>(widgetSize.width()) / widgetSize.height();
+
+  if (imageRatio > widgetRatio) {
+    int targetHeight = static_cast<int>(widgetSize.width() / imageRatio);
+    return QRect(0, (widgetSize.height() - targetHeight) / 2,
+                 widgetSize.width(), targetHeight);
+  } else {
+    int targetWidth = static_cast<int>(widgetSize.height() * imageRatio);
+    return QRect((widgetSize.width() - targetWidth) / 2, 0, targetWidth,
+                 widgetSize.height());
+  }
+}
+
 void VideoWidget::handleFrame(const QVideoFrame &frame) {
   if (!frame.isValid()) {
     return;
@@ -46,9 +69,11 @@ void VideoWidget::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event);
 
   QPainter painter(this);
-  painter.fillRect(rect(), Qt::black);
-
   if (m_currentImage.isNull()) {
+    painter.fillRect(rect(), QColor(240, 240, 240));
+    painter.setPen(QColor(150, 150, 150));
+    painter.setFont(QFont("Segoe UI", 12));
+    painter.drawText(rect(), Qt::AlignCenter, "Aucune vidéo chargée");
     return;
   }
 
@@ -72,6 +97,8 @@ void VideoWidget::paintEvent(QPaintEvent *event) {
     targetRect = QRect((widgetSize.width() - targetWidth) / 2, 0, targetWidth,
                        widgetSize.height());
   }
+  // Fill with black first (for letterboxing/pillarboxing)
+  painter.fillRect(rect(), Qt::black);
 
   painter.drawImage(targetRect, m_currentImage);
 }

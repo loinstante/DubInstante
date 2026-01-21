@@ -1,244 +1,323 @@
 /* ============================================
-   PROFESSIONAL LIGHT THEME - DUBSync
-   Design: Clean white backgrounds with modern blue accents
+   REFINED PROFESSIONAL THEME - DUBSync
+   Design: Clean, polished UI with subtle depth
    ============================================ */
 
-/* Global Styles - Clean White Background */
+/* Global Styles - Soft Background */
 QWidget {
-    font-family: 'Segoe UI', Arial, sans-serif;
-    background-color: #ffffff;
-    color: #333333;
+    font-family: 'Segoe UI', 'SF Pro Display', -apple-system, sans-serif;
+    background-color: #fafafa;
+    color: #2c2c2c;
 }
 
 QMainWindow {
-    background-color: #ffffff;
+    background-color: #fafafa;
+    padding: 8px;
+}
+
+/* Labels - Better Typography */
+QLabel {
+    color: #2c2c2c;
+    font-size: 13px;
+}
+
+QLabel[class="heading"] {
+    font-weight: 600;
+    font-size: 14px;
+    color: #1a1a1a;
 }
 
 /* ============================================
-   OPEN BUTTON - Modern Blue Pill Shape
+   OPEN BUTTON - Refined Gradient Pill
    ============================================ */
 QPushButton#openButton {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                stop:0 #0078d7, stop:1 #00bcf2);
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                stop:0 #0078d7, stop:1 #0062b5);
     color: white;
-    border: 1px solid #005a9e;
-    padding: 10px 24px;
-    border-radius: 20px;
-    font-weight: bold;
+    border: none;
+    padding: 12px 28px;
+    border-radius: 22px;
+    font-weight: 600;
     font-size: 14px;
-    min-height: 40px;
+    min-height: 44px;
 }
 
 QPushButton#openButton:hover {
-    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, 
-                stop:0 #0086ef, stop:1 #21c9ff);
-    border: 1px solid #0078d7;
+    background: qlineargradient(x1:0, y1:0, x2:0, y2:1, 
+                stop:0 #1084e3, stop:1 #0070c9);
 }
 
 QPushButton#openButton:pressed {
     background: #005a9e;
-    border: 1px solid #004578;
 }
 
 /* ============================================
-   VIDEO WIDGET - Subtle Container
+   VIDEO WIDGET - Elegant Container
    ============================================ */
 VideoWidget {
-    background-color: #f0f0f0;
-    border: 1px solid #cccccc;
-    border-radius: 12px;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
 }
 
 QFrame#videoContainer {
-    background-color: #f0f0f0;
-    border: 1px solid #cccccc;
-    border-radius: 12px;
+    background-color: #f5f5f5;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
 }
 
 /* ============================================
-   CONTROL BUTTONS - Subtle Gray Style
-   ============================================ */
-/* ============================================
-   CONTROL BUTTONS - Modern Minimalist
+   CONTROL BUTTONS - Refined & Modern
    ============================================ */
 QPushButton.controlButton {
     background-color: #ffffff;
-    border: 1px solid #e0e0e0;
-    border-radius: 8px;
-    padding: 6px;
-    min-width: 32px;
-    min-height: 32px;
-    color: #333333;
+    border: 1px solid #d5d5d5;
+    border-radius: 6px;
+    padding: 8px;
+    min-width: 36px;
+    min-height: 36px;
+    color: #2c2c2c;
 }
 
 QPushButton.controlButton:hover {
-    background-color: #f5f5f5;
-    border: 1px solid #d0d0d0;
+    background-color: #f8f8f8;
+    border: 1px solid #b8b8b8;
 }
 
 QPushButton.controlButton:pressed {
-    background-color: #e8e8e8;
-    border: 1px solid #c0c0c0;
-    margin-top: 1px; /* Press effect */
+    background-color: #ebebeb;
+    border: 1px solid #a0a0a0;
 }
 
 /* ============================================
-   POSITION SLIDER - Modern Blue Style
+   POSITION SLIDER - Elegant Blue
    ============================================ */
 QSlider {
-    min-height: 32px;
+    min-height: 36px;
 }
 
 QSlider::groove:horizontal {
-    border: 1px solid #e0e0e0;
-    height: 4px; /* Thinner groove */
-    background: #f5f5f5;
+    border: none;
+    height: 6px;
+    background: #e8e8e8;
     margin: 0px;
-    border-radius: 2px;
+    border-radius: 3px;
 }
 
 QSlider::sub-page:horizontal {
-    background: #0078d7;
-    border-radius: 2px;
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #0078d7, stop:1 #00a8ff);
+    border-radius: 3px;
 }
 
 QSlider::handle:horizontal {
     background: #ffffff;
     border: 2px solid #0078d7;
-    width: 12px; /* Smaller handle */
-    height: 12px;
-    margin: -5px 0; /* Center vertically on 4px groove: (4 - 16)/2 = -6. Wait. Reduced borders? 12px + 4 border = 16px total height? No, width/height is usually content box in Qt stylesheets unless specified otherwise? actually usually border-box-ish. */
-    /* Let's assume height 12px. Groove 4px. Offset = (12-4)/2 = 4px. Margin should be -4px. */
-    /* Wait, standard style.qss behavior: margin is relative to groove.
-       If margin is -5px, handle top is 5px above groove top.
-       Groove height 4. Handle height 12.
-       Top of groove at Y.
-       Top of handle at Y - 5.
-       Bottom of handle at Y - 5 + 12 + borders?
-       Let's try margin -5px for 12px handle on 4px groove. */
-    border-radius: 7px; /* Circular-ish */
+    width: 16px;
+    height: 16px;
+    margin: -6px 0;
+    border-radius: 8px;
 }
 
 QSlider::handle:horizontal:hover {
-    background: #e5f3ff;
-    border: 2px solid #005a9e;
-    transform: scale(1.1); /* Qt doesn't support transform in qss easily, simulate with size */
-    width: 14px;
-    height: 14px;
-    margin: -6px 0;
+    background: #f0f8ff;
+    border: 2px solid #005eb8;
+    width: 18px;
+    height: 18px;
+    margin: -7px 0;
 }
 
 /* ============================================
-   VOLUME SLIDER - Compact Light Style
-   ============================================ */
-/* ============================================
-   VOLUME SLIDER - Compact Light Style
+   VOLUME SLIDER - Compact & Refined
    ============================================ */
 QSlider#volumeSlider {
     min-height: 32px;
 }
 
 QSlider#volumeSlider::groove:horizontal {
-    border: 1px solid #e0e0e0;
-    height: 4px;
-    background: #f5f5f5;
-    border-radius: 2px;
+    border: none;
+    height: 5px;
+    background: #e8e8e8;
+    border-radius: 2.5px;
 }
 
 QSlider#volumeSlider::sub-page:horizontal {
     background: #0078d7;
-    border-radius: 2px;
+    border-radius: 2.5px;
 }
 
 QSlider#volumeSlider::handle:horizontal {
     background: #ffffff;
-    border: 1px solid #0078d7;
-    width: 12px;
-    height: 12px;
+    border: 2px solid #0078d7;
+    width: 14px;
+    height: 14px;
     margin: -5px 0;
-    border-radius: 6px;
+    border-radius: 7px;
+}
+
+QSlider#volumeSlider::handle:horizontal:hover {
+    background: #f0f8ff;
+    border: 2px solid #005eb8;
 }
 
 /* ============================================
-   TIME LABEL - Professional Dark Text
-   ============================================ */
-/* ============================================
-   TIME LABEL - Professional Dark Text
+   TIME LABEL - Clear & Bold
    ============================================ */
 QLabel#timeLabel {
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 600;
-    color: #333333;
+    color: #1a1a1a;
     background-color: transparent;
+    letter-spacing: 0.3px;
 }
 
 /* ============================================
-   SPINBOX & COMBOBOX - Modern Flat Style
+   SPINBOX & COMBOBOX - Polished Input
    ============================================ */
 QSpinBox, QComboBox {
-    border: 1px solid #e0e0e0;
-    border-radius: 4px;
-    padding: 4px;
+    border: 1px solid #d5d5d5;
+    border-radius: 6px;
+    padding: 6px 4px;
+    padding-right: 6px; /* Minimal - buttons use border origin */
     background: #ffffff;
     selection-background-color: #0078d7;
+    selection-color: #ffffff;
+    min-height: 34px;
+    font-size: 13px;
 }
 
 QSpinBox:hover, QComboBox:hover {
-    border: 1px solid #b0b0b0;
+    border: 1px solid #999999;
+    background: #fafafa;
 }
 
 QSpinBox:focus, QComboBox:focus {
-    border: 1px solid #0078d7;
+    border: 2px solid #0078d7;
+    padding: 5px 7px;
+    padding-right: 27px;
+    background: #ffffff;
 }
 
+/* Refined SpinBox Buttons */
 QSpinBox::up-button, QSpinBox::down-button {
     background: transparent;
     border: none;
-    width: 24px; /* Wider click area */
+    border-left: 1px solid #e8e8e8;
+    width: 22px;
+    subcontrol-origin: border; /* Position relative to border, not padding */
+    subcontrol-position: right;
+}
+
+QSpinBox::up-button {
+    subcontrol-position: top right;
+    border-top-right-radius: 6px;
+}
+
+QSpinBox::down-button {
+    subcontrol-position: bottom right;
+    border-bottom-right-radius: 6px;
 }
 
 QSpinBox::up-button:hover, QSpinBox::down-button:hover {
-    background: #f0f0f0;
-    border-radius: 2px;
+    background: #f5f5f5;
 }
 
 QSpinBox::up-arrow {
     image: url(:/resources/icons/arrow_up.svg);
-    width: 16px;
-    height: 16px;
+    width: 10px;
+    height: 10px;
 }
 
 QSpinBox::down-arrow {
     image: url(:/resources/icons/arrow_down.svg); 
-    width: 16px;
-    height: 16px;
+    width: 10px;
+    height: 10px;
+}
+
+/* ComboBox Arrow */
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox::down-arrow {
+    width: 10px;
+    height: 10px;
 }
 
 /* ============================================
-   RECORD BUTTON - Modern Capsule Style
+   RECORD BUTTON - Premium Pill Style
    ============================================ */
 QPushButton#recordButton {
     background-color: #ffffff;
-    border: 1px solid #d32f2f; /* Material Red 700 */
-    border-radius: 16px; /* Pill shape */
+    border: 2px solid #d32f2f;
+    border-radius: 18px;
     color: #d32f2f;
-    font-weight: bold;
-    padding: 0 12px;
+    font-weight: 600;
+    padding: 2px 16px;
     text-align: center;
+    min-height: 36px;
+    font-size: 13px;
 }
 
 QPushButton#recordButton:hover {
-    background-color: #ffebee; /* Red 50 */
-    border: 1px solid #c62828;
+    background-color: #fff5f5;
+    border: 2px solid #c62828;
 }
 
 QPushButton#recordButton:checked {
     background-color: #d32f2f;
     color: #ffffff;
-    border: 1px solid #b71c1c;
+    border: 2px solid #c62828;
 }
 
 QPushButton#recordButton:pressed {
     background-color: #b71c1c;
-    color: #ffffff;
+    border: 2px solid #b71c1c;
+}
+
+/* ============================================
+   CHECKBOX - Modern & Clean
+   ============================================ */
+QCheckBox {
+    spacing: 8px;
+    color: #2c2c2c;
+    font-size: 13px;
+}
+
+QCheckBox::indicator {
+    width: 18px;
+    height: 18px;
+    border-radius: 4px;
+    border: 2px solid #c0c0c0;
+    background: #ffffff;
+}
+
+QCheckBox::indicator:hover {
+    border: 2px solid #0078d7;
+}
+
+QCheckBox::indicator:checked {
+    background: #0078d7;
+    border: 2px solid #0078d7;
+    image: url(data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTIiIGhlaWdodD0iOSIgdmlld0JveD0iMCAwIDEyIDkiIGZpbGw9Im5vbmUiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHBhdGggZD0iTTEgNEw0LjUgNy41TDExIDEiIHN0cm9rZT0id2hpdGUiIHN0cm9rZS13aWR0aD0iMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIi8+PC9zdmc+);
+}
+
+/* ============================================
+   PROGRESS BAR - Sleek Design
+   ============================================ */
+QProgressBar {
+    border: none;
+    border-radius: 4px;
+    background-color: #e8e8e8;
+    text-align: center;
+    color: #2c2c2c;
+    font-weight: 500;
+    height: 24px;
+}
+
+QProgressBar::chunk {
+    background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
+                stop:0 #0078d7, stop:1 #00a8ff);
+    border-radius: 4px;
 }

@@ -21,6 +21,12 @@ public:
   void setSpeed(int speed);
   int speed() const;
 
+  enum VisualStyle { Standalone, UnifiedTop, UnifiedBottom };
+  Q_ENUM(VisualStyle)
+
+  void setVisualStyle(VisualStyle style);
+  VisualStyle visualStyle() const;
+
   void setText(const QString &text);
   QString text() const;
 
@@ -35,7 +41,8 @@ signals:
 
 protected:
   void paintEvent(QPaintEvent *event) override;
-  void resizeEvent(QResizeEvent *event) override;
+  QSize sizeHint() const override; // Added
+  // void resizeEvent(QResizeEvent *event) override; // Removed implementation
   void mousePressEvent(QMouseEvent *event) override;
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
@@ -63,6 +70,9 @@ private:
   QColor m_barColor;
   QColor m_playingBarColor;
   bool m_isPlaying;
+
+  // Visual Style
+  VisualStyle m_visualStyle = Standalone;
 };
 
 #endif // RYTHMOWIDGET_H

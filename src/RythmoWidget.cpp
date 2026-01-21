@@ -69,6 +69,19 @@ void RythmoWidget::setText(const QString &text) {
 
 QString RythmoWidget::text() const { return m_text; }
 
+// Visual Style
+void RythmoWidget::setVisualStyle(VisualStyle style) {
+  if (m_visualStyle != style) {
+    m_visualStyle = style;
+    updateGeometry(); // Trigger re-layout
+    update();
+  }
+}
+
+RythmoWidget::VisualStyle RythmoWidget::visualStyle() const {
+  return m_visualStyle;
+}
+
 // ============================================================================
 // Sync (Video position → Widget)
 // ============================================================================
@@ -91,8 +104,16 @@ void RythmoWidget::setPlaying(bool playing) {
 // Resize
 // ============================================================================
 
-void RythmoWidget::resizeEvent(QResizeEvent *event) {
-  QWidget::resizeEvent(event);
+QSize RythmoWidget::sizeHint() const {
+  // Base band height (slim look)
+  int h = 35;
+
+  // Add Header space for Handle/Timestamp if needed
+  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
+    h += 25; // 25px Header (Increased from 15 to fix text clipping)
+  }
+
+  return QSize(QWidget::sizeHint().width(), h);
 }
 
 // ============================================================================
@@ -105,73 +126,110 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   QPainter painter(this);
   painter.setRenderHint(QPainter::Antialiasing);
 
-  // 1. Calculate dimensions
-  int bandHeight = m_fontSize + m_verticalPadding * 2;
-  int bandY = (height() - bandHeight) / 2;
+  // 1. Calculate Layout Dimensions
+  int headerHeight = 0;
+  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
+    headerHeight = 25; // Matching sizeHint (Increased from 15)
+  }
+
+  int bandHeight = height() - headerHeight;
+  int bandY = headerHeight;
   QRect bandRect(0, bandY, width(), bandHeight);
 
-  // 2. Draw Band Background (purple when playing)
+  // 2. Draw Band Background
   QColor bgColor = m_isPlaying ? m_playingBarColor : m_barColor;
   painter.fillRect(bandRect, bgColor);
 
-  // 3. Draw Target Line (Playhead position - 20% from left)
-  int targetX = width() / 5;
-  QPen targetPen(QColor(0, 120, 215), 2);
-  targetPen.setStyle(Qt::DashLine);
-  painter.setPen(targetPen);
-  painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
-
-  // 4. Draw Scrolling Text
-  // Text starts at targetX when m_currentPosition = 0
-  // As time advances, text scrolls left (negative shift)
+  // 3. Draw Scrolling Text (Layer 1)
   double pixelOffset = (double(m_currentPosition) / 1000.0) * m_speed;
+  int targetX = width() / 5;
   double textStartX = targetX - pixelOffset;
 
   QFont font = getFont();
   painter.setFont(font);
   painter.setPen(m_textColor);
 
-  int textY = bandY + m_fontSize + (m_verticalPadding / 2) - 2;
+  // Vertically center text in the BAND area
+  int textY = bandY + (bandHeight + m_fontSize) / 2 - 2;
   painter.drawText(QPointF(textStartX, textY), m_text);
 
-  // 5. Draw Band Border
-  painter.setPen(QPen(QColor(0, 120, 215), 2));
-  painter.drawRect(bandRect);
+  // 4. Draw Band Border (Layer 2)
+  QPen borderPen(QColor(0, 120, 215), 2);
+  painter.setPen(borderPen);
 
-  // 6. Draw Edit Cursor (Orange Playhead)
+  if (m_visualStyle == Standalone) {
+    painter.drawRect(bandRect);
+  } else if (m_visualStyle == UnifiedTop) {
+    painter.drawRect(bandRect);
+  } else if (m_visualStyle == UnifiedBottom) {
+    painter.drawRect(bandRect);
+  }
+
+  // 5. Draw Target Line (Guide)
+  QPen targetPen(QColor(0, 120, 215), 2);
+  targetPen.setStyle(Qt::DashLine);
+  painter.setPen(targetPen);
+  painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
+
+  // 6. Draw Edit Cursor (Unified Blue Line)
   int cw = charWidth();
   if (cw > 0) {
     int idx = cursorIndex();
     double cursorScreenX = textStartX + (idx * cw);
 
+    bool drawHandle =
+        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
+    bool drawLabel =
+        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
+
+    // Line Geometry
+    int lineTop = bandY;
+    int lineBottom = bandY + bandHeight;
+
+    // Adjust line for Unified look
+    if (m_visualStyle == UnifiedTop)
+      lineBottom += 2;
+    if (m_visualStyle == UnifiedBottom)
+      lineTop -= 2;
+
     // Vertical Line
-    QPen cursorPen(QColor(0, 120, 215), 2);
+    QPen cursorPen(QColor(0, 120, 215), 3);
     painter.setPen(cursorPen);
-    painter.drawLine(cursorScreenX, bandY - 5, cursorScreenX,
-                     bandY + bandHeight + 5);
+    painter.drawLine(cursorScreenX, lineTop, cursorScreenX, lineBottom);
 
-    // Triangle Handle
-    QPolygon tri;
-    tri << QPoint(cursorScreenX, bandY - 5)
-        << QPoint(cursorScreenX - 4, bandY - 10)
-        << QPoint(cursorScreenX + 4, bandY - 10);
-    painter.setBrush(QColor(0, 120, 215));
-    painter.drawPolygon(tri);
+    // Triangle Handle (In Header Area)
+    if (drawHandle) {
+      // Draw handle at bottom of header, pointing down to band
+      // Handle height ~10px.
+      // Position: 15 to 25.
+      QPolygon tri;
+      tri << QPoint(cursorScreenX, bandY)           // Point at thread (25)
+          << QPoint(cursorScreenX - 5, bandY - 10)  // Left Top (15)
+          << QPoint(cursorScreenX + 5, bandY - 10); // Right Top (15)
+      painter.setBrush(QColor(0, 120, 215));
+      painter.drawPolygon(tri);
+    }
 
-    // Timestamp Label
-    int mm = (m_currentPosition / 60000) % 60;
-    int ss = (m_currentPosition / 1000) % 60;
-    int ms = m_currentPosition % 1000;
-    QString timeStr = QString("%1:%2.%3")
-                          .arg(mm, 2, 10, QChar('0'))
-                          .arg(ss, 2, 10, QChar('0'))
-                          .arg(ms, 3, 10, QChar('0'));
+    if (drawLabel) {
+      int mm = (m_currentPosition / 60000) % 60;
+      int ss = (m_currentPosition / 1000) % 60;
+      int ms = m_currentPosition % 1000;
+      QString timeStr = QString("%1:%2.%3")
+                            .arg(mm, 2, 10, QChar('0'))
+                            .arg(ss, 2, 10, QChar('0'))
+                            .arg(ms, 3, 10, QChar('0'));
 
-    painter.setPen(QColor(34, 34, 34));
-    QFont smallFont("Segoe UI", 8, QFont::Bold);
-    painter.setFont(smallFont);
-    int tw = painter.fontMetrics().horizontalAdvance(timeStr);
-    painter.drawText(cursorScreenX - tw / 2, bandY - 15, timeStr);
+      painter.setPen(QColor(34, 34, 34));
+      QFont smallFont("Segoe UI", 8, QFont::Bold);
+      painter.setFont(smallFont);
+      int tw = painter.fontMetrics().horizontalAdvance(timeStr);
+      // Draw centered above handle in the 15px space
+      // Header available: 0..25.
+      // Handle occupies 15..25.
+      // Text space: 0..15.
+      // Baseline at 12 should fit nicely directly under the top edge.
+      painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
+    }
   }
 }
 
@@ -189,14 +247,6 @@ void RythmoWidget::mousePressEvent(QMouseEvent *event) {
   int clickX = event->pos().x();
 
   // Pixel-perfect seek
-  // The text is shifted by pixelOffset = (currentPosition / 1000) * speed
-  // Visually: character at 'time' is at: targetX - pixelOffset + (time/1000 *
-  // speed) Actually simpler: Visual X = targetX - (currentPos - time) *
-  // (speed/1000) We want to find 'time' such that Visual X = clickX. clickX -
-  // targetX = -(currentPos - time) * (speed/1000) (clickX - targetX) /
-  // (speed/1000) = time - currentPos time = currentPos + (clickX - targetX) *
-  // 1000 / speed
-
   double timeDeltaMs = (double(clickX - targetX) * 1000.0) / m_speed;
   qint64 newTime = m_currentPosition + static_cast<qint64>(timeDeltaMs);
 
@@ -212,11 +262,7 @@ void RythmoWidget::mouseMoveEvent(QMouseEvent *event) {
   int deltaX = currentX - m_lastMouseX;
   m_lastMouseX = currentX;
 
-  // Dragging logic:
-  // If I drag mouse to the right (positive delta), I am pulling the "paper" to
-  // the right. This means I am seeing earlier time (rewinding). Visual shift =
-  // deltaX. Time shift = (deltaX / speed) * 1000. changing time by -TimeShift.
-
+  // Dragging logic
   double timeDeltaMs = (double(deltaX) * 1000.0) / m_speed;
   qint64 newTime = m_currentPosition - static_cast<qint64>(timeDeltaMs);
 
@@ -224,7 +270,6 @@ void RythmoWidget::mouseMoveEvent(QMouseEvent *event) {
 }
 
 void RythmoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
-  // Treat as single click (don't call mousePressEvent twice!)
   mousePressEvent(event);
 }
 

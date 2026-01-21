@@ -17,6 +17,7 @@ add_executable(DUBSync
     src/Exporter.cpp
     src/AudioRecorderManager.cpp
     src/RythmoWidget.cpp
+    src/RythmoOverlay.cpp
      src/VideoWidget.cpp
     src/PlayerController.cpp
     include/MainWindow.h
@@ -25,6 +26,7 @@ add_executable(DUBSync
     include/RythmoWidget.h
     include/VideoWidget.h
     include/PlayerController.h
+    include/RythmoOverlay.h
     include/ClickableSlider.h
     resources.qrc
 )

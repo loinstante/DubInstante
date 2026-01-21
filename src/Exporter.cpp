@@ -79,7 +79,8 @@ bool Exporter::isFFmpegAvailable() const {
 
 void Exporter::merge(const QString &videoPath, const QString &audioPath,
                      const QString &outputPath, qint64 durationMs,
-                     qint64 startTimeMs, float originalVolume) {
+                     qint64 startTimeMs, float originalVolume,
+                     const QString &secondAudioPath) {
   if (m_process->state() != QProcess::NotRunning) {
     emit finished(false, "Un export est déjà en cours.");
     return;
@@ -88,8 +89,6 @@ void Exporter::merge(const QString &videoPath, const QString &audioPath,
   emit progressChanged(0);
 
   // Audio Mixing & High Quality Video Command
-  // -filter_complex: Mix original audio (volume scaled) + recorded audio
-  // -c:v libx264 -crf 18 -preset superfast: Visually lossless, fast encoding
   QStringList args;
   args << "-y";
   args << "-threads" << "0";
@@ -99,8 +98,13 @@ void Exporter::merge(const QString &videoPath, const QString &audioPath,
     args << "-ss" << QString::number(startTimeMs / 1000.0, 'f', 3);
   }
 
-  args << "-i" << videoPath;
-  args << "-i" << audioPath;
+  args << "-i" << videoPath; // [0]
+  args << "-i" << audioPath; // [1]
+
+  bool hasSecondTrack = !secondAudioPath.isEmpty();
+  if (hasSecondTrack) {
+    args << "-i" << secondAudioPath; // [2]
+  }
 
   // Video Settings: High Quality
   args << "-c:v" << "libx264";
@@ -108,26 +112,51 @@ void Exporter::merge(const QString &videoPath, const QString &audioPath,
   args << "-crf" << "18";           // Visually lossless
   args << "-pix_fmt" << "yuv420p";
 
-  // Audio Settings: Mixing
-  // [0:a] is video audio, [1:a] is dub audio
-  // Check if original volume is effectively muted
-  if (originalVolume < 0.01f) {
-    // Just use the dub audio
-    args << "-map" << "0:v:0";
-    args << "-map" << "1:a:0";
-    args << "-c:a" << "aac";
-    args << "-b:a" << "192k";
-  } else {
-    // Mix both
-    QString filter = QString("[0:a]volume=%1[a0];[1:a]volume=1.0[a1];[a0][a1]"
-                             "amix=inputs=2:duration=longest[aout]")
-                         .arg(originalVolume);
-    args << "-filter_complex" << filter;
-    args << "-map" << "0:v:0";
-    args << "-map" << "[aout]";
-    args << "-c:a" << "aac";
-    args << "-b:a" << "192k";
+  // Audio Mixing Logic
+  // Inputs:
+  // [0:a] = Original Video Audio
+  // [1:a] = Mic 1
+  // [2:a] = Mic 2 (Optional)
+
+  QString filterComplex;
+  int inputCount = 1; // Always have Mic 1? Assume yes for now based on logic
+
+  // Construct filter inputs
+  // If original volume > 0, include [0:a]
+  bool includeOriginal = (originalVolume >= 0.01f);
+
+  if (includeOriginal) {
+    filterComplex += QString("[0:a]volume=%1[a0];").arg(originalVolume);
   }
+
+  // Mic 1 is always volume 1.0 (pre-mixed or raw) - strictly raw here
+  filterComplex += "[1:a]volume=1.0[a1];";
+  inputCount++; // We have [a1]
+
+  if (hasSecondTrack) {
+    filterComplex += "[2:a]volume=1.0[a2];";
+    inputCount++; // We have [a2]
+  }
+
+  // AMIX command
+  QString inputsStr;
+  if (includeOriginal)
+    inputsStr += "[a0]";
+  inputsStr += "[a1]";
+  if (hasSecondTrack)
+    inputsStr += "[a2]";
+
+  int amixInputs = (includeOriginal ? 1 : 0) + 1 + (hasSecondTrack ? 1 : 0);
+
+  filterComplex +=
+      inputsStr +
+      QString("amix=inputs=%1:duration=longest[aout]").arg(amixInputs);
+
+  args << "-filter_complex" << filterComplex;
+  args << "-map" << "0:v:0";
+  args << "-map" << "[aout]";
+  args << "-c:a" << "aac";
+  args << "-b:a" << "192k";
 
   if (durationMs > 0) {
     args << "-t" << QString::number(durationMs / 1000.0, 'f', 3);

@@ -18,8 +18,11 @@
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent), m_playerController(new PlayerController(this)),
-      m_previousVolume(100), m_rythmoWidget(new RythmoWidget(this)),
+      m_previousVolume(100),
+      m_rythmoOverlay(new RythmoOverlay(
+          this)), // Parented initially to this, reparented in setupUi
       m_recorderManager(new AudioRecorderManager(this)),
+      m_recorderManager2(new AudioRecorderManager(this)), // Track 2 Recorder
       m_exporter(new Exporter(this)) {
   // Load styling using Qt resource system
   QFile styleFile(":/resources/style.qss");
@@ -29,6 +32,7 @@ MainWindow::MainWindow(QWidget *parent)
   }
 
   setupUi();
+  setupTrack2(); // Call Helper
   setupConnections();
 
   // Link the controller to the widget's sink
@@ -37,6 +41,10 @@ MainWindow::MainWindow(QWidget *parent)
   m_tempAudioPath =
       QStandardPaths::writableLocation(QStandardPaths::TempLocation) +
       "/temp_dub.wav";
+
+  m_tempAudioPath2 =
+      QStandardPaths::writableLocation(QStandardPaths::TempLocation) +
+      "/temp_dub_2.wav";
 
   // 0. General Window Settings
   setWindowTitle("DUBSync - Studio");
@@ -72,11 +80,12 @@ void MainWindow::setupUi() {
 
   playerContainerLayout->addWidget(videoFrame, 1);
 
-  // RythmoWidget as overlay on top of VideoWidget
-  m_rythmoWidget->setParent(videoFrame);
-  m_rythmoWidget->setFixedHeight(70);
-  m_rythmoWidget->raise(); // Bring to front
-  m_rythmoWidget->show();
+  // Rythmo Overlay (OOP)
+  // Reparent to videoFrame so it sits on top
+  m_rythmoOverlay->setParent(videoFrame);
+  m_rythmoOverlay->show();
+
+  // Note: Geometry managed by eventFilter resizing
 
   mainLayout->addLayout(playerContainerLayout, 1);
 
@@ -88,100 +97,76 @@ void MainWindow::setupUi() {
   m_positionSlider->setRange(0, 0);
   mainLayout->addWidget(m_positionSlider);
 
-  // 4. Compact Control Bar
-  QString iconButtonStyle =
-      "QPushButton { border: 1px solid #ccc; background: #f5f5f5; "
-      "border-radius: 3px; min-width: 24px; max-width: 24px; min-height: 24px; "
-      "max-height: 24px; color: #333; padding: 0px; }"
-      "QPushButton:hover { background: #e5e5e5; border-color: #bbb; }"
-      "QPushButton:pressed { background: #ddd; border-color: #0078d7; }";
-
-  m_openButton = new QPushButton(this);
-  m_openButton->setIcon(QIcon(":/resources/icons/folder_open.svg"));
-  m_openButton->setToolTip("Ouvrir une vidéo");
-  m_openButton->setFixedSize(32, 32);
-  m_openButton->setStyleSheet(iconButtonStyle);
-  m_openButton->setObjectName("openButtonToolbar");
-
-  if (!m_exporter->isFFmpegAvailable()) {
-    QMessageBox::critical(this, "Erreur",
-                          "FFmpeg n'est pas installé ou introuvable "
-                          "!\nL'exportation ne fonctionnera pas.\nVeuillez "
-                          "installer FFmpeg (sudo apt install ffmpeg).");
-    m_openButton->setEnabled(false);
-  }
-
+  // 4. Playback Controls Row
   QHBoxLayout *controlsLayout = new QHBoxLayout();
+  controlsLayout->setSpacing(10);
 
-  m_playPauseButton = new QPushButton(this);
-  m_playPauseButton->setIcon(QIcon(":/resources/icons/play.svg"));
-  m_playPauseButton->setIconSize(QSize(20, 20));
-  m_playPauseButton->setFixedSize(32, 32);
-  m_playPauseButton->setStyleSheet(iconButtonStyle);
+  m_openButton =
+      new QPushButton(QIcon(":/resources/icons/folder_open.svg"), "", this);
+  m_openButton->setFixedSize(24, 24);
+  m_openButton->setFlat(true);
+  controlsLayout->addWidget(m_openButton);
 
-  m_stopButton = new QPushButton(this);
-  m_stopButton->setIcon(QIcon(":/resources/icons/stop.svg"));
-  m_stopButton->setIconSize(QSize(20, 20));
-  m_stopButton->setFixedSize(32, 32);
-  m_stopButton->setStyleSheet(iconButtonStyle);
+  m_playPauseButton =
+      new QPushButton(QIcon(":/resources/icons/play.svg"), "", this);
+  m_playPauseButton->setFixedSize(36, 36);
+  m_playPauseButton->setIconSize(QSize(24, 24));
+  controlsLayout->addWidget(m_playPauseButton);
+
+  m_stopButton = new QPushButton(QIcon(":/resources/icons/stop.svg"), "", this);
+  m_stopButton->setFixedSize(36, 36);
+  m_stopButton->setIconSize(QSize(24, 24));
+  controlsLayout->addWidget(m_stopButton);
 
   m_timeLabel = new QLabel("00:00 / 00:00", this);
-  m_timeLabel->setObjectName("timeLabel");
   m_timeLabel->setStyleSheet(
-      "font-size: 11px; font-weight: bold; margin: 0 5px;");
+      "color: #666; font-family: monospace; font-weight: bold;");
+  controlsLayout->addWidget(m_timeLabel);
 
-  m_recordButton = new QPushButton("REC", this);
-  m_recordButton->setObjectName("recordButton");
-  m_recordButton->setIcon(QIcon(":/resources/icons/record.svg"));
-  m_recordButton->setIconSize(QSize(16, 16));
-  m_recordButton->setCheckable(true);
-  m_recordButton->setFixedSize(90, 32); // Pill size
-  // Updated style later in QSS
-  m_recordButton->setStyleSheet("");
+  controlsLayout->addStretch();
 
-  m_volumeButton = new QPushButton(this);
-  m_volumeButton->setIcon(QIcon(":/resources/icons/volume.svg"));
-  m_volumeButton->setIconSize(QSize(20, 20));
-  m_volumeButton->setFixedSize(32, 32);
-  m_volumeButton->setStyleSheet(iconButtonStyle);
+  m_volumeButton =
+      new QPushButton(QIcon(":/resources/icons/volume_up.svg"), "", this);
+  m_volumeButton->setFixedSize(24, 24);
+  m_volumeButton->setFlat(true);
+  controlsLayout->addWidget(m_volumeButton);
+
   m_volumeSlider = new ClickableSlider(Qt::Horizontal, this);
   m_volumeSlider->setRange(0, 100);
   m_volumeSlider->setValue(100);
-  m_volumeSlider->setFixedWidth(80);
-  m_volumeSlider->setObjectName("volumeSlider");
+  m_volumeSlider->setFixedWidth(100);
+  controlsLayout->addWidget(m_volumeSlider);
 
   m_volumeSpinBox = new QSpinBox(this);
   m_volumeSpinBox->setRange(0, 100);
   m_volumeSpinBox->setValue(100);
-  m_volumeSpinBox->setFixedWidth(50);
+  m_volumeSpinBox->setFixedWidth(70);            // Compact, no wasted space
+  m_volumeSpinBox->setAlignment(Qt::AlignRight); // Align next to buttons
   m_volumeSpinBox->setSuffix("%");
-
-  controlsLayout->addWidget(m_openButton); // Leftmost
-  controlsLayout->addSpacing(10);
-  controlsLayout->addWidget(m_playPauseButton);
-  controlsLayout->addWidget(m_stopButton);
-  controlsLayout->addSpacing(10);
-  controlsLayout->addWidget(m_timeLabel);
-  controlsLayout->addStretch();
-  controlsLayout->addWidget(m_recordButton);
-  controlsLayout->addSpacing(20);
-  controlsLayout->addWidget(m_volumeButton);
-  controlsLayout->addWidget(m_volumeSlider);
   controlsLayout->addWidget(m_volumeSpinBox);
+
+  m_recordButton = new QPushButton(
+      QIcon(":/resources/icons/fiber_manual_record.svg"), "REC", this);
+  m_recordButton->setObjectName("recordButton");
+  m_recordButton->setCheckable(true);
+  m_recordButton->setFixedSize(90, 36);
+  m_recordButton->setIconSize(QSize(16, 16));
+  m_recordButton->setCursor(Qt::PointingHandCursor);
+  controlsLayout->addWidget(m_recordButton);
 
   mainLayout->addLayout(controlsLayout);
 
-  // 5. Bottom Controls Layout (Audio/Speed/Export)
-  QHBoxLayout *bottomControlsLayout = new QHBoxLayout();
-  bottomControlsLayout->setSpacing(15);
-  bottomControlsLayout->setContentsMargins(10, 5, 10, 5);
-
+  // Initialize Audio/Export UI Elements for Track 1
   m_inputDeviceCombo = new QComboBox(this);
-  m_inputDeviceCombo->setMinimumWidth(150);
-  m_inputDeviceCombo->addItem("Aucun (NONE)", QVariant()); // Add NONE option
+  // Remove fixed minimum width, let layout handle it
+  m_inputDeviceCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  // also set a reasonable minimum width so it doesn't vanish
+  m_inputDeviceCombo->setMinimumWidth(100);
   auto devices = m_recorderManager->availableDevices();
-  for (const auto &dev : devices) {
-    m_inputDeviceCombo->addItem(dev.description(), QVariant::fromValue(dev));
+  m_inputDeviceCombo->addItem("Aucun (NONE)", QVariant());
+  for (const auto &device : devices) {
+    m_inputDeviceCombo->addItem(device.description(),
+                                QVariant::fromValue(device));
   }
 
   m_micVolumeSlider = new ClickableSlider(Qt::Horizontal, this);
@@ -192,61 +177,128 @@ void MainWindow::setupUi() {
   m_micGainSpinBox = new QSpinBox(this);
   m_micGainSpinBox->setRange(0, 100);
   m_micGainSpinBox->setValue(100);
-  m_micGainSpinBox->setFixedWidth(50);
+  m_micGainSpinBox->setFixedWidth(70);
+  m_micGainSpinBox->setAlignment(Qt::AlignRight);
   m_micGainSpinBox->setSuffix("%");
 
-  m_exportProgressBar = new QProgressBar(this);
-  m_exportProgressBar->setRange(0, 100);
-  m_exportProgressBar->setValue(0);
-  m_exportProgressBar->setVisible(false);
-  m_exportProgressBar->setFixedHeight(15);
-  m_exportProgressBar->setTextVisible(false);
-
   m_speedSpinBox = new QSpinBox(this);
-  m_speedSpinBox->setRange(50, 500); // 50 to 500 px/sec
+  m_speedSpinBox->setRange(1, 400);
+  m_speedSpinBox->setValue(100);
+  m_speedSpinBox->setSuffix("%");
+  m_speedSpinBox->setFixedWidth(70);
+  m_speedSpinBox->setAlignment(Qt::AlignRight);
   m_speedSpinBox->setSingleStep(10);
-  m_speedSpinBox->setValue(m_rythmoWidget->speed());
-  m_speedSpinBox->setFixedWidth(100);
-  m_speedSpinBox->setSuffix(" px/s");
 
-  // Mic Group (Tight)
+  // Speed buttons removed (using SpinBox internal buttons)
+
+  m_exportProgressBar = new QProgressBar(this);
+  m_exportProgressBar->setVisible(false);
+
+  // 5. Bottom Controls Layout
+  QHBoxLayout *bottomControlsLayout = new QHBoxLayout();
+  // =========================================================
+  // TRACK 1 CONTROLS
+  // =========================================================
+  QFrame *track1Frame = new QFrame(this);
+  track1Frame->setFrameShape(QFrame::NoFrame); // Removed border/background
+  // Removed stylesheet
+  QHBoxLayout *track1Layout = new QHBoxLayout(track1Frame);
+  track1Layout->setContentsMargins(0, 2, 0, 2); // Tighter margins
+  track1Layout->setSpacing(10);
+
+  track1Layout->addWidget(new QLabel("<b>Piste 1:</b>", this));
+
   QHBoxLayout *micGroup = new QHBoxLayout();
-  micGroup->setSpacing(2); // Very tight spacing
+  micGroup->setSpacing(2);
   micGroup->addWidget(new QLabel("Mic:", this));
   micGroup->addWidget(m_inputDeviceCombo);
+  track1Layout->addLayout(micGroup);
 
-  // Gain Group (Tight)
   QHBoxLayout *gainGroup = new QHBoxLayout();
-  gainGroup->setSpacing(2); // Very tight spacing
+  gainGroup->setSpacing(5); // Increased Spacing from 2 to 5
   gainGroup->addWidget(new QLabel("Gain:", this));
   gainGroup->addWidget(m_micVolumeSlider);
   gainGroup->addWidget(m_micGainSpinBox);
+  track1Layout->addLayout(gainGroup);
 
-  bottomControlsLayout->addLayout(micGroup);
-  bottomControlsLayout->addSpacing(15);
-  bottomControlsLayout->addLayout(gainGroup);
+  // =========================================================
+  // TRACK 2 CONTROLS (Hidden by default)
+  // =========================================================
+  m_track2Container = new QWidget(this);
+  QHBoxLayout *track2Layout = new QHBoxLayout(m_track2Container);
+  track2Layout->setContentsMargins(0, 0, 0, 0); // Inner layout
+  track2Layout->setSpacing(0);                  // Inner layout
+
+  QFrame *track2Frame = new QFrame(this);
+  track2Frame->setFrameShape(QFrame::NoFrame); // Removed border/background
+  // Removed stylesheet
+  QHBoxLayout *t2InnerLayout = new QHBoxLayout(track2Frame);
+  t2InnerLayout->setContentsMargins(0, 2, 0, 2); // Tighter margins
+  t2InnerLayout->setSpacing(10);
+
+  t2InnerLayout->addWidget(new QLabel("<b>Piste 2:</b>", this));
+
+  m_inputDeviceCombo2 = new QComboBox(this);
+  m_inputDeviceCombo2->setSizePolicy(QSizePolicy::Expanding,
+                                     QSizePolicy::Fixed);
+  m_inputDeviceCombo2->setMinimumWidth(100);
+  // Filled in setupTrack2
+
+  QHBoxLayout *micGroup2 = new QHBoxLayout();
+  micGroup2->setSpacing(2);
+  micGroup2->addWidget(new QLabel("Mic:", this));
+  micGroup2->addWidget(m_inputDeviceCombo2);
+  t2InnerLayout->addLayout(micGroup2);
+
+  m_micVolumeSlider2 = new ClickableSlider(Qt::Horizontal, this);
+  m_micVolumeSlider2->setRange(0, 100);
+  m_micVolumeSlider2->setValue(100);
+  m_micVolumeSlider2->setFixedWidth(100);
+
+  m_micGainSpinBox2 = new QSpinBox(this);
+  m_micGainSpinBox2->setRange(0, 100);
+  m_micGainSpinBox2->setValue(100);
+  m_micGainSpinBox2->setFixedWidth(70);
+  m_micGainSpinBox2->setAlignment(Qt::AlignRight);
+  m_micGainSpinBox2->setSuffix("%");
+
+  QHBoxLayout *gainGroup2 = new QHBoxLayout();
+  gainGroup2->setSpacing(5); // Increased Spacing consistent with Track 1
+  gainGroup2->addWidget(new QLabel("Gain:", this));
+  gainGroup2->addWidget(m_micVolumeSlider2);
+  gainGroup2->addWidget(m_micGainSpinBox2);
+  t2InnerLayout->addLayout(gainGroup2);
+
+  track2Layout->addWidget(track2Frame);
+  m_track2Container->setVisible(false); // Hidden initally
+
+  // =========================================================
+  // MAIN BOTTOM LAYOUT
+  // =========================================================
+  // Left: Tracks. Right: Global Settings (Speed, Export)
+  QVBoxLayout *tracksLayout = new QVBoxLayout();
+  tracksLayout->setSpacing(5);
+  tracksLayout->addWidget(track1Frame);
+  tracksLayout->addWidget(m_track2Container);
+
+  // Checkbox near Start/Stop or near tracks? Near tracks.
+  m_enableTrack2Check = new QCheckBox("Activer Piste 2", this);
+  tracksLayout->addWidget(m_enableTrack2Check);
+
+  bottomControlsLayout->addLayout(tracksLayout);
   bottomControlsLayout->addStretch();
-  bottomControlsLayout->addWidget(new QLabel("Vitesse:", this));
 
-  QPushButton *speedDownBtn = new QPushButton(this);
-  speedDownBtn->setIcon(QIcon(":/resources/icons/arrow_left.svg"));
-  speedDownBtn->setFixedWidth(32);
-  speedDownBtn->setFixedHeight(32);
-  speedDownBtn->setStyleSheet(iconButtonStyle);
-  connect(speedDownBtn, &QPushButton::clicked, this,
-          [this]() { m_speedSpinBox->setValue(m_speedSpinBox->value() - 10); });
-  bottomControlsLayout->addWidget(speedDownBtn);
+  // Speed Controls
+  QVBoxLayout *speedLayout = new QVBoxLayout();
+  speedLayout->setSpacing(2);
+  speedLayout->addWidget(new QLabel("Vitesse Défilement:", this));
 
-  bottomControlsLayout->addWidget(m_speedSpinBox);
+  QHBoxLayout *speedControlRow = new QHBoxLayout();
+  // Simplified row: Just label (above) and spinbox
+  speedControlRow->addWidget(m_speedSpinBox);
+  speedLayout->addLayout(speedControlRow);
 
-  QPushButton *speedUpBtn = new QPushButton(this);
-  speedUpBtn->setIcon(QIcon(":/resources/icons/arrow_right.svg"));
-  speedUpBtn->setFixedWidth(32);
-  speedUpBtn->setFixedHeight(32);
-  speedUpBtn->setStyleSheet(iconButtonStyle);
-  connect(speedUpBtn, &QPushButton::clicked, this,
-          [this]() { m_speedSpinBox->setValue(m_speedSpinBox->value() + 10); });
-  bottomControlsLayout->addWidget(speedUpBtn);
+  bottomControlsLayout->addLayout(speedLayout);
 
   bottomControlsLayout->addSpacing(20);
   bottomControlsLayout->addWidget(m_exportProgressBar);
@@ -278,18 +330,23 @@ void MainWindow::setupConnections() {
           &MainWindow::updatePlayPauseButton);
   connect(m_playerController, &PlayerController::playbackStateChanged, this,
           [this](QMediaPlayer::PlaybackState state) {
-            m_rythmoWidget->setPlaying(state == QMediaPlayer::PlayingState);
+            m_rythmoOverlay->setPlaying(state == QMediaPlayer::PlayingState);
           });
 
   connect(m_playerController, &PlayerController::positionChanged, this,
-          [this](qint64 pos) { m_rythmoWidget->sync(pos); });
+          [this](qint64 pos) { m_rythmoOverlay->sync(pos); });
 
-  connect(m_rythmoWidget, &RythmoWidget::scrubRequested, m_playerController,
-          &PlayerController::seek);
+  // Scrubbing from either track
+  connect(m_rythmoOverlay->track1(), &RythmoWidget::scrubRequested,
+          m_playerController, &PlayerController::seek);
+  connect(m_rythmoOverlay->track2(), &RythmoWidget::scrubRequested,
+          m_playerController, &PlayerController::seek);
 
   // Escape key -> Play
-  connect(m_rythmoWidget, &RythmoWidget::playRequested, m_playerController,
-          &PlayerController::play);
+  connect(m_rythmoOverlay->track1(), &RythmoWidget::playRequested,
+          m_playerController, &PlayerController::play);
+  connect(m_rythmoOverlay->track2(), &RythmoWidget::playRequested,
+          m_playerController, &PlayerController::play);
 
   connect(m_positionSlider, &QSlider::sliderMoved, m_playerController,
           &PlayerController::seek);
@@ -355,9 +412,9 @@ void MainWindow::setupConnections() {
     }
   });
 
-  // Speed spinbox -> RythmoWidget
-  connect(m_speedSpinBox, &QSpinBox::valueChanged, m_rythmoWidget,
-          &RythmoWidget::setSpeed);
+  // Speed spinbox -> RythmoOverlay (Updates both tracks)
+  connect(m_speedSpinBox, &QSpinBox::valueChanged, m_rythmoOverlay,
+          &RythmoOverlay::setSpeed);
 
   connect(m_recordButton, &QPushButton::clicked, this,
           &MainWindow::toggleRecording);
@@ -413,6 +470,12 @@ void MainWindow::toggleRecording() {
     m_recordingStartTimeMs = m_playerController->position();
 
     m_recorderManager->startRecording(QUrl::fromLocalFile(m_tempAudioPath));
+
+    // Track 2 Recording
+    if (m_enableTrack2Check->isChecked()) {
+      m_recorderManager2->startRecording(QUrl::fromLocalFile(m_tempAudioPath2));
+    }
+
     m_playerController->play();
 
     m_recordingTimer.start();
@@ -422,16 +485,23 @@ void MainWindow::toggleRecording() {
     // Let's keep it simple: Pressed state = Recording.
     m_exportProgressBar->setVisible(false);
     m_openButton->setEnabled(false);
+    m_enableTrack2Check->setEnabled(false);
 
   } else {
     m_playerController->pause();
     m_recorderManager->stopRecording();
+
+    if (m_enableTrack2Check->isChecked()) {
+      m_recorderManager2->stopRecording();
+    }
+
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
 
     m_isRecording = false;
     m_recordButton->setChecked(false);
     m_recordButton->setText("REC");
     m_openButton->setEnabled(true);
+    m_enableTrack2Check->setEnabled(true);
 
     QString currentVideo = property("currentVideoPath").toString();
     QString outputFile = QFileDialog::getSaveFileName(
@@ -443,9 +513,15 @@ void MainWindow::toggleRecording() {
       m_exportProgressBar->setValue(0);
       m_exporter->setTotalDuration(m_lastRecordedDurationMs);
       float currentVolume = m_playerController->volume();
+
+      QString secondTrackPath = "";
+      if (m_enableTrack2Check->isChecked()) {
+        secondTrackPath = m_tempAudioPath2;
+      }
+
       m_exporter->merge(currentVideo, m_tempAudioPath, outputFile,
                         m_lastRecordedDurationMs, m_recordingStartTimeMs,
-                        currentVolume);
+                        currentVolume, secondTrackPath);
     }
   }
 }
@@ -496,6 +572,8 @@ void MainWindow::handleError(const QString &errorMessage) {
   QMessageBox::critical(this, "Erreur", errorMessage);
 }
 
+// Helper removed - Layout handles geometry
+
 QString MainWindow::formatTime(qint64 milliseconds) const {
   QTime currentTime(0, 0);
   currentTime = currentTime.addMSecs(static_cast<int>(milliseconds));
@@ -503,24 +581,75 @@ QString MainWindow::formatTime(qint64 milliseconds) const {
                                    : currentTime.toString("mm:ss");
 }
 
+void MainWindow::setupTrack2() {
+  m_inputDeviceCombo2->addItem("Aucun (NONE)", QVariant());
+  auto devices = m_recorderManager2->availableDevices();
+  for (const auto &dev : devices) {
+    m_inputDeviceCombo2->addItem(dev.description(), QVariant::fromValue(dev));
+  }
+
+  // Initial Sync
+  // m_rythmoOverlay->setSpeed(m_speedSpinBox->value()); // Already connected
+  // elsewhere? We can force it just in case
+  m_rythmoOverlay->setSpeed(m_speedSpinBox->value());
+  m_rythmoOverlay->track2()->setText("TRACK 2: Ready for dubbing...");
+
+  connect(m_enableTrack2Check, &QCheckBox::toggled, this, [this](bool checked) {
+    m_track2Container->setVisible(checked);
+    m_rythmoOverlay->setTrack2Visible(checked);
+  });
+
+  connect(m_inputDeviceCombo2, &QComboBox::currentIndexChanged, this,
+          [this](int index) {
+            QVariant data = m_inputDeviceCombo2->itemData(index);
+            if (data.isValid()) {
+              auto device = data.value<QAudioDevice>();
+              m_recorderManager2->setDevice(device);
+            } else {
+              m_recorderManager2->setDevice(QAudioDevice());
+            }
+          });
+
+  connect(m_micVolumeSlider2, &QSlider::valueChanged, this, [this](int value) {
+    m_recorderManager2->setVolume(value / 100.0f);
+    if (m_micGainSpinBox2->value() != value) {
+      m_micGainSpinBox2->blockSignals(true);
+      m_micGainSpinBox2->setValue(value);
+      m_micGainSpinBox2->blockSignals(false);
+    }
+  });
+
+  connect(m_micGainSpinBox2, &QSpinBox::valueChanged, this, [this](int value) {
+    if (m_micVolumeSlider2->value() != value) {
+      m_micVolumeSlider2->setValue(value);
+    }
+  });
+
+  // Redundant connections removed (Speed, Sync, PlayState handled by
+  // RythmoOverlay)
+}
+
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
   if (watched->objectName() == "videoFrame" &&
       event->type() == QEvent::Resize) {
     QFrame *frame = qobject_cast<QFrame *>(watched);
-    if (frame && m_videoWidget) {
+    if (frame) {
       // Position VideoWidget to fill the entire frame
-      m_videoWidget->setGeometry(0, 0, frame->width(), frame->height());
+      if (m_videoWidget)
+        m_videoWidget->setGeometry(0, 0, frame->width(), frame->height());
 
-      // Get the actual video content rectangle (respects aspect ratio)
-      QRect videoRect = m_videoWidget->videoRect();
-      // Position rythmo at the bottom of the actual video, not the container
-      int ry = videoRect.bottom() - m_rythmoWidget->height();
-      int rx = videoRect.left();
-      int rw = videoRect.width();
-      m_rythmoWidget->setGeometry(rx, ry, rw, m_rythmoWidget->height());
+      // Position OverlayWidget to fill the entire frame
+      if (m_rythmoOverlay) {
+        m_rythmoOverlay->setGeometry(0, 0, frame->width(), frame->height());
+        m_rythmoOverlay->raise();
+      }
     }
   }
   return QMainWindow::eventFilter(watched, event);
+}
+
+void MainWindow::resizeEvent(QResizeEvent *event) {
+  QMainWindow::resizeEvent(event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

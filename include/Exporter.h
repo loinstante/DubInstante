@@ -19,10 +19,12 @@ public:
    * @param videoPath Absolute path to source video.
    * @param audioPath Absolute path to recorded audio.
    * @param outputPath Absolute path for the result.
+   * @param secondAudioPath Optional absolute path to second recorded audio.
    */
   void merge(const QString &videoPath, const QString &audioPath,
              const QString &outputPath, qint64 durationMs = -1,
-             qint64 startTimeMs = 0, float originalVolume = 1.0f);
+             qint64 startTimeMs = 0, float originalVolume = 1.0f,
+             const QString &secondAudioPath = QString());
 
   void setTotalDuration(qint64 durationMs);
 

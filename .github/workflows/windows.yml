@@ -40,11 +40,11 @@ jobs:
     - name: Package with windeployqt
       run: |
         mkdir dist
-        copy build\Release\DUBSync.exe dist\
-        windeployqt --release --no-translations --compiler-runtime --multimedia dist\DUBSync.exe
+        copy build\Release\DubInstante.exe dist\
+        windeployqt --release --no-translations --compiler-runtime --multimedia dist\DubInstante.exe
 
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DUBSync-Windows
+        name: DubInstante-Windows
         path: dist/

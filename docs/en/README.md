@@ -160,4 +160,3 @@ Please open an issue or submit a pull request.
     - [ ] Global keyboard shortcuts for recording control (pause and other actions)
 - **And more...**
     - [ ] We are always listening! User suggestions and ideas are always welcome 💡
-

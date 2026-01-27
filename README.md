@@ -50,4 +50,5 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 - **v1.5.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
 - **v1.6.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !
+<img width="1336" height="207" alt="image" src="https://github.com/user-attachments/assets/f8295854-666b-4283-b09a-c3838cd53e7a" />
 

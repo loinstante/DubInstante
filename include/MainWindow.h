@@ -6,6 +6,7 @@
 #include "Exporter.h"
 #include "PlayerController.h"
 #include "RythmoOverlay.h"
+#include "TrackPanel.h"
 #include "VideoWidget.h"
 
 #include <QCheckBox>
@@ -46,7 +47,6 @@ private slots:
 
 private:
   void setupUi();
-  void setupTrack2(); // Helper for initialization
   void setupConnections();
   QString formatTime(qint64 milliseconds) const;
 
@@ -55,13 +55,12 @@ private:
   PlayerController *m_playerController;
 
   // Phase 2 Managers
-  // Phase 2 Managers - Track 1
   RythmoOverlay *m_rythmoOverlay;
   AudioRecorderManager *m_recorderManager;
-
-  // Track 2 Managers
-  // RythmoWidget *m_rythmoWidget2; // Handled by Overlay
   AudioRecorderManager *m_recorderManager2;
+
+  TrackPanel *m_track1Panel;
+  TrackPanel *m_track2Panel;
 
   Exporter *m_exporter;
 
@@ -76,17 +75,9 @@ private:
   QLabel *m_timeLabel;
   QLabel *m_cursorTimeLabel;
 
-  // Audio / Export Elements - Track 1
-  QComboBox *m_inputDeviceCombo;
-  ClickableSlider *m_micVolumeSlider;
-  QSpinBox *m_micGainSpinBox;
-
-  // Audio / Export Elements - Track 2
-  QWidget *m_track2Container; // To toggle visibility
+  // Track 2 Container
+  QWidget *m_track2Container;
   QCheckBox *m_enableTrack2Check;
-  QComboBox *m_inputDeviceCombo2;
-  ClickableSlider *m_micVolumeSlider2;
-  QSpinBox *m_micGainSpinBox2;
 
   QPushButton *m_recordButton;
   QSpinBox *m_speedSpinBox;
@@ -102,7 +93,6 @@ private:
   QElapsedTimer m_recordingTimer;
   qint64 m_lastRecordedDurationMs = 0;
   qint64 m_recordingStartTimeMs = 0;
-  bool m_isUpdatingCursorFromVideo = false; // Guard for reverse sync
 };
 
 #endif // MAINWINDOW_H

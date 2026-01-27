@@ -1,8 +1,15 @@
 #include "AudioRecorderManager.h"
+#include <QMediaFormat>
 
 AudioRecorderManager::AudioRecorderManager(QObject *parent) : QObject(parent) {
   m_audioInput = new QAudioInput(this);
   m_recorder = new QMediaRecorder(this);
+
+  // Force format to be simple/compatible (e.g. Wave or safe default)
+  QMediaFormat format;
+  format.setFileFormat(QMediaFormat::Wave);
+  format.setAudioCodec(QMediaFormat::AudioCodec::Wave);
+  m_recorder->setMediaFormat(format);
 
   m_captureSession.setAudioInput(m_audioInput);
   m_captureSession.setRecorder(m_recorder);
@@ -14,6 +21,7 @@ AudioRecorderManager::AudioRecorderManager(QObject *parent) : QObject(parent) {
   connect(m_recorder, &QMediaRecorder::errorOccurred, this,
           [this](QMediaRecorder::Error error, const QString &errorString) {
             Q_UNUSED(error);
+            qWarning() << "AudioRecorderManager Error:" << errorString;
             emit errorOccurred(errorString);
           });
 

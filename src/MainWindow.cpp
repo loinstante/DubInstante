@@ -1,4 +1,5 @@
 #include "MainWindow.h"
+#include "TrackPanel.h"
 #include <QAudioDevice>
 #include <QDebug>
 #include <QDir>
@@ -32,7 +33,7 @@ MainWindow::MainWindow(QWidget *parent)
   }
 
   setupUi();
-  setupTrack2(); // Call Helper
+  // setupTrack2() removed - logic now in TrackPanel via setupUi
   setupConnections();
 
   // Link the controller to the widget's sink
@@ -145,8 +146,8 @@ void MainWindow::setupUi() {
   m_volumeSpinBox->setSuffix("%");
   controlsLayout->addWidget(m_volumeSpinBox);
 
-  m_recordButton = new QPushButton(
-      QIcon(":/resources/icons/record.svg"), "REC", this);
+  m_recordButton =
+      new QPushButton(QIcon(":/resources/icons/record.svg"), "REC", this);
   m_recordButton->setObjectName("recordButton");
   m_recordButton->setCheckable(true);
   m_recordButton->setFixedSize(90, 36);
@@ -156,30 +157,8 @@ void MainWindow::setupUi() {
 
   mainLayout->addLayout(controlsLayout);
 
-  // Initialize Audio/Export UI Elements for Track 1
-  m_inputDeviceCombo = new QComboBox(this);
-  // Remove fixed minimum width, let layout handle it
-  m_inputDeviceCombo->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
-  // also set a reasonable minimum width so it doesn't vanish
-  m_inputDeviceCombo->setMinimumWidth(100);
-  auto devices = m_recorderManager->availableDevices();
-  m_inputDeviceCombo->addItem("Aucun (NONE)", QVariant());
-  for (const auto &device : devices) {
-    m_inputDeviceCombo->addItem(device.description(),
-                                QVariant::fromValue(device));
-  }
-
-  m_micVolumeSlider = new ClickableSlider(Qt::Horizontal, this);
-  m_micVolumeSlider->setRange(0, 100);
-  m_micVolumeSlider->setValue(100);
-  m_micVolumeSlider->setFixedWidth(100);
-
-  m_micGainSpinBox = new QSpinBox(this);
-  m_micGainSpinBox->setRange(0, 100);
-  m_micGainSpinBox->setValue(100);
-  m_micGainSpinBox->setFixedWidth(70);
-  m_micGainSpinBox->setAlignment(Qt::AlignRight);
-  m_micGainSpinBox->setSuffix("%");
+  m_recorderManager = new AudioRecorderManager(this);
+  m_recorderManager2 = new AudioRecorderManager(this);
 
   m_speedSpinBox = new QSpinBox(this);
   m_speedSpinBox->setRange(1, 400);
@@ -189,8 +168,6 @@ void MainWindow::setupUi() {
   m_speedSpinBox->setAlignment(Qt::AlignRight);
   m_speedSpinBox->setSingleStep(10);
 
-  // Speed buttons removed (using SpinBox internal buttons)
-
   m_exportProgressBar = new QProgressBar(this);
   m_exportProgressBar->setVisible(false);
 
@@ -199,78 +176,21 @@ void MainWindow::setupUi() {
   // =========================================================
   // TRACK 1 CONTROLS
   // =========================================================
-  QFrame *track1Frame = new QFrame(this);
-  track1Frame->setFrameShape(QFrame::NoFrame); // Removed border/background
-  // Removed stylesheet
-  QHBoxLayout *track1Layout = new QHBoxLayout(track1Frame);
-  track1Layout->setContentsMargins(0, 2, 0, 2); // Tighter margins
-  track1Layout->setSpacing(10);
-
-  track1Layout->addWidget(new QLabel("<b>Piste 1:</b>", this));
-
-  QHBoxLayout *micGroup = new QHBoxLayout();
-  micGroup->setSpacing(2);
-  micGroup->addWidget(new QLabel("Mic:", this));
-  micGroup->addWidget(m_inputDeviceCombo);
-  track1Layout->addLayout(micGroup);
-
-  QHBoxLayout *gainGroup = new QHBoxLayout();
-  gainGroup->setSpacing(5); // Increased Spacing from 2 to 5
-  gainGroup->addWidget(new QLabel("Gain:", this));
-  gainGroup->addWidget(m_micVolumeSlider);
-  gainGroup->addWidget(m_micGainSpinBox);
-  track1Layout->addLayout(gainGroup);
+  m_track1Panel = new TrackPanel("Piste 1", m_recorderManager, this);
 
   // =========================================================
   // TRACK 2 CONTROLS (Hidden by default)
   // =========================================================
   m_track2Container = new QWidget(this);
-  QHBoxLayout *track2Layout = new QHBoxLayout(m_track2Container);
-  track2Layout->setContentsMargins(0, 0, 0, 0); // Inner layout
-  track2Layout->setSpacing(0);                  // Inner layout
+  QHBoxLayout *track2ContainerLayout = new QHBoxLayout(m_track2Container);
+  track2ContainerLayout->setContentsMargins(0, 0, 0, 0);
+  track2ContainerLayout->setSpacing(0);
 
-  QFrame *track2Frame = new QFrame(this);
-  track2Frame->setFrameShape(QFrame::NoFrame); // Removed border/background
-  // Removed stylesheet
-  QHBoxLayout *t2InnerLayout = new QHBoxLayout(track2Frame);
-  t2InnerLayout->setContentsMargins(0, 2, 0, 2); // Tighter margins
-  t2InnerLayout->setSpacing(10);
+  m_track2Panel =
+      new TrackPanel("Piste 2", m_recorderManager2, m_track2Container);
+  track2ContainerLayout->addWidget(m_track2Panel);
 
-  t2InnerLayout->addWidget(new QLabel("<b>Piste 2:</b>", this));
-
-  m_inputDeviceCombo2 = new QComboBox(this);
-  m_inputDeviceCombo2->setSizePolicy(QSizePolicy::Expanding,
-                                     QSizePolicy::Fixed);
-  m_inputDeviceCombo2->setMinimumWidth(100);
-  // Filled in setupTrack2
-
-  QHBoxLayout *micGroup2 = new QHBoxLayout();
-  micGroup2->setSpacing(2);
-  micGroup2->addWidget(new QLabel("Mic:", this));
-  micGroup2->addWidget(m_inputDeviceCombo2);
-  t2InnerLayout->addLayout(micGroup2);
-
-  m_micVolumeSlider2 = new ClickableSlider(Qt::Horizontal, this);
-  m_micVolumeSlider2->setRange(0, 100);
-  m_micVolumeSlider2->setValue(100);
-  m_micVolumeSlider2->setFixedWidth(100);
-
-  m_micGainSpinBox2 = new QSpinBox(this);
-  m_micGainSpinBox2->setRange(0, 100);
-  m_micGainSpinBox2->setValue(100);
-  m_micGainSpinBox2->setFixedWidth(70);
-  m_micGainSpinBox2->setAlignment(Qt::AlignRight);
-  m_micGainSpinBox2->setSuffix("%");
-
-  QHBoxLayout *gainGroup2 = new QHBoxLayout();
-  gainGroup2->setSpacing(5); // Increased Spacing consistent with Track 1
-  gainGroup2->addWidget(new QLabel("Gain:", this));
-  gainGroup2->addWidget(m_micVolumeSlider2);
-  gainGroup2->addWidget(m_micGainSpinBox2);
-  t2InnerLayout->addLayout(gainGroup2);
-
-  track2Layout->addWidget(track2Frame);
-  m_track2Container->setVisible(false); // Hidden initally
+  m_track2Container->setVisible(false); // Hidden initially
 
   // =========================================================
   // MAIN BOTTOM LAYOUT
@@ -278,7 +198,7 @@ void MainWindow::setupUi() {
   // Left: Tracks. Right: Global Settings (Speed, Export)
   QVBoxLayout *tracksLayout = new QVBoxLayout();
   tracksLayout->setSpacing(5);
-  tracksLayout->addWidget(track1Frame);
+  tracksLayout->addWidget(m_track1Panel);
   tracksLayout->addWidget(m_track2Container);
 
   // Checkbox near Start/Stop or near tracks? Near tracks.
@@ -307,6 +227,15 @@ void MainWindow::setupUi() {
   bottomControlsLayout->addWidget(m_exportProgressBar);
 
   mainLayout->addLayout(bottomControlsLayout);
+
+  // Initial Sync
+  m_rythmoOverlay->setSpeed(m_speedSpinBox->value());
+  m_rythmoOverlay->track2()->setText("TRACK 2: Ready for dubbing...");
+
+  connect(m_enableTrack2Check, &QCheckBox::toggled, this, [this](bool checked) {
+    m_track2Container->setVisible(checked);
+    m_rythmoOverlay->setTrack2Visible(checked);
+  });
 }
 
 void MainWindow::setupConnections() {
@@ -376,33 +305,6 @@ void MainWindow::setupConnections() {
     }
   });
 
-  connect(m_inputDeviceCombo, &QComboBox::currentIndexChanged, this,
-          [this](int index) {
-            QVariant data = m_inputDeviceCombo->itemData(index);
-            if (data.isValid()) {
-              auto device = data.value<QAudioDevice>();
-              m_recorderManager->setDevice(device);
-            } else {
-              // NONE selected
-              m_recorderManager->setDevice(QAudioDevice());
-            }
-          });
-
-  connect(m_micVolumeSlider, &QSlider::valueChanged, this, [this](int value) {
-    m_recorderManager->setVolume(value / 100.0f);
-    if (m_micGainSpinBox->value() != value) {
-      m_micGainSpinBox->blockSignals(true);
-      m_micGainSpinBox->setValue(value);
-      m_micGainSpinBox->blockSignals(false);
-    }
-  });
-
-  connect(m_micGainSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
-    if (m_micVolumeSlider->value() != value) {
-      m_micVolumeSlider->setValue(value);
-    }
-  });
-
   // Volume SpinBox -> Player Volume & Slider
   connect(m_volumeSpinBox, &QSpinBox::valueChanged, this, [this](int value) {
     if (m_playerController) {
@@ -467,8 +369,8 @@ void MainWindow::toggleRecording() {
   if (!m_isRecording) {
     QString currentVideo = property("currentVideoPath").toString();
     if (currentVideo.isEmpty()) {
-      QMessageBox::warning(this, "Dubbing",
-                           "Chargez une vidéo avant d'enregistrer.");
+      QMessageBox::warning(this, tr("Dubbing"),
+                           tr("Chargez une vidéo avant d'enregistrer."));
       m_recordButton->setChecked(false);
       return;
     }
@@ -477,11 +379,11 @@ void MainWindow::toggleRecording() {
     // Capture start time for seeking
     m_recordingStartTimeMs = m_playerController->position();
 
-    m_recorderManager->startRecording(QUrl::fromLocalFile(m_tempAudioPath));
+    m_track1Panel->startRecording(QUrl::fromLocalFile(m_tempAudioPath));
 
     // Track 2 Recording
     if (m_enableTrack2Check->isChecked()) {
-      m_recorderManager2->startRecording(QUrl::fromLocalFile(m_tempAudioPath2));
+      m_track2Panel->startRecording(QUrl::fromLocalFile(m_tempAudioPath2));
     }
 
     m_playerController->play();
@@ -497,10 +399,10 @@ void MainWindow::toggleRecording() {
 
   } else {
     m_playerController->pause();
-    m_recorderManager->stopRecording();
+    m_track1Panel->stopRecording();
 
     if (m_enableTrack2Check->isChecked()) {
-      m_recorderManager2->stopRecording();
+      m_track2Panel->stopRecording();
     }
 
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
@@ -513,8 +415,8 @@ void MainWindow::toggleRecording() {
 
     QString currentVideo = property("currentVideoPath").toString();
     QString outputFile = QFileDialog::getSaveFileName(
-        this, "Sauvegarder le doublage", QDir::homePath() + "/dub_result.mp4",
-        "Video (*.mp4)");
+        this, tr("Sauvegarder le doublage"),
+        QDir::homePath() + "/dub_result.mp4", tr("Video (*.mp4)"));
 
     if (!outputFile.isEmpty()) {
       m_exportProgressBar->setVisible(true);
@@ -541,15 +443,15 @@ void MainWindow::updateExportProgress(int percentage) {
 void MainWindow::onExportFinished(bool success, const QString &message) {
   m_exportProgressBar->setVisible(false);
   if (success) {
-    QMessageBox::information(this, "Export", message);
+    QMessageBox::information(this, tr("Export"), message);
   } else {
-    QMessageBox::critical(this, "Export", message);
+    QMessageBox::critical(this, tr("Export"), message);
   }
 }
 
 void MainWindow::onOpenFile() {
-  QString fileName =
-      QFileDialog::getOpenFileName(this, "Ouvrir", "", "Vidéos MP4 (*.mp4)");
+  QString fileName = QFileDialog::getOpenFileName(this, tr("Ouvrir"), "",
+                                                  tr("Vidéos MP4 (*.mp4)"));
   if (!fileName.isEmpty()) {
     m_playerController->openFile(QUrl::fromLocalFile(fileName));
     setProperty("currentVideoPath", fileName);
@@ -577,7 +479,7 @@ void MainWindow::updatePlayPauseButton(QMediaPlayer::PlaybackState state) {
 }
 
 void MainWindow::handleError(const QString &errorMessage) {
-  QMessageBox::critical(this, "Erreur", errorMessage);
+  QMessageBox::critical(this, tr("Erreur"), errorMessage);
 }
 
 // Helper removed - Layout handles geometry
@@ -587,54 +489,6 @@ QString MainWindow::formatTime(qint64 milliseconds) const {
   currentTime = currentTime.addMSecs(static_cast<int>(milliseconds));
   return (milliseconds >= 3600000) ? currentTime.toString("hh:mm:ss")
                                    : currentTime.toString("mm:ss");
-}
-
-void MainWindow::setupTrack2() {
-  m_inputDeviceCombo2->addItem("Aucun (NONE)", QVariant());
-  auto devices = m_recorderManager2->availableDevices();
-  for (const auto &dev : devices) {
-    m_inputDeviceCombo2->addItem(dev.description(), QVariant::fromValue(dev));
-  }
-
-  // Initial Sync
-  // m_rythmoOverlay->setSpeed(m_speedSpinBox->value()); // Already connected
-  // elsewhere? We can force it just in case
-  m_rythmoOverlay->setSpeed(m_speedSpinBox->value());
-  m_rythmoOverlay->track2()->setText("TRACK 2: Ready for dubbing...");
-
-  connect(m_enableTrack2Check, &QCheckBox::toggled, this, [this](bool checked) {
-    m_track2Container->setVisible(checked);
-    m_rythmoOverlay->setTrack2Visible(checked);
-  });
-
-  connect(m_inputDeviceCombo2, &QComboBox::currentIndexChanged, this,
-          [this](int index) {
-            QVariant data = m_inputDeviceCombo2->itemData(index);
-            if (data.isValid()) {
-              auto device = data.value<QAudioDevice>();
-              m_recorderManager2->setDevice(device);
-            } else {
-              m_recorderManager2->setDevice(QAudioDevice());
-            }
-          });
-
-  connect(m_micVolumeSlider2, &QSlider::valueChanged, this, [this](int value) {
-    m_recorderManager2->setVolume(value / 100.0f);
-    if (m_micGainSpinBox2->value() != value) {
-      m_micGainSpinBox2->blockSignals(true);
-      m_micGainSpinBox2->setValue(value);
-      m_micGainSpinBox2->blockSignals(false);
-    }
-  });
-
-  connect(m_micGainSpinBox2, &QSpinBox::valueChanged, this, [this](int value) {
-    if (m_micVolumeSlider2->value() != value) {
-      m_micVolumeSlider2->setValue(value);
-    }
-  });
-
-  // Redundant connections removed (Speed, Sync, PlayState handled by
-  // RythmoOverlay)
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {

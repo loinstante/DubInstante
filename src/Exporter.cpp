@@ -1,5 +1,6 @@
 #include "Exporter.h"
 #include <QDebug>
+#include <QFile>
 #include <QRegularExpression>
 #include <QStandardPaths>
 
@@ -83,6 +84,24 @@ void Exporter::merge(const QString &videoPath, const QString &audioPath,
                      const QString &secondAudioPath) {
   if (m_process->state() != QProcess::NotRunning) {
     emit finished(false, "Un export est déjà en cours.");
+    return;
+  }
+
+  // Verification des fichiers
+  if (!QFile::exists(videoPath)) {
+    emit finished(false, "Erreur: Le fichier vidéo source est introuvable.");
+    return;
+  }
+  if (!QFile::exists(audioPath)) {
+    emit finished(false,
+                  "Erreur: L'enregistrement de la Piste 1 est introuvable.");
+    return;
+  }
+  if (!secondAudioPath.isEmpty() && !QFile::exists(secondAudioPath)) {
+    // If track 2 path is provided but file is missing, warn but maybe continue?
+    // Or failing is safer to avoid silent failures. Let's fail for now.
+    emit finished(false,
+                  "Erreur: L'enregistrement de la Piste 2 est introuvable.");
     return;
   }
 

@@ -5,6 +5,18 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2] - 2026-01-27
+
+### Added
+- **Track 2 audio recording not mendatory**: add possibility to record with only one mic but with the 
+ rythmo band of the second track
+### Fixed
+- **Export**: Fixed export errors by ensuring proper file paths and permissions
+- **Export**: Fixed export errors by ensuring proper audio recording and export
+
+### Technical
+- **refactoring mainwindows class**: fixing the mainclass that was godclass for better security, maintainability and bug preventing 
+
 ## [1.3.1] - 2026-01-24
 
 ### Fixed
@@ -83,12 +95,3 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **UI Framework**: Modern, responsive interface with custom Qt styling
 
 ---
-
-
-**Legend:**
-- 🎉 Added: New features
-- ✨ Changed: Changes to existing functionality
-- 🐛 Fixed: Bug fixes
-- 🚀 Deprecated: Soon-to-be removed features
-- ❌ Removed: Removed features
-- 🔒 Security: Security improvements

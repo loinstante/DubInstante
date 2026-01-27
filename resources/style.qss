@@ -4,10 +4,17 @@
    ============================================ */
 
 /* Global Styles - Soft Background */
+QToolTip {
+    color: black;
+    background-color: white;
+    border: 1px solid #ccc;
+}
+
 QWidget {
     font-family: 'Segoe UI', 'SF Pro Display', -apple-system, sans-serif;
     background-color: #fafafa;
     color: #2c2c2c;
+    font-size: 10pt;
 }
 
 QMainWindow {
@@ -25,6 +32,42 @@ QLabel[class="heading"] {
     font-weight: 600;
     font-size: 14px;
     color: #1a1a1a;
+}
+
+/* GroupBoxes & Panels */
+QGroupBox {
+    border: 1px solid #ddd;
+    margin-top: 1ex;
+    border-radius: 4px;
+}
+QGroupBox::title {
+    subcontrol-origin: margin;
+    subcontrol-position: top center;
+    padding: 0 3px;
+    color: #666;
+}
+
+/* Generic Buttons (Fallbacks) */
+QPushButton {
+    background-color: #f5f5f5;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 2px 8px;
+    color: #333;
+}
+QPushButton:hover {
+    background-color: #e5e5e5;
+    border-color: #bbb;
+}
+QPushButton:pressed {
+    background-color: #0078d7;
+    color: white;
+    border-color: #0078d7;
+}
+QPushButton:disabled {
+    background-color: #eee;
+    color: #999;
+    border-color: #ddd;
 }
 
 /* ============================================
@@ -174,27 +217,24 @@ QLabel#timeLabel {
 /* ============================================
    SPINBOX & COMBOBOX - Polished Input
    ============================================ */
-QSpinBox, QComboBox {
+/* LineEdit & SpinBox from main.cpp merged with SpinBox/ComboBox */
+QLineEdit, QSpinBox, QComboBox {
+    background-color: white;
     border: 1px solid #d5d5d5;
     border-radius: 6px;
     padding: 6px 4px;
-    padding-right: 6px; /* Minimal - buttons use border origin */
-    background: #ffffff;
+    padding-right: 6px;
+    color: #333;
     selection-background-color: #0078d7;
     selection-color: #ffffff;
     min-height: 34px;
     font-size: 13px;
 }
 
-QSpinBox:hover, QComboBox:hover {
-    border: 1px solid #999999;
-    background: #fafafa;
-}
-
-QSpinBox:focus, QComboBox:focus {
+QLineEdit:focus, QSpinBox:focus, QComboBox:focus {
     border: 2px solid #0078d7;
     padding: 5px 7px;
-    padding-right: 27px;
+    /* padding-right: 27px; for spinbox/combo handling */
     background: #ffffff;
 }
 

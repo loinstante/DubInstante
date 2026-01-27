@@ -18,6 +18,7 @@ add_executable(DubInstante
     src/AudioRecorderManager.cpp
     src/RythmoWidget.cpp
     src/RythmoOverlay.cpp
+    src/TrackPanel.cpp
      src/VideoWidget.cpp
     src/PlayerController.cpp
     include/MainWindow.h
@@ -27,6 +28,7 @@ add_executable(DubInstante
     include/VideoWidget.h
     include/PlayerController.h
     include/RythmoOverlay.h
+    include/TrackPanel.h
     include/ClickableSlider.h
     resources.qrc
 )

@@ -21,13 +21,12 @@ jobs:
 
     - name: Build and Package AppImage
       run: |
-        chmod +x deploy/build_appimage.sh
-        ./deploy/build_appimage.sh
+        bash deploy/build_appimage.sh
 
     - name: Get Version
       id: get_version
       run: |
-        VERSION=$(grep -m 1 -oP '(?<=\[)\d+\.\d+\.\d+(?=\])' CHANGELOG.md)
+        VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
         echo "version=$VERSION" >> $GITHUB_OUTPUT
 
     - name: Upload Artifact

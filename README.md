@@ -7,18 +7,11 @@
 - 🇫🇷 [Documentation complète en Français](docs/fr/README.md)
 - 🇬🇧 [Full Documentation in English](docs/en/README.md)
 
-## Quick Start / Démarrage Rapide
+```markdown
+### 🚀 Installation
 
-### Installation
-
-**Windows**: Download from [GitHub Actions](../../actions)  
-**Linux**:
-```bash
-sudo apt install qt6-multimedia-dev libqt6opengl6-dev ffmpeg
-mkdir build && cd build
-cmake ..
-make -j$(nproc)
-./DubInstante
+- 📥 **Download / Téléchargement** : [GitHub Releases](../../releases)
+- 🛠️ **Build / Compilation** : [Instructions](build/)
 ```
 
 ### Key Features / Fonctionnalités Principales

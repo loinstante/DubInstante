@@ -163,7 +163,7 @@ void MainWindow::setupUi() {
   m_volumeSpinBox = new QSpinBox(this);
   m_volumeSpinBox->setRange(0, 100);
   m_volumeSpinBox->setValue(100);
-  m_volumeSpinBox->setFixedWidth(70);
+  m_volumeSpinBox->setFixedWidth(90);
   m_volumeSpinBox->setAlignment(Qt::AlignRight);
   m_volumeSpinBox->setSuffix("%");
   controlsLayout->addWidget(m_volumeSpinBox);
@@ -216,7 +216,7 @@ void MainWindow::setupUi() {
   m_speedSpinBox->setRange(1, 400);
   m_speedSpinBox->setValue(100);
   m_speedSpinBox->setSuffix("%");
-  m_speedSpinBox->setFixedWidth(70);
+  m_speedSpinBox->setFixedWidth(90);
   m_speedSpinBox->setAlignment(Qt::AlignRight);
   m_speedSpinBox->setSingleStep(10);
   speedLayout->addWidget(m_speedSpinBox);
@@ -645,12 +645,22 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
   int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
 
   if (event->key() == Qt::Key_Left) {
-    m_playbackEngine->seek(m_playbackEngine->position() - frameStep);
-    event->accept();
+    // Only intercept if we are not in an input widget
+    if (!focusWidget() || !focusWidget()->inherits("QAbstractSpinBox")) {
+      m_playbackEngine->seek(m_playbackEngine->position() - frameStep);
+      event->accept();
+      return;
+    }
   } else if (event->key() == Qt::Key_Right) {
-    m_playbackEngine->seek(m_playbackEngine->position() + frameStep);
-    event->accept();
-  } else {
-    QMainWindow::keyPressEvent(event);
+    // Only intercept if we are not in an input widget
+    if (!focusWidget() || !focusWidget()->inherits("QAbstractSpinBox")) {
+      m_playbackEngine->seek(m_playbackEngine->position() + frameStep);
+      event->accept();
+      return;
+    }
   }
+}
+else {
+  QMainWindow::keyPressEvent(event);
+}
 }

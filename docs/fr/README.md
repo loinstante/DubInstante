@@ -13,6 +13,9 @@ DubInstante est un logiciel de doublage vidéo professionnel conçu pour être p
 ### 📝 Système de Bande Rythmo
 - **Double Bande Rythmo**: Deux bandes de texte défilant indépendantes pour les workflows complexes
 - **Édition Interactive**: Saisie de texte directe sur la bande rythmo avec aperçu en temps réel
+- **Animation Ultra-Fluide**: Boucle d'interpolation 60 FPS dédiée garantissant un défilement fluide indépendant des saccades du moteur vidéo
+- **Snap-to-Grid de Précision**: Alignement intelligent au caractère le plus proche lors de la pause pour une édition intuitive et centrée
+- **Indicateurs Unifiés**: Alignement parfait de la ligne de temps et du guide de lecture pour un feedback visuel sans décalage
 - **Rendu Virtualisé**: Ne dessine que le texte visible, permettant des enregistrements infinis sans lag
 - **Réaction Instantanée**: Découplage de l'interface et du moteur vidéo pour une frappe fluide sur gros fichiers
 - **Seek Debouncing**: Regroupement intelligent des recherches pour éviter la saturation disque (50GB+)

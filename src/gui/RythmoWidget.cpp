@@ -241,8 +241,14 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   int cw = charWidth();
   int targetX = width() / 5; // Target line position
 
-  // Snap to character grid for precise alignment with cursor
-  double pixelOffset = static_cast<double>(cursorIndex() * cw);
+  double pixelOffset;
+  if (m_isPlaying && cw > 0) {
+    // Smooth scrolling using continuous position
+    pixelOffset = (static_cast<double>(m_currentPosition) / 1000.0) * m_speed;
+  } else {
+    // Snap to character grid for precise editing alignment when paused
+    pixelOffset = static_cast<double>(cursorIndex() * cw);
+  }
 
   double textStartX = targetX - pixelOffset;
 

@@ -13,6 +13,9 @@ DubInstante is a professional video dubbing software designed to be powerful, in
 ### 📝 Rythmo Band System
 - **Dual Rythmo Bands**: Two independent scrolling text bands for complex dubbing workflows
 - **Interactive Editing**: Direct text input on the rythmo band with real-time preview
+- **Ultra-Smooth Animation**: Dedicated 60FPS interpolation loop ensures fluid scrolling regardless of playback engine updates
+- **Precision Snap-to-Grid**: Smart nearest-neighbor alignment when paused for perfectly centered character editing
+- **Unified Indicators**: Seamlessly aligned timestamp line and playback guide for intuitive "what you see is where you write" feedback
 - **Virtualized Rendering**: Only renders visible text, allowing for infinite recording length with zero lag
 - **Instant Feedback**: Decoupled UI updates from video engine for smooth editing on large files
 - **Seek Debouncing**: Smart batching of seeks to prevent disk saturation on massive files (50GB+)

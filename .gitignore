@@ -39,7 +39,6 @@ DubInstante
 
 # Deployment & Packaging
 build_release/
-deploy/
 dist_appimage/
 tools/
 

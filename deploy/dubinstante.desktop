@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=DubInstante
+Comment=Professional Video Dubbing Studio
+Exec=DubInstante
+Icon=DubInstante
+Categories=AudioVideo;Video;Audio;
+Terminal=false
+StartupNotify=true

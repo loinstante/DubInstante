@@ -157,14 +157,14 @@ Please open an issue or submit a pull request.
 **DubInstante** - Making professional video dubbing accessible to everyone.
 
 ## 🗺️ Roadmap
-- **v1.4.0 - Customization Update**
+- **v0.4.0 - Customization Update**
     - [ ] Advanced Rythmo Band styling (Custom background and text colors)
     - [ ] Dedicated sub-menu for independent settings per band
     - [ ] Visual tweaking that preserves original layout/position
-- **v1.5.0 - Project Management**
+- **v0.5.0 - Project Management**
     - [ ] Save/Load system for session states (Dedicated project file format)
     - [ ] Persistence of all Rythmo text and modified application parameters
-- **v1.6.0 - Pro Experience**
+- **v0.6.0 - Pro Experience**
     - [ ] Full-screen recording mode
     - [ ] Global keyboard shortcuts for recording control (pause and other actions)
 - **And more...**

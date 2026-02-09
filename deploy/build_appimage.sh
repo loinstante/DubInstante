@@ -7,7 +7,7 @@ BUILD_DIR="build_release"
 DIST_DIR="dist_appimage"
 DESKTOP_FILE="deploy/dubinstante.desktop"
 
-# Extract version from CHANGELOG.md (e.g., [1.3.4])
+# Extract version from CHANGELOG.md (e.g., [0.3.4])
 export VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
 echo "--- Building $APP_NAME version $VERSION ---"
 

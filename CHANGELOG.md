@@ -5,7 +5,7 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [1.3.4] - 2026-02-09
+## [0.3.4] - 2026-02-09
 
 ### Added
 - **Ultra-Smooth 60FPS Rythmo**: Implemented dedicated interpolation loop for decoupled, high-framerate band scrolling.
@@ -17,12 +17,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Stability**: Fixed a segmentation fault on startup related to uninitialized timers.
 - **Video Engine**: Refined media loading sequence (PlaybackEngine) to ensure consistent frame rendering on file open.
 
-## [1.3.3] - 2026-02-09
+## [0.3.3] - 2026-02-09
 
 ### Technical
 - **Refactoring**: refactoring entire Main class with seperation of Core and UI preparing future platform availability 
 
-## [1.3.2] - 2026-01-27
+## [0.3.2] - 2026-01-27
 
 ### Added
 - **Track 2 audio recording not mendatory**: add possibility to record with only one mic but with the 
@@ -34,12 +34,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Technical
 - **refactoring mainwindows class**: fixing the mainclass that was godclass for better security, maintainability and bug preventing 
 
-## [1.3.1] - 2026-01-24
+## [0.3.1] - 2026-01-24
 
 ### Fixed
 - **Windows Build**: Fixed build errors on Windows using github actions
 
-## [1.3.0] - 2026-01-24
+## [0.3.0] - 2026-01-24
 
 ### Added
 - **Rythmo Text Color Toggle**: Switch between Black and White text for better visibility on different video backgrounds
@@ -55,12 +55,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Font Metric Caching**: Implemented caching for fixed-font character widths to reduce CPU overhead during text rendering.
 - **Optimized Paint Pipeline**: Refined the RythmoWidget refresh cycle for smoother animations and lower power consumption.
 
-## [1.2.0] - 2026-01-21
+## [0.2.0] - 2026-01-21
 
 ### Added
 - **Project Rebranding**: Officially renamed the software from DUBSync to **DubInstante**
 
-## [1.1.0] - 2026-01-21
+## [0.1.0] - 2026-01-21
 
 ### Added
 - **Dual Track Recording**: Second independent audio input for simultaneous two-track dubbing
@@ -82,7 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [1.0.0] - 2026-01-12
+## [0.0.0] - 2026-01-12
 
 ### Initial Release
 - **Single Track Recording**: Professional audio dubbing with one microphone input

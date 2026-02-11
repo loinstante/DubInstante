@@ -1,0 +1,130 @@
+name: Build and Release
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build-linux:
+    name: Linux Build
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y qt6-multimedia-dev libqt6opengl6-dev ffmpeg wget libfuse2 libgl1-mesa-dev
+
+    - name: Build and Package AppImage
+      run: |
+        bash deploy/build_appimage.sh
+
+    - name: Get Version
+      id: get_version
+      run: |
+        VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DubInstante_linux_${{ steps.get_version.outputs.version }}
+        path: DubInstante_linux_*.AppImage
+
+  build-windows:
+    name: Windows Build
+    runs-on: windows-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        host: 'windows'
+        target: 'desktop'
+        arch: 'win64_msvc2019_64'
+        modules: 'qtmultimedia'
+
+    - name: Set up MSVC
+      uses: ilammy/msvc-dev-cmd@v1
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -G "Visual Studio 17 2022" -A x64 -DCMAKE_PREFIX_PATH="C:/Qt/6.5.3/msvc2019_64"
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --config Release
+
+    - name: Package with windeployqt
+      run: |
+        mkdir dist
+        copy build\Release\DubInstante.exe dist\
+        windeployqt --release --no-translations --compiler-runtime --multimedia dist\DubInstante.exe
+
+    - name: Get Version
+      id: get_version
+      shell: bash
+      run: |
+        VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DubInstante_windows_${{ steps.get_version.outputs.version }}
+        path: dist/
+
+  build-macos:
+    name: macOS Build
+    runs-on: macos-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        host: 'mac'
+        target: 'desktop'
+        arch: 'clang_64'
+        modules: 'qtmultimedia'
+
+    - name: Configure CMake
+      run: |
+        mkdir build
+        cd build
+        cmake .. -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_BUNDLE=ON
+
+    - name: Build
+      run: |
+        cd build
+        cmake --build . --config Release
+
+    - name: Package with macdeployqt
+      run: |
+        cd build
+        macdeployqt DubInstante.app -dmg -verbose=1
+
+    - name: Get Version
+      id: get_version
+      shell: bash
+      run: |
+        VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DubInstante_macos_${{ steps.get_version.outputs.version }}
+        path: build/DubInstante.dmg

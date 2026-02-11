@@ -20,6 +20,7 @@
 - 📝 **Dual Rythmo Bands** / Double bande rythmo
 - ⚡ **High Performance** / Support des fichiers massifs (50GB+)
 - 🎙️ **Multi-Track Recording** / Enregistrement multipiste
+- 💾 **Project Save/Load** / Sauvegarde et chargement de projets (.dbi + ZIP)
 - 🎨 **Modern UI** / Interface moderne et professionnelle
 - 📤 **Export** / Exportation FFmpeg
 
@@ -39,7 +40,7 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 **DubInstante** - Rendre le doublage vidéo professionnel accessible à tous.
 
 ## 🗺️ Roadmap
-- **v0.4.0**: Project Save/Load System / Sauvegarde & Chargement de projet ( release before march 2026 )
+- **v0.4.0**: ✅ Project Save/Load System / Sauvegarde & Chargement de projet
 - **v0.5.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
 - **v0.6.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !

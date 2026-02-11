@@ -61,6 +61,9 @@ public:
   void setSpeed(int speed);
   int speed() const;
 
+signals:
+  void textChanged(const QString &text);
+
 public slots:
   // =========================================================================
   // Data Input (from RythmoManager)

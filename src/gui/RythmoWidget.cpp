@@ -70,6 +70,7 @@ int RythmoWidget::speed() const { return m_speed; }
 void RythmoWidget::setText(const QString &text) {
   if (m_text != text) {
     m_text = text;
+    emit textChanged(m_text);
     update();
   }
 }
@@ -414,6 +415,7 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
     m_text.insert(idx, ' ');
     qint64 newTime = m_currentPosition + step;
     requestDebouncedSeek(newTime);
+    emit textChanged(m_text);
     emit playRequested();
     return;
   }
@@ -432,6 +434,7 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
       m_text.remove(idx - 1, 1);
       qint64 newTime = std::max(qint64(0), m_currentPosition - step);
       requestDebouncedSeek(newTime);
+      emit textChanged(m_text);
     }
     return;
   }
@@ -439,6 +442,7 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_Delete) {
     if (idx >= 0 && idx < m_text.length()) {
       m_text.remove(idx, 1);
+      emit textChanged(m_text);
       update();
     }
     return;
@@ -453,5 +457,6 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
     m_text.insert(idx, event->text());
     qint64 newTime = m_currentPosition + step;
     requestDebouncedSeek(newTime);
+    emit textChanged(m_text);
   }
 }

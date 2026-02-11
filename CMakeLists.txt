@@ -24,6 +24,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     MultimediaWidgets
     OpenGLWidgets
     OpenGL
+    Concurrent
 )
 
 # =============================================================================
@@ -40,6 +41,8 @@ set(CORE_SOURCES
     src/core/AudioRecorder.cpp
     src/core/ExportService.h
     src/core/ExportService.cpp
+    src/core/SaveManager.h
+    src/core/SaveManager.cpp
 )
 
 # GUI Layer - User Interface (passive widgets)
@@ -95,4 +98,5 @@ target_link_libraries(DubInstante PRIVATE
     Qt6::MultimediaWidgets
     Qt6::OpenGLWidgets
     Qt6::OpenGL
+    Qt6::Concurrent
 )

@@ -10,6 +10,7 @@
 #include "ExportService.h"
 #include "PlaybackEngine.h"
 #include "RythmoManager.h"
+#include "SaveManager.h"
 
 // GUI includes
 #include "ClickableSlider.h"
@@ -29,7 +30,12 @@
 #include <QMessageBox>
 #include <QResizeEvent>
 #include <QStandardPaths>
+#include <QStatusBar>
 #include <QVBoxLayout>
+
+#include <QFutureWatcher>
+#include <QProgressDialog>
+#include <QtConcurrent>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
@@ -39,7 +45,8 @@ MainWindow::MainWindow(QWidget *parent)
       m_rythmoManager(new RythmoManager(this)),
       m_audioRecorder1(new AudioRecorder(this)),
       m_audioRecorder2(new AudioRecorder(this)),
-      m_exportService(new ExportService(this))
+      m_exportService(new ExportService(this)),
+      m_saveManager(new SaveManager(this))
       // Initialize state
       ,
       m_previousVolume(100), m_isRecording(false), m_lastRecordedDurationMs(0),
@@ -127,7 +134,25 @@ void MainWindow::setupUi() {
       new QPushButton(QIcon(":/resources/icons/folder_open.svg"), "", this);
   m_openButton->setFixedSize(24, 24);
   m_openButton->setFlat(true);
+  m_openButton->setToolTip(tr("Ouvrir une vidéo"));
   controlsLayout->addWidget(m_openButton);
+
+  QPushButton *saveButton = new QPushButton(QIcon(":/resources/icons/stop.svg"),
+                                            "", this); // Placeholder for save
+  saveButton->setFixedSize(24, 24);
+  saveButton->setFlat(true);
+  saveButton->setToolTip(tr("Sauvegarder le projet (.dbi)"));
+  connect(saveButton, &QPushButton::clicked, this, &MainWindow::onSaveProject);
+  controlsLayout->addWidget(saveButton);
+
+  QPushButton *loadButton =
+      new QPushButton(QIcon(":/resources/icons/folder_open.svg"), "",
+                      this); // Placeholder for load
+  loadButton->setFixedSize(24, 24);
+  loadButton->setFlat(true);
+  loadButton->setToolTip(tr("Charger un projet (.dbi)"));
+  connect(loadButton, &QPushButton::clicked, this, &MainWindow::onLoadProject);
+  controlsLayout->addWidget(loadButton);
 
   m_playPauseButton =
       new QPushButton(QIcon(":/resources/icons/play.svg"), "", this);
@@ -446,6 +471,15 @@ void MainWindow::setupConnections() {
   // Recording
   // =========================================================================
 
+  // RythmoOverlay -> RythmoManager
+  // We need to sync text changes back to the manager
+  connect(m_rythmoOverlay->track1(), &RythmoWidget::textChanged, this,
+          [this](const QString &text) { m_rythmoManager->setText(0, text); });
+
+  connect(m_rythmoOverlay->track2(), &RythmoWidget::textChanged, this,
+          [this](const QString &text) { m_rythmoManager->setText(1, text); });
+
+  // Recording
   connect(m_recordButton, &QPushButton::clicked, this,
           &MainWindow::toggleRecording);
   connect(m_audioRecorder1, &AudioRecorder::errorOccurred, this,
@@ -475,6 +509,169 @@ void MainWindow::onOpenFile() {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
     setProperty("currentVideoPath", fileName);
   }
+}
+
+void MainWindow::onSaveProject() {
+  QMessageBox::StandardButton reply;
+  reply = QMessageBox::question(
+      this, tr("Sauvegarder"),
+      tr("Voulez-vous inclure la vidéo dans l'archive ?\n(Cela créera un "
+         "fichier .zip)"),
+      QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
+
+  if (reply == QMessageBox::Cancel)
+    return;
+
+  bool saveWithVideo = (reply == QMessageBox::Yes);
+  QString filter = saveWithVideo ? tr("DubInstante Archive (*.zip)")
+                                 : tr("DubInstante Project (*.dbi)");
+  QString suffix = saveWithVideo ? ".zip" : ".dbi";
+
+  QString fileName = QFileDialog::getSaveFileName(
+      this, tr("Sauvegarder le projet"), "", filter);
+
+  if (fileName.isEmpty())
+    return;
+
+  if (!fileName.endsWith(suffix, Qt::CaseInsensitive)) {
+    fileName += suffix;
+  }
+
+  SaveData data;
+  data.videoUrl = property("currentVideoPath").toString();
+  data.videoVolume = m_playbackEngine->volume();
+  data.audioInput1 = m_track1Panel->selectedDevice().description();
+  data.audioGain1 = m_track1Panel->gain();
+  data.audioInput2 = m_track2Panel->selectedDevice().description();
+  data.audioGain2 = m_track2Panel->gain();
+  data.scrollSpeed = m_speedSpinBox->value();
+  data.isTextWhite = m_textColorCheck->isChecked();
+  data.enableTrack2 = m_enableTrack2Check->isChecked();
+  data.tracks << m_rythmoManager->text(0) << m_rythmoManager->text(1);
+
+  if (saveWithVideo) {
+    // Check zip availability BEFORE launching thread (for specific error
+    // messages)
+    QString zipError;
+    if (!SaveManager::isZipAvailable(&zipError)) {
+      QMessageBox::critical(this, tr("Erreur de sauvegarde"), zipError);
+      return;
+    }
+
+    // Show progress dialog
+    QProgressDialog *progressDialog = new QProgressDialog(this);
+    progressDialog->setLabelText(
+        tr("Création de l'archive ZIP en cours...\nCela peut prendre quelques "
+           "minutes selon la taille de la vidéo."));
+    progressDialog->setRange(0, 0); // Indeterminate
+    progressDialog->setCancelButton(
+        nullptr); // Disable cancel for safety during zip
+    progressDialog->setWindowModality(Qt::WindowModal);
+    progressDialog->show();
+
+    // Run in background thread
+    QFutureWatcher<bool> *watcher = new QFutureWatcher<bool>(this);
+    connect(watcher, &QFutureWatcher<bool>::finished, this,
+            [this, watcher, progressDialog, fileName]() {
+              bool result = watcher->result();
+              progressDialog->close();
+              progressDialog->deleteLater();
+              watcher->deleteLater();
+
+              if (result) {
+                statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
+              } else {
+                QMessageBox::critical(
+                    this, tr("Erreur"),
+                    tr("Impossible de créer l'archive ZIP.\nVérifiez l'espace "
+                       "disque ou les permissions."));
+              }
+            });
+
+    QFuture<bool> future = QtConcurrent::run([this, fileName, data]() {
+      return m_saveManager->saveWithMedia(fileName, data);
+    });
+    watcher->setFuture(future);
+
+  } else {
+    if (m_saveManager->save(fileName, data)) {
+      statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
+    } else {
+      QMessageBox::critical(this, tr("Erreur"),
+                            tr("Impossible de sauvegarder le projet."));
+    }
+  }
+}
+
+void MainWindow::onLoadProject() {
+  QString fileName = QFileDialog::getOpenFileName(
+      this, tr("Charger un projet"), "", tr("DubInstante Project (*.dbi)"));
+
+  if (fileName.isEmpty())
+    return;
+
+  SaveData data;
+  if (!m_saveManager->load(fileName, data)) {
+    QMessageBox::critical(
+        this, tr("Erreur"),
+        tr("Le fichier est corrompu ou d'une version incompatible."));
+    return;
+  }
+
+  // Apply loaded data
+  m_speedSpinBox->setValue(data.scrollSpeed);
+  m_textColorCheck->setChecked(data.isTextWhite);
+  m_enableTrack2Check->setChecked(data.enableTrack2);
+
+  // Restore tracks
+  if (data.tracks.size() > 0) {
+    m_rythmoManager->setText(0, data.tracks[0]);
+    m_rythmoOverlay->track1()->setText(data.tracks[0]);
+  }
+  if (data.tracks.size() > 1) {
+    m_rythmoManager->setText(1, data.tracks[1]);
+    m_rythmoOverlay->track2()->setText(data.tracks[1]);
+  }
+
+  // Restore video and volume
+  if (!data.videoUrl.isEmpty()) {
+    QString localPath = data.videoUrl;
+    if (localPath.startsWith("file://")) {
+      localPath = QUrl(localPath).toLocalFile();
+    }
+
+    if (!QFile::exists(localPath)) {
+      QMessageBox::warning(
+          this, tr("Relink"),
+          tr("La vidéo est introuvable. Veuillez la localiser."));
+      onOpenFile(); // Simple relink via open file dialog
+    } else {
+      m_playbackEngine->openFile(QUrl::fromLocalFile(localPath));
+      setProperty("currentVideoPath", localPath);
+    }
+  }
+
+  m_playbackEngine->setVolume(data.videoVolume);
+
+  // Note: Audio device selection by name is best-effort
+  // Fallback: if device not found, remain on current/default
+  for (const auto &dev : m_audioRecorder1->availableDevices()) {
+    if (dev.description() == data.audioInput1) {
+      m_track1Panel->setDevice(dev);
+      break;
+    }
+  }
+  m_track1Panel->setVolume(data.audioGain1);
+
+  for (const auto &dev : m_audioRecorder2->availableDevices()) {
+    if (dev.description() == data.audioInput2) {
+      m_track2Panel->setDevice(dev);
+      break;
+    }
+  }
+  m_track2Panel->setVolume(data.audioGain2);
+
+  statusBar()->showMessage(tr("Projet chargé"), 3000);
 }
 
 // =============================================================================

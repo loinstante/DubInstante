@@ -415,6 +415,22 @@ make -j$(nproc)
 
 Pre-built binaries are available from the **Actions** tab (CI artifact: `DubInstante-Windows`).
 
+### macOS
+
+Pre-built DMG images are available from the **Actions** tab (CI artifact: `DubInstante_macos`).
+
+**First Launch (Gatekeeper):**
+Since the app is not signed, macOS will block it by default.
+1. Download the `.dmg` and drag `DubInstante.app` to your **Applications** folder.
+2. **Right-click** (or Ctrl-click) `DubInstante.app` in Applications and select **Open**.
+3. Click **Open** in the dialog that appears. You only need to do this once.
+
+
+### Linux
+
+The AppImage version of the application is available from the **Actions** tab (CI artifact: `DubInstante-Linux`).
+
+
 ### AppImage
 
 ```bash

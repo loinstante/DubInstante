@@ -6,6 +6,7 @@
 
 - 🇫🇷 [Documentation complète en Français](docs/fr/README.md)
 - 🇬🇧 [Full Documentation in English](docs/en/README.md)
+- 🍎 **macOS Help:** [How to launch on Mac](docs/en/README.md#macos) / [Lancer sur Mac](docs/fr/README.md#macos)
 
 ```markdown
 ### 🚀 Installation
@@ -40,7 +41,8 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 **DubInstante** - Rendre le doublage vidéo professionnel accessible à tous.
 
 ## 🗺️ Roadmap
-- **v0.4.0**: ✅ Project Save/Load System / Sauvegarde & Chargement de projet
+- **v0.4.1**: ✅ macOS Fixes & Documentation / Correctifs macOS & Documentation
+- **v0.4.0**: ✅ Project Management System / Gestion de Projet (.dbi + ZIP)
 - **v0.5.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
 - **v0.6.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !

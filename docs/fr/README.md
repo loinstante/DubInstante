@@ -413,7 +413,21 @@ make -j$(nproc)
 
 ### Windows
 
-Des binaires pré-compilés sont disponibles depuis l'onglet **Actions** (artefact CI : `DubInstante-Windows`).
+L'application au format zip est disponible depuis l'onglet **Actions** (artefact CI : `DubInstante-Windows`).
+
+### macOS
+
+L'application au format dmg est disponible depuis l'onglet **Actions** (artefact CI : `DubInstante_macos`).
+
+**Premier lancement (Gatekeeper) :**
+L'application n'étant pas signées, macOS la bloquera par défaut.
+1. Téléchargez le `.dmg` et glissez `DubInstante.app` dans votre dossier **Applications**.
+2. Faites un **clic droit** (ou Ctrl-clic) sur `DubInstante.app` dans Applications et sélectionnez **Ouvrir**.
+3. Cliquez sur **Ouvrir** dans la boîte de dialogue. Cette manipulation n'est requise qu'au premier lancement.
+
+### Linux
+
+L'application au format AppImage est disponible depuis l'onglet **Actions** (artefact CI : `DubInstante-Linux`).
 
 ### AppImage
 

@@ -5,6 +5,21 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1] - 2026-02-11
+
+### Fixed
+- **macOS Build**: Repaired bundle generation and deployment. The app is now correctly packaged as a `.app` bundle inside a `.dmg`.
+- **macOS Gatekeeper**: Added documentation for first-launch workaround on Apple Silicon/Intel.
+
+## [0.4.0] - 2026-02-11
+
+### Added
+- **Project Management System**: New `.dbi` custom binary format with XOR obfuscation and SHA-256 integrity checks.
+- **ZIP Archives**: Capability to bundle the project file and video into a single portable `.zip` archive.
+- **Async Saving**: Non-blocking save operations with progress indicators for large video archives.
+- **Cross-Platform Compression**: Native support for PowerShell (Windows) and `zip` (Unix) for project bundling.
+- **Technical Documentation**: Comprehensive onboarding guides in English and French covering the entire architecture.
+
 ## [0.3.5] - 2026-02-11
 
 ### Added

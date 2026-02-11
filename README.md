@@ -41,10 +41,12 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 **DubInstante** - Rendre le doublage vidéo professionnel accessible à tous.
 
 ## 🗺️ Roadmap
-- **v0.4.1**: ✅ macOS Fixes & Documentation / Correctifs macOS & Documentation
 - **v0.4.0**: ✅ Project Management System / Gestion de Projet (.dbi + ZIP)
-- **v0.5.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
-- **v0.6.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
+- **v0.5.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
+- **v0.6.0**: Prototype for android and potientialy iphone(not sure)
+- **v0.7.0**: Online prototype with .dbi files possible (no beta avaible)
+- **v0.8.0**: Surprise for all of you
+- **v0.9.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
+- **V1**: Stable launch on every platform possible with many surprises
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !
-<img width="1336" height="207" alt="image" src="https://github.com/user-attachments/assets/f8295854-666b-4283-b09a-c3838cd53e7a" />
 

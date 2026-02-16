@@ -49,11 +49,13 @@ MainWindow::MainWindow(QWidget *parent)
       m_saveManager(new SaveManager(this))
       // Initialize state
       ,
-      m_previousVolume(100), m_isRecording(false), m_lastRecordedDurationMs(0),
+      m_previousVolume(100), m_isRecording(false),
+      m_isFullscreenRecording(false), m_lastRecordedDurationMs(0),
       m_recordingStartTimeMs(0) {
   loadStylesheet();
   setupUi();
   setupConnections();
+  setupShortcuts();
 
   // Connect video sink
   m_playbackEngine->setVideoSink(m_videoWidget->videoSink());
@@ -94,26 +96,33 @@ void MainWindow::setupUi() {
   // Video Area with Overlay
   // =========================================================================
 
-  QFrame *videoFrame = new QFrame(this);
-  videoFrame->setObjectName("videoFrame");
-  videoFrame->setFrameStyle(QFrame::NoFrame);
-  videoFrame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  m_videoFrame = new QFrame(this);
+  m_videoFrame->setObjectName("videoFrame");
+  m_videoFrame->setFrameStyle(QFrame::NoFrame);
+  m_videoFrame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
 
-  m_videoWidget = new VideoWidget(videoFrame);
+  m_videoWidget = new VideoWidget(m_videoFrame);
   m_videoWidget->show();
 
-  m_rythmoOverlay = new RythmoOverlay(videoFrame);
+  m_rythmoOverlay = new RythmoOverlay(m_videoFrame);
   m_rythmoOverlay->show();
 
   QVBoxLayout *playerContainerLayout = new QVBoxLayout();
   playerContainerLayout->setContentsMargins(0, 0, 0, 0);
   playerContainerLayout->setSpacing(0);
-  playerContainerLayout->addWidget(videoFrame, 1);
+  playerContainerLayout->addWidget(m_videoFrame, 1);
 
   mainLayout->addLayout(playerContainerLayout, 1);
 
   // Watch for resize events
-  videoFrame->installEventFilter(this);
+  m_videoFrame->installEventFilter(this);
+
+  // Fullscreen container (hidden until recording starts)
+  m_fullscreenContainer =
+      new QWidget(nullptr, Qt::Window | Qt::FramelessWindowHint);
+  m_fullscreenContainer->setObjectName("fullscreenContainer");
+  m_fullscreenContainer->setStyleSheet("background-color: black;");
+  m_fullscreenContainer->hide();
 
   // =========================================================================
   // Position Slider
@@ -202,6 +211,12 @@ void MainWindow::setupUi() {
   m_recordButton->setCursor(Qt::PointingHandCursor);
   controlsLayout->addWidget(m_recordButton);
 
+  m_shortcutsButton = new QPushButton("⌨", this);
+  m_shortcutsButton->setFixedSize(36, 36);
+  m_shortcutsButton->setToolTip(tr("Raccourcis clavier"));
+  m_shortcutsButton->setCursor(Qt::PointingHandCursor);
+  controlsLayout->addWidget(m_shortcutsButton);
+
   mainLayout->addLayout(controlsLayout);
 
   // =========================================================================
@@ -248,6 +263,9 @@ void MainWindow::setupUi() {
 
   m_textColorCheck = new QCheckBox("Texte Blanc", this);
   speedLayout->addWidget(m_textColorCheck);
+
+  m_fullscreenRecordingCheck = new QCheckBox("Fullscreen Recording", this);
+  speedLayout->addWidget(m_fullscreenRecordingCheck);
 
   bottomControlsLayout->addLayout(speedLayout);
 
@@ -487,6 +505,10 @@ void MainWindow::setupConnections() {
   connect(m_audioRecorder2, &AudioRecorder::errorOccurred, this,
           &MainWindow::onError);
 
+  // Shortcuts button
+  connect(m_shortcutsButton, &QPushButton::clicked, this,
+          &MainWindow::showShortcutsPopup);
+
   // =========================================================================
   // Export
   // =========================================================================
@@ -722,6 +744,14 @@ void MainWindow::toggleRecording() {
       m_track2Panel->startRecording(QUrl::fromLocalFile(m_tempAudioPath2));
     }
 
+    // Enter fullscreen if checkbox is checked
+    if (m_fullscreenRecordingCheck->isChecked()) {
+      enterFullscreenRecording();
+    }
+
+    // Lock rythmo editing during recording
+    m_rythmoOverlay->setEditable(false);
+
     m_playbackEngine->play();
     m_recordingTimer.start();
 
@@ -738,6 +768,14 @@ void MainWindow::toggleRecording() {
     if (m_enableTrack2Check->isChecked()) {
       m_track2Panel->stopRecording();
     }
+
+    // Exit fullscreen if active
+    if (m_isFullscreenRecording) {
+      exitFullscreenRecording();
+    }
+
+    // Unlock rythmo editing
+    m_rythmoOverlay->setEditable(true);
 
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
 
@@ -775,6 +813,91 @@ void MainWindow::toggleRecording() {
 }
 
 // =============================================================================
+// Fullscreen Recording
+// =============================================================================
+
+void MainWindow::enterFullscreenRecording() {
+  // Reparent video and rythmo into fullscreen container
+  m_videoWidget->setParent(m_fullscreenContainer);
+  m_rythmoOverlay->setParent(m_fullscreenContainer);
+
+  // Layout them inside the fullscreen container
+  QVBoxLayout *fsLayout = new QVBoxLayout(m_fullscreenContainer);
+  fsLayout->setContentsMargins(0, 0, 0, 0);
+  fsLayout->setSpacing(0);
+  fsLayout->addWidget(m_videoWidget);
+
+  // Overlay must be raised above the video
+  m_rythmoOverlay->show();
+  m_rythmoOverlay->raise();
+  m_videoWidget->show();
+
+  m_fullscreenContainer->showFullScreen();
+  m_isFullscreenRecording = true;
+
+  // Install event filter on fullscreen container for resize sync
+  m_fullscreenContainer->installEventFilter(this);
+}
+
+void MainWindow::exitFullscreenRecording() {
+  m_fullscreenContainer->hide();
+
+  // Clean up the layout from the fullscreen container
+  QLayout *fsLayout = m_fullscreenContainer->layout();
+  if (fsLayout) {
+    while (fsLayout->count() > 0) {
+      fsLayout->takeAt(0);
+    }
+    delete fsLayout;
+  }
+
+  // Reparent back into the video frame
+  m_videoWidget->setParent(m_videoFrame);
+  m_rythmoOverlay->setParent(m_videoFrame);
+
+  m_videoWidget->show();
+  m_rythmoOverlay->show();
+  m_rythmoOverlay->raise();
+
+  // Restore geometry to match the video frame
+  m_videoWidget->setGeometry(0, 0, m_videoFrame->width(),
+                             m_videoFrame->height());
+  m_rythmoOverlay->setGeometry(0, 0, m_videoFrame->width(),
+                               m_videoFrame->height());
+
+  m_isFullscreenRecording = false;
+}
+
+// =============================================================================
+// Shortcuts
+// =============================================================================
+
+void MainWindow::setupShortcuts() {
+  // Ctrl+S: Stop recording
+  QShortcut *stopRecShortcut = new QShortcut(QKeySequence("Ctrl+S"), this);
+  stopRecShortcut->setContext(Qt::ApplicationShortcut);
+  connect(stopRecShortcut, &QShortcut::activated, this, [this]() {
+    if (m_isRecording) {
+      toggleRecording();
+    }
+  });
+
+  // Build persistent shortcuts menu
+  m_shortcutsMenu = new QMenu(tr("Raccourcis Clavier"), this);
+  m_shortcutsMenu->addAction("Ctrl+S — " + tr("Arrêter l'enregistrement"));
+  m_shortcutsMenu->addSeparator();
+  m_shortcutsMenu->addAction("Space — " + tr("Lecture / Pause"));
+  m_shortcutsMenu->addAction("← / → — " + tr("Image par image"));
+  m_shortcutsMenu->addAction("Esc — " + tr("Insérer espace + lecture"));
+  m_shortcutsMenu->addAction("Backspace — " + tr("Supprimer caractère"));
+}
+
+void MainWindow::showShortcutsPopup() {
+  m_shortcutsMenu->popup(m_shortcutsButton->mapToGlobal(
+      QPoint(0, -m_shortcutsMenu->sizeHint().height())));
+}
+
+// =============================================================================
 // Slots - Export
 // =============================================================================
 
@@ -805,16 +928,31 @@ void MainWindow::onError(const QString &errorMessage) {
 // =============================================================================
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
-  if (watched->objectName() == "videoFrame" &&
-      event->type() == QEvent::Resize) {
-    QFrame *frame = qobject_cast<QFrame *>(watched);
-    if (frame) {
-      if (m_videoWidget) {
-        m_videoWidget->setGeometry(0, 0, frame->width(), frame->height());
+  if (event->type() == QEvent::Resize) {
+    if (watched->objectName() == "videoFrame") {
+      QFrame *frame = qobject_cast<QFrame *>(watched);
+      if (frame) {
+        if (m_videoWidget) {
+          m_videoWidget->setGeometry(0, 0, frame->width(), frame->height());
+        }
+        if (m_rythmoOverlay) {
+          m_rythmoOverlay->setGeometry(0, 0, frame->width(), frame->height());
+          m_rythmoOverlay->raise();
+        }
       }
-      if (m_rythmoOverlay) {
-        m_rythmoOverlay->setGeometry(0, 0, frame->width(), frame->height());
-        m_rythmoOverlay->raise();
+    } else if (watched->objectName() == "fullscreenContainer" &&
+               m_isFullscreenRecording) {
+      QWidget *container = qobject_cast<QWidget *>(watched);
+      if (container) {
+        if (m_videoWidget) {
+          m_videoWidget->setGeometry(0, 0, container->width(),
+                                     container->height());
+        }
+        if (m_rythmoOverlay) {
+          m_rythmoOverlay->setGeometry(0, 0, container->width(),
+                                       container->height());
+          m_rythmoOverlay->raise();
+        }
       }
     }
   }
@@ -826,6 +964,14 @@ void MainWindow::resizeEvent(QResizeEvent *event) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
+  // Escape in fullscreen recording: stop recording + exit fullscreen
+  if (event->key() == Qt::Key_Escape && m_isFullscreenRecording &&
+      m_isRecording) {
+    toggleRecording();
+    event->accept();
+    return;
+  }
+
   // Global Play/Pause via Space
   if (event->key() == Qt::Key_Space) {
     if (m_playbackEngine->playbackState() == QMediaPlayer::PlayingState) {

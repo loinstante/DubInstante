@@ -61,6 +61,10 @@ public:
   void setSpeed(int speed);
   int speed() const;
 
+  /** @brief Enable/disable text editing on this band. */
+  void setEditable(bool editable);
+  bool isEditable() const;
+
 signals:
   void textChanged(const QString &text);
 
@@ -178,6 +182,7 @@ private:
   qint64 m_currentPosition;
   int m_speed;
   bool m_isPlaying;
+  bool m_editable;
 
   // Visual configuration
   VisualStyle m_visualStyle;

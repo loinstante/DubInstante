@@ -16,8 +16,8 @@
 
 RythmoWidget::RythmoWidget(QWidget *parent)
     : QWidget(parent), m_cursorIndex(0), m_currentPosition(0), m_speed(100),
-      m_isPlaying(false), m_visualStyle(Standalone), m_fontSize(16),
-      m_verticalPadding(4), m_textColor(QColor(34, 34, 34)),
+      m_isPlaying(false), m_editable(true), m_visualStyle(Standalone),
+      m_fontSize(16), m_verticalPadding(4), m_textColor(QColor(34, 34, 34)),
       m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
       m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
@@ -66,6 +66,10 @@ void RythmoWidget::setSpeed(int speed) {
 }
 
 int RythmoWidget::speed() const { return m_speed; }
+
+void RythmoWidget::setEditable(bool editable) { m_editable = editable; }
+
+bool RythmoWidget::isEditable() const { return m_editable; }
 
 void RythmoWidget::setText(const QString &text) {
   if (m_text != text) {
@@ -408,6 +412,8 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
 
   // Escape: Insert space (push text) and play
   if (event->key() == Qt::Key_Escape) {
+    if (!m_editable)
+      return;
     int idx = cursorIndex();
     while (m_text.length() < idx) {
       m_text.append(' ');
@@ -424,6 +430,8 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
   int idx = cursorIndex();
 
   if (event->key() == Qt::Key_Backspace) {
+    if (!m_editable)
+      return;
     // If we are BEYOND the text, just move back
     if (idx > m_text.length()) {
       qint64 newTime = std::max(qint64(0), m_currentPosition - step);
@@ -440,6 +448,8 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
   }
 
   if (event->key() == Qt::Key_Delete) {
+    if (!m_editable)
+      return;
     if (idx >= 0 && idx < m_text.length()) {
       m_text.remove(idx, 1);
       emit textChanged(m_text);
@@ -449,6 +459,8 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
   }
 
   // Printable Characters
+  if (!m_editable)
+    return;
   if (!event->text().isEmpty() && event->text().at(0).isPrint()) {
     // Pad with spaces if needed
     while (m_text.length() < idx) {

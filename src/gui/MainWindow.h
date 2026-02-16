@@ -14,12 +14,15 @@
 
 #include <QCheckBox>
 #include <QElapsedTimer>
+#include <QFrame>
 #include <QKeyEvent>
 #include <QLabel>
 #include <QMainWindow>
 #include <QMediaPlayer>
+#include <QMenu>
 #include <QProgressBar>
 #include <QPushButton>
+#include <QShortcut>
 #include <QSpinBox>
 
 // Forward declarations - Core layer
@@ -87,7 +90,11 @@ private slots:
 private:
   void setupUi();
   void setupConnections();
+  void setupShortcuts();
   void loadStylesheet();
+  void enterFullscreenRecording();
+  void exitFullscreenRecording();
+  void showShortcutsPopup();
 
   // =========================================================================
   // Core Services (Business Logic)
@@ -125,11 +132,18 @@ private:
   QPushButton *m_recordButton;
   QSpinBox *m_speedSpinBox;
   QCheckBox *m_textColorCheck;
+  QCheckBox *m_fullscreenRecordingCheck;
   QProgressBar *m_exportProgressBar;
 
   // Track 2 controls
   QWidget *m_track2Container;
   QCheckBox *m_enableTrack2Check;
+
+  // Fullscreen recording
+  QFrame *m_videoFrame;
+  QWidget *m_fullscreenContainer;
+  QPushButton *m_shortcutsButton;
+  QMenu *m_shortcutsMenu;
 
   // =========================================================================
   // State
@@ -137,6 +151,7 @@ private:
 
   int m_previousVolume;
   bool m_isRecording;
+  bool m_isFullscreenRecording;
   QString m_tempAudioPath1;
   QString m_tempAudioPath2;
   QElapsedTimer m_recordingTimer;

@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(DubInstante VERSION 0.4.2 LANGUAGES CXX)
+project(DubInstante VERSION 0.5.0 LANGUAGES CXX)
 
 # =============================================================================
 # C++ Configuration

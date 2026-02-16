@@ -28,6 +28,7 @@
 ### Keyboard Shortcuts / Raccourcis Clavier
 
 - **Space** / **Espace**: Play / Pause
+- **Ctrl+S**: Stop Recording / Arrêter l'enregistrement
 - **Esc** / **Échap**: Insert space & play / Insérer espace & lecture
 - **← / →**: Frame navigation / Navigation image par image
 
@@ -42,7 +43,7 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 
 ## 🗺️ Roadmap
 - **v0.4.0**: ✅ Project Management System / Gestion de Projet (.dbi + ZIP)
-- **v0.5.0**: Fullscreen Mode & Pro Shortcuts / Mode Plein Écran & Raccourcis Pro
+- **v0.5.0**: ✅ Fullscreen Recording & Shortcuts / Enregistrement Plein Écran & Raccourcis
 - **v0.6.0**: Prototype for Android and potientialy Iphone(not sure) / Prototype application Andrdoid et Iphone(pas sur)
 - **v0.7.0**: Online prototype with .dbi files possible (no beta avaible) / Prototype d'un site web avec prise en charge du .dbi
 - **v0.8.0**: Surprise for all of you / Surprise pour vous tous

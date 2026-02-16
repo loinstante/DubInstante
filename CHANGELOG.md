@@ -5,6 +5,16 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-02-16
+
+### Added
+- **Fullscreen Recording Mode**: New "Fullscreen Recording" checkbox — when enabled, the video player and rythmo band go fullscreen during recording for an immersive experience.
+- **Stop Recording Shortcut**: `Ctrl+S` immediately stops the active recording session.
+- **Shortcuts Popup Menu**: New "⌨" button in the control bar displays all available keyboard shortcuts.
+
+### Fixed
+- **edition of the rythmo band**: fixed the rythmo band that could be changed when recording 
+
 ## [0.4.2] - 2026-02-13
 
 ### Fixed

@@ -299,11 +299,13 @@ RythmoWidget::characterTyped("A")
 MainWindow::toggleRecording()
     ├──→ AudioRecorder1::startRecording(tempPath1)
     ├──→ AudioRecorder2::startRecording(tempPath2)
+    ├──→ [si fullscreen coché] enterFullscreenRecording()
     └──→ PlaybackEngine::play()
 
-MainWindow::toggleRecording() (second appui)
+MainWindow::toggleRecording() (second appui ou Ctrl+S)
     ├──→ AudioRecorder1::stopRecording()
     ├──→ AudioRecorder2::stopRecording()
+    ├──→ [si fullscreen] exitFullscreenRecording()
     ├──→ PlaybackEngine::pause()
     └──→ ExportService::startExport(config)  [déclenché par l'utilisateur]
 ```
@@ -457,7 +459,8 @@ Le projet n'utilise **aucune bibliothèque C++ externe** en dehors de Qt 6. Les 
 | Touche | Action |
 |--------|--------|
 | **Espace** | Lecture / Pause |
-| **Échap** | Insère un espace sur le rythmo + lecture |
+| **Ctrl+S** | Arrêter l'enregistrement |
+| **Échap** | Insère un espace sur le rythmo + lecture (ou arrête l'enregistrement plein écran) |
 | **← / →** | Navigation image par image |
 | **Toute lettre** | Tape sur la bande rythmo active |
 | **Retour arrière** | Supprime le caractère avant le curseur |
@@ -484,12 +487,14 @@ Le projet n'utilise **aucune bibliothèque C++ externe** en dehors de Qt 6. Les 
     - [x] Regroupement archive ZIP (projet + vidéo)
     - [x] Support compression multi-plateformes
     - [x] Persistance complète de l'état
-- **v0.5.0 — Personnalisation**
+- **v0.5.0 — Enregistrement Plein Écran & Raccourcis** ✅
+    - [x] Mode d'enregistrement plein écran (case à cocher)
+    - [x] Raccourci Ctrl+S pour arrêter l'enregistrement
+    - [x] Menu popup des raccourcis
+    - [x] Touche Échap pour quitter l'enregistrement plein écran
+- **v0.6.0 — Personnalisation**
     - [ ] Couleurs personnalisées des bandes rythmo (fond + texte)
     - [ ] Réglages indépendants par bande
     - [ ] Ajustements visuels sans impact sur la mise en page
-- **v0.6.0 — Expérience Pro**
-    - [ ] Mode d'enregistrement plein écran
-    - [ ] Raccourcis clavier globaux
 - **Et plus encore…**
     - [ ] Vos suggestions sont les bienvenues ! 💡

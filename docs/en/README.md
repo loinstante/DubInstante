@@ -299,11 +299,13 @@ RythmoWidget::characterTyped("A")
 MainWindow::toggleRecording()
     ├──→ AudioRecorder1::startRecording(tempPath1)
     ├──→ AudioRecorder2::startRecording(tempPath2)
+    ├──→ [if fullscreen checked] enterFullscreenRecording()
     └──→ PlaybackEngine::play()
 
-MainWindow::toggleRecording() (second press)
+MainWindow::toggleRecording() (second press or Ctrl+S)
     ├──→ AudioRecorder1::stopRecording()
     ├──→ AudioRecorder2::stopRecording()
+    ├──→ [if fullscreen] exitFullscreenRecording()
     ├──→ PlaybackEngine::pause()
     └──→ ExportService::startExport(config)  [user-triggered]
 ```
@@ -459,7 +461,8 @@ The project uses **no external C++ libraries** beyond Qt 6. External tools are i
 | Key | Action |
 |-----|--------|
 | **Space** | Play / Pause |
-| **Esc** | Insert space on rythmo + play |
+| **Ctrl+S** | Stop Recording |
+| **Esc** | Insert space on rythmo + play (or stop fullscreen recording) |
 | **← / →** | Frame-by-frame navigation |
 | **Any letter** | Types on the active rythmo band |
 | **Backspace** | Deletes character before cursor |
@@ -486,12 +489,14 @@ The project uses **no external C++ libraries** beyond Qt 6. External tools are i
     - [x] ZIP archive bundling (project + video)
     - [x] Cross-platform compression
     - [x] Full state persistence
-- **v0.5.0 — Customization**
+- **v0.5.0 — Fullscreen Recording & Shortcuts** ✅
+    - [x] Fullscreen recording mode (checkbox toggle)
+    - [x] Ctrl+S stop recording shortcut
+    - [x] Shortcuts popup menu
+    - [x] Escape key exits fullscreen recording
+- **v0.6.0 — Customization**
     - [ ] Custom rythmo band colors (background + text)
     - [ ] Per-band independent settings
     - [ ] Visual tweaks without layout impact
-- **v0.6.0 — Pro Experience**
-    - [ ] Full-screen recording mode
-    - [ ] Global keyboard shortcuts
 - **And more…**
     - [ ] User suggestions welcome! 💡

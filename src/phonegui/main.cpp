@@ -1,13 +1,12 @@
 #include <QGuiApplication>
-#include <QIcon>
 #include <QQmlApplicationEngine>
 
 int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
-  app.setWindowIcon(QIcon(":/DubInstante.png"));
+  app.setApplicationName("DubInstante");
 
   QQmlApplicationEngine engine;
-  const QUrl url(u"qrc:/Main.qml"_qs);
+  const QUrl url(QStringLiteral("qrc:/Main.qml"));
   QObject::connect(
       &engine, &QQmlApplicationEngine::objectCreated, &app,
       [url](QObject *obj, const QUrl &objUrl) {

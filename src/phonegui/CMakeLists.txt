@@ -8,7 +8,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Multimedia)
+find_package(Qt6 REQUIRED COMPONENTS Quick Qml Multimedia)
 
 qt_add_executable(DubInstanteAndroid
     main.cpp
@@ -23,5 +23,7 @@ endif()
 
 target_link_libraries(DubInstanteAndroid PRIVATE
     Qt6::Quick
+    Qt6::Qml
     Qt6::Multimedia
 )
+

@@ -158,17 +158,25 @@ jobs:
       with:
         java-version: '17'
         distribution: 'temurin'
-        
+
     - name: Setup Android SDK
       uses: android-actions/setup-android@v3
 
-    - name: Install Qt
+    - name: Install Qt (Host tools for cross-compilation)
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        host: 'linux'
+        target: 'desktop'
+        set-env: false
+
+    - name: Install Qt (Android arm64)
       uses: jurplel/install-qt-action@v3
       with:
         version: '6.5.3'
         host: 'linux'
         target: 'android'
-        arch: 'android_armv7'
+        arch: 'android_arm64_v8a'
         modules: 'qtmultimedia'
 
     - name: Configure CMake
@@ -176,12 +184,14 @@ jobs:
         cd src/phonegui
         mkdir build-android
         cd build-android
-        qt-cmake ..
+        $Qt6_DIR/bin/qt-cmake .. \
+          -DCMAKE_BUILD_TYPE=Debug \
+          -DQT_HOST_PATH="$(dirname "$Qt6_DIR")/gcc_64"
 
     - name: Build APK
       run: |
         cd src/phonegui/build-android
-        cmake --build . --target DubInstanteAndroid_make_apk
+        cmake --build . --target apk
 
     - name: Get Version
       id: get_version
@@ -192,5 +202,5 @@ jobs:
     - name: Upload Artifact
       uses: actions/upload-artifact@v4
       with:
-        name: DubInstante_Android_${{ steps.get_version.outputs.version }}.apk
-        path: src/phonegui/build-android/android-build/build/outputs/apk/release/android-build-release-signed.apk
+        name: DubInstante_Android_${{ steps.get_version.outputs.version }}
+        path: src/phonegui/build-android/android-build/build/outputs/apk/**/*.apk

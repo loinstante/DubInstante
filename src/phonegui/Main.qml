@@ -1,105 +1,157 @@
 import QtQuick
 import QtQuick.Controls
-import QtQuick.Dialogs
 import QtQuick.Layouts
 import QtMultimedia
+import Qt.labs.platform as Platform
+import QtCore
 
 ApplicationWindow {
+    id: root
     visible: true
     width: 360
     height: 640
     title: "DubInstante Phone"
 
+    // ── Recording ──────────────────────────────────────────────
     CaptureSession {
         id: captureSession
         audioInput: AudioInput {}
         recorder: MediaRecorder {
             id: recorder
-            outputLocation: "file:///storage/emulated/0/Download/dub_recording.m4a"
+            outputLocation: StandardPaths.writableLocation(StandardPaths.MusicLocation) + "/dub_recording.m4a"
             onRecorderStateChanged: {
-                if (recorderState === MediaRecorder.StoppedState) {
-                    console.log("Recording saved to", outputLocation)
-                }
+                if (recorderState === MediaRecorder.StoppedState)
+                    console.log("Recording saved to", actualLocation)
             }
         }
     }
 
+    // ── Video Playback ─────────────────────────────────────────
     MediaPlayer {
         id: player
         videoOutput: videoOutput
         audioOutput: AudioOutput {}
     }
 
-    FileDialog {
+    // ── Android-compatible File Dialog (Qt.labs.platform) ──────
+    Platform.FileDialog {
         id: fileDialog
-        title: "Please choose a video file"
+        title: "Choose a video file"
+        nameFilters: ["Video files (*.mp4 *.mkv *.avi *.mov *.webm)", "All files (*)"]
         onAccepted: {
-            player.source = fileDialog.selectedFile
+            player.source = file
             player.play()
         }
     }
 
+    // ── UI ─────────────────────────────────────────────────────
     ColumnLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
+        anchors.margins: 8
+        spacing: 8
 
-        // Video Output
+        // Video area
         Rectangle {
             Layout.fillWidth: true
-            Layout.preferredHeight: width * 9 / 16 // 16:9 aspect ratio
+            Layout.preferredHeight: width * 9 / 16
             color: "black"
+            radius: 6
 
             VideoOutput {
                 id: videoOutput
                 anchors.fill: parent
             }
-        }
 
-        // Controls
-        RowLayout {
-            Layout.fillWidth: true
-            
-            Button {
-                text: "Load Video"
-                Layout.fillWidth: true
-                onClicked: fileDialog.open()
-            }
-
-            Button {
-                text: recorder.recorderState === MediaRecorder.RecordingState ? "Stop" : "Record"
-                Layout.fillWidth: true
-                font.bold: true
-                palette.buttonText: recorder.recorderState === MediaRecorder.RecordingState ? "white" : "black"
-                palette.button: recorder.recorderState === MediaRecorder.RecordingState ? "red" : "#e0e0e0"
-
+            // Tap to play / pause
+            MouseArea {
+                anchors.fill: parent
                 onClicked: {
-                    if (recorder.recorderState === MediaRecorder.RecordingState) {
-                        recorder.stop()
-                    } else {
-                        recorder.record()
-                    }
+                    if (player.playbackState === MediaPlayer.PlayingState)
+                        player.pause()
+                    else
+                        player.play()
                 }
             }
         }
 
-        // Rythmo Band (Editable)
+        // Buttons row
+        RowLayout {
+            Layout.fillWidth: true
+            spacing: 8
+
+            Button {
+                id: loadBtn
+                text: "📂  Load Video"
+                Layout.fillWidth: true
+                onClicked: fileDialog.open()
+
+                background: Rectangle {
+                    color: loadBtn.pressed ? "#bbdefb" : "#e3f2fd"
+                    radius: 6
+                }
+            }
+
+            Button {
+                id: recBtn
+                property bool isRecording: recorder.recorderState === MediaRecorder.RecordingState
+                text: isRecording ? "⏹  Stop" : "🔴  Record"
+                Layout.fillWidth: true
+                font.bold: true
+                onClicked: {
+                    if (isRecording)
+                        recorder.stop()
+                    else
+                        recorder.record()
+                }
+
+                background: Rectangle {
+                    color: recBtn.isRecording
+                        ? (recBtn.pressed ? "#c62828" : "#ef5350")
+                        : (recBtn.pressed ? "#c8e6c9" : "#e8f5e9")
+                    radius: 6
+                }
+
+                contentItem: Text {
+                    text: recBtn.text
+                    font: recBtn.font
+                    color: recBtn.isRecording ? "white" : "black"
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                }
+            }
+        }
+
+        // Rythmo Band (editable)
         Rectangle {
             Layout.fillWidth: true
             Layout.fillHeight: true
-            border.color: "gray"
+            border.color: "#bdbdbd"
             border.width: 1
-            color: "#f5f5f5"
+            radius: 6
+            color: "#fafafa"
 
-            ScrollView {
+            ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 5
-                
-                TextArea {
-                    id: rythmoText
-                    width: parent.width
-                    text: "Write your rythmo text here...\nScroll down as the video plays."
-                    wrapMode: Text.WordWrap
+                anchors.margins: 6
+                spacing: 4
+
+                Text {
+                    text: "Rythmo Band"
+                    font.pixelSize: 12
+                    font.bold: true
+                    color: "#757575"
+                }
+
+                ScrollView {
+                    Layout.fillWidth: true
+                    Layout.fillHeight: true
+
+                    TextArea {
+                        id: rythmoText
+                        placeholderText: "Type your dubbing text here…"
+                        wrapMode: Text.WordWrap
+                        font.pixelSize: 16
+                    }
                 }
             }
         }

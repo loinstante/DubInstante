@@ -58,3 +58,11 @@ Thumbs.db
 
 # Logs
 *.log
+
+# Android toolchain & build artifacts
+src/phonegui/android-toolchain/
+src/phonegui/build-android/
+src/phonegui/jdk-*/
+src/phonegui/.env
+*.apk
+*.aab

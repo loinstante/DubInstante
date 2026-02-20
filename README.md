@@ -44,7 +44,7 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 ## 🗺️ Roadmap
 - **v0.4.0**: ✅ Project Management System / Gestion de Projet (.dbi + ZIP)
 - **v0.5.0**: ✅ Fullscreen Recording & Shortcuts / Enregistrement Plein Écran & Raccourcis
-- **v0.6.0**: Prototype for Android and potientialy Iphone(not sure) / Prototype application Andrdoid et Iphone(pas sur)
+- **v0.6.0**: Prototype for Android and potientialy Iphone(not sure) / Prototype application Android et Iphone(pas sur)
 - **v0.7.0**: Online prototype with .dbi files possible (no beta avaible) / Prototype d'un site web avec prise en charge du .dbi
 - **v0.8.0**: Surprise for all of you / Surprise pour vous tous
 - **v0.9.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes

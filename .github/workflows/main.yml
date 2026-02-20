@@ -145,3 +145,52 @@ jobs:
       with:
         name: DubInstante_macos_${{ steps.get_version.outputs.version }}
         path: build/DubInstante.dmg
+
+  build-android:
+    name: Android Build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v3
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        
+    - name: Setup Android SDK
+      uses: android-actions/setup-android@v3
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v3
+      with:
+        version: '6.5.3'
+        host: 'linux'
+        target: 'android'
+        arch: 'android_armv7'
+        modules: 'qtmultimedia'
+
+    - name: Configure CMake
+      run: |
+        cd src/phonegui
+        mkdir build-android
+        cd build-android
+        qt-cmake ..
+
+    - name: Build APK
+      run: |
+        cd src/phonegui/build-android
+        cmake --build . --target DubInstanteAndroid_make_apk
+
+    - name: Get Version
+      id: get_version
+      run: |
+        VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+
+    - name: Upload Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: DubInstante_Android_${{ steps.get_version.outputs.version }}.apk
+        path: src/phonegui/build-android/android-build/build/outputs/apk/release/android-build-release-signed.apk

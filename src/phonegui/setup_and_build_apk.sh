@@ -116,7 +116,7 @@ QT_HOST_DIR="$TOOLCHAIN_DIR/Qt/$QT_VERSION/gcc_64"
 if [ ! -d "$QT_ANDROID_DIR" ]; then
     echo "📦 Downloading Qt $QT_VERSION for Android arm64 (this may take a while)..."
     "$AQT_EXE" install-qt linux android "$QT_VERSION" android_arm64_v8a \
-        -m qtmultimedia \
+        -m qtmultimedia qt5compat \
         --outputdir "$TOOLCHAIN_DIR/Qt"
 fi
 echo "✅ Qt $QT_VERSION Android arm64 ready"

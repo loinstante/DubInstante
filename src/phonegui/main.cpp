@@ -1,27 +1,21 @@
-#include <QCoreApplication> // Added for QCoreApplication::exit
-#include <QDebug>           // Added for qCritical()
+#include <QDebug>
 #include <QGuiApplication>
 #include <QQmlApplicationEngine>
+#include <QQuickWindow>
 #include <QUrl>
-
-using namespace Qt::StringLiterals;
+#include <stdlib.h>
 
 int main(int argc, char *argv[]) {
+  // Force software rendering to avoid MIUI/Android hwui OpenGL conflicts
+  qputenv("QT_QUICK_BACKEND", "software");
+
   QGuiApplication app(argc, argv);
-  app.setApplicationName("DubInstante");
 
   QQmlApplicationEngine engine;
-  const QUrl url(u"qrc:/qt/qml/DubInstante/Main.qml"_s);
   QObject::connect(
-      &engine, &QQmlApplicationEngine::objectCreated, &app,
-      [url](QObject *obj, const QUrl &objUrl) {
-        if (!obj && url == objUrl) {
-          qCritical() << "Failed to load Main.qml from" << url;
-          QCoreApplication::exit(-1);
-        }
-      },
-      Qt::QueuedConnection);
-  engine.load(url);
+      &engine, &QQmlApplicationEngine::objectCreationFailed, &app,
+      []() { QCoreApplication::exit(-1); }, Qt::QueuedConnection);
+  engine.loadFromModule("DubInstante", "Main");
 
   return app.exec();
 }

@@ -35,16 +35,18 @@ class AndroidExportService(private val context: Context) {
         val sourceVideoPath = tempSourceFile.absolutePath
 
         // 2. Construct identical ffmpeg command logic to desktop as an exact array of arguments
-        // Strip out existing audio, add new audio, map shortest
+        // We use a filter_complex with amix to mix the original video's audio [0:a] and the mic [1:a]
         val commandArgs = arrayOf(
             "ffmpeg",
             "-y",
             "-i", sourceVideoPath,
             "-i", recordedAudioPath,
+            "-filter_complex", "[0:a]volume=1.0[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=longest[aout]",
+            "-map", "0:v:0",
+            "-map", "[aout]",
             "-c:v", "copy",
             "-c:a", "aac",
-            "-map", "0:v:0",
-            "-map", "1:a:0",
+            "-b:a", "192k",
             "-shortest",
             outputFile.absolutePath
         )

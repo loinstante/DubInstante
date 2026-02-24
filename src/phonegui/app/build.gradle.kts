@@ -44,6 +44,12 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+    externalNativeBuild {
+        cmake {
+            path("src/main/cpp/CMakeLists.txt")
+            version = "3.22.1"
+        }
+    }
 }
 
 dependencies {
@@ -55,4 +61,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+    implementation("androidx.media3:media3-exoplayer:1.3.1")
+    implementation("androidx.media3:media3-ui:1.3.1")
 }

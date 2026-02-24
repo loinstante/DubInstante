@@ -62,7 +62,38 @@ class MainActivity : ComponentActivity() {
                     var isRecording by remember { mutableStateOf(false) }
                     var isExporting by remember { mutableStateOf(false) }
                     var exportProgress by remember { mutableStateOf(0) }
+                    var pendingExportAudioPath by remember { mutableStateOf<String?>(null) }
                     val coroutineScope = rememberCoroutineScope()
+
+                    val saveVideoLauncher = rememberLauncherForActivityResult(
+                        contract = ActivityResultContracts.CreateDocument("video/mp4")
+                    ) { uri: Uri? ->
+                        if (uri != null && selectedVideoUri != null && pendingExportAudioPath != null) {
+                            isExporting = true
+                            exportProgress = 0
+                            coroutineScope.launch {
+                                exportService.exportVideo(
+                                    Uri.parse(selectedVideoUri),
+                                    pendingExportAudioPath!!,
+                                    uri,
+                                    onProgress = { exportProgress = it },
+                                    onComplete = { success, msg, _ ->
+                                        isExporting = false
+                                        pendingExportAudioPath = null
+                                        coroutineScope.launch(Dispatchers.Main) {
+                                            if (success) {
+                                                Toast.makeText(context, "Exported successfully", Toast.LENGTH_LONG).show()
+                                            } else {
+                                                Toast.makeText(context, "Export Failed: $msg", Toast.LENGTH_LONG).show()
+                                            }
+                                        }
+                                    }
+                                )
+                            }
+                        } else {
+                            pendingExportAudioPath = null
+                        }
+                    }
 
                     // Initialize state from JNI on first load
                     LaunchedEffect(Unit) {
@@ -81,30 +112,11 @@ class MainActivity : ComponentActivity() {
                             exoPlayer.pause()
                             audioRecorder.stopRecording()
                             isRecording = false
-                            isExporting = true
-                            exportProgress = 0
                             
                             val audioPath = audioRecorder.outputFile?.absolutePath
                             if (selectedVideoUri != null && audioPath != null) {
-                                coroutineScope.launch {
-                                    exportService.exportVideo(
-                                        Uri.parse(selectedVideoUri),
-                                        audioPath,
-                                        onProgress = { exportProgress = it },
-                                        onComplete = { success, msg, path ->
-                                            isExporting = false
-                                            coroutineScope.launch(Dispatchers.Main) {
-                                                if (success) {
-                                                    Toast.makeText(context, "Exported: $path", Toast.LENGTH_LONG).show()
-                                                } else {
-                                                    Toast.makeText(context, "Export Failed: $msg", Toast.LENGTH_LONG).show()
-                                                }
-                                            }
-                                        }
-                                    )
-                                }
-                            } else {
-                                isExporting = false
+                                pendingExportAudioPath = audioPath
+                                saveVideoLauncher.launch("dubinstante_export_${System.currentTimeMillis()}.mp4")
                             }
                         }
                     }
@@ -226,35 +238,66 @@ class MainActivity : ComponentActivity() {
                         
                         Spacer(modifier = Modifier.height(24.dp))
                         
-                        // Actions (Slider + Open Button)
+                        // Volume Control Slider
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🔈", fontSize = 20.sp)
+                            Slider(
+                                value = volume,
+                                onValueChange = { 
+                                    volume = it
+                                    exoPlayer.volume = volume
+                                    nativeBridge.setVolume(it)
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                            )
+                            Text("🔊", fontSize = 20.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Speed Control Slider
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Speed:", fontSize = 16.sp, modifier = Modifier.width(60.dp))
+                            Slider(
+                                value = rythmoSpeed,
+                                onValueChange = { 
+                                    rythmoSpeed = it
+                                    nativeBridge.setRythmoSpeed(it.toInt())
+                                },
+                                valueRange = 100f..999f,
+                                modifier = Modifier.weight(1f)
+                            )
+                            Text("${rythmoSpeed.toInt()} px/s", fontSize = 14.sp, modifier = Modifier.width(60.dp))
+                        }
+
+                        Spacer(modifier = Modifier.height(24.dp))
+
+                        // Actions (Open Video + Record Buttons)
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth(0.9f)
                                 .height(56.dp),
                             verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.SpaceBetween
+                            horizontalArrangement = Arrangement.SpaceEvenly
                         ) {
-                            // Volume Slider
-                            Row(
-                                modifier = Modifier.weight(1f),
-                                verticalAlignment = Alignment.CenterVertically
+                            // Open Video Button
+                            Button(
+                                onClick = { videoPickerLauncher.launch(arrayOf("video/*")) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(end = 8.dp)
                             ) {
-                                Text("🔈", fontSize = 20.sp)
-                                Slider(
-                                    value = volume,
-                                    onValueChange = { 
-                                        volume = it
-                                        exoPlayer.volume = volume
-                                        nativeBridge.setVolume(it)
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .padding(horizontal = 8.dp)
-                                )
-                                Text("🔊", fontSize = 20.sp)
+                                Text("Open Video", fontSize = 18.sp)
                             }
-
-                            Spacer(modifier = Modifier.width(16.dp))
 
                             // Record Button
                             Button(
@@ -273,41 +316,14 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }
                                 },
-                                modifier = Modifier.fillMaxHeight(),
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .padding(start = 8.dp),
                                 colors = ButtonDefaults.buttonColors(containerColor = if (isRecording) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary)
                             ) {
                                 Text(if (isRecording) "Stop" else "Record", fontSize = 18.sp)
                             }
-                            
-                            Spacer(modifier = Modifier.width(8.dp))
-
-                            // Open Video Button
-                            Button(
-                                onClick = { videoPickerLauncher.launch(arrayOf("video/*")) },
-                                modifier = Modifier.fillMaxHeight()
-                            ) {
-                                Text("Open Video", fontSize = 18.sp)
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Speed Control Slider
-                        Row(
-                            modifier = Modifier.fillMaxWidth(0.9f),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text("Speed:", fontSize = 16.sp, modifier = Modifier.width(60.dp))
-                            Slider(
-                                value = rythmoSpeed,
-                                onValueChange = { 
-                                    rythmoSpeed = it
-                                    nativeBridge.setRythmoSpeed(it.toInt())
-                                },
-                                valueRange = 50f..300f,
-                                modifier = Modifier.weight(1f)
-                            )
-                            Text("${rythmoSpeed.toInt()} px/s", fontSize = 14.sp, modifier = Modifier.width(60.dp))
                         }
                     }
 

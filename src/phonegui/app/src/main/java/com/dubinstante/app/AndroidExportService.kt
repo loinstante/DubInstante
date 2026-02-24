@@ -16,14 +16,11 @@ class AndroidExportService(private val context: Context) {
     suspend fun exportVideo(
         sourceVideoUri: Uri,
         recordedAudioPath: String,
+        targetUri: Uri,
         onProgress: (Int) -> Unit,
         onComplete: (Boolean, String, String?) -> Unit
     ) {
-        val outputDir = File(context.getExternalFilesDir(null), "Exports")
-        if (!outputDir.exists()) {
-            outputDir.mkdirs()
-        }
-        val outputFile = File(outputDir, "dubinstante_export_${System.currentTimeMillis()}.mp4")
+        val outputFile = File(context.cacheDir, "dubinstante_export_temp_${System.currentTimeMillis()}.mp4")
 
         // 1. Copy Content URI to a temp file
         val tempSourceFile = File(context.cacheDir, "temp_source_video.mp4")
@@ -37,16 +34,43 @@ class AndroidExportService(private val context: Context) {
         
         val sourceVideoPath = tempSourceFile.absolutePath
 
-        // 2. Construct identical ffmpeg command logic to desktop
-        val command = "ffmpeg -y -i \"$sourceVideoPath\" -i \"$recordedAudioPath\" -c:v copy -c:a aac -map 0:v:0 -map 1:a:0 -shortest \"${outputFile.absolutePath}\""
-        val commandArgs = command.split(" ").toTypedArray()
+        // 2. Construct identical ffmpeg command logic to desktop as an exact array of arguments
+        // Strip out existing audio, add new audio, map shortest
+        val commandArgs = arrayOf(
+            "ffmpeg",
+            "-y",
+            "-i", sourceVideoPath,
+            "-i", recordedAudioPath,
+            "-c:v", "copy",
+            "-c:a", "aac",
+            "-map", "0:v:0",
+            "-map", "1:a:0",
+            "-shortest",
+            outputFile.absolutePath
+        )
 
-        Log.i("AndroidExportService", "Executing FFmpeg: $command")
+        Log.i("AndroidExportService", "Executing FFmpeg: ${commandArgs.joinToString(" ")}")
         
         RxFFmpegInvoke.getInstance().runCommandAsync(commandArgs, object : RxFFmpegSubscriber() {
             override fun onFinish() {
-                Log.i("AndroidExportService", "Export successful: ${outputFile.absolutePath}")
-                onComplete(true, "Export completed successfully", outputFile.absolutePath)
+                try {
+                    val outputStream = context.contentResolver.openOutputStream(targetUri)
+                    if (outputStream != null) {
+                        outputFile.inputStream().use { input ->
+                            outputStream.use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                        outputFile.delete() // Cleanup temp file
+                        Log.i("AndroidExportService", "Export copied successfully to user Uri")
+                        onComplete(true, "Export completed successfully", null)
+                    } else {
+                        onComplete(false, "Failed to open output stream for selected location", null)
+                    }
+                } catch (e: Exception) {
+                    Log.e("AndroidExportService", "Failed to copy export to target Uri", e)
+                    onComplete(false, "Failed to copy export: ${e.message}", null)
+                }
             }
 
             override fun onProgress(progress: Int, progressTime: Long) {

@@ -48,6 +48,7 @@ class MainActivity : ComponentActivity() {
                 ) {
                     var selectedVideoUri by remember { mutableStateOf<String?>(null) }
                     var volume by remember { mutableStateOf(1.0f) }
+                    var micVolume by remember { mutableStateOf(1.0f) }
                     var currentPositionMs by remember { mutableStateOf(0L) }
                     
                     // State linked to C++ via NativeBridge
@@ -76,6 +77,8 @@ class MainActivity : ComponentActivity() {
                                     Uri.parse(selectedVideoUri),
                                     pendingExportAudioPath!!,
                                     uri,
+                                    volume,
+                                    micVolume,
                                     onProgress = { exportProgress = it },
                                     onComplete = { success, msg, _ ->
                                         isExporting = false
@@ -251,6 +254,24 @@ class MainActivity : ComponentActivity() {
                                     exoPlayer.volume = volume
                                     nativeBridge.setVolume(it)
                                 },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(horizontal = 8.dp)
+                            )
+                            Text("🔊", fontSize = 20.sp)
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        // Mic Volume Control Slider
+                        Row(
+                            modifier = Modifier.fillMaxWidth(0.9f),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("🎤", fontSize = 20.sp)
+                            Slider(
+                                value = micVolume,
+                                onValueChange = { micVolume = it },
                                 modifier = Modifier
                                     .weight(1f)
                                     .padding(horizontal = 8.dp)

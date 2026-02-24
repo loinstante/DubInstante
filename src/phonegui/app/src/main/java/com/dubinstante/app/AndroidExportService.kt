@@ -17,6 +17,8 @@ class AndroidExportService(private val context: Context) {
         sourceVideoUri: Uri,
         recordedAudioPath: String,
         targetUri: Uri,
+        mediaVolume: Float,
+        micVolume: Float,
         onProgress: (Int) -> Unit,
         onComplete: (Boolean, String, String?) -> Unit
     ) {
@@ -41,7 +43,7 @@ class AndroidExportService(private val context: Context) {
             "-y",
             "-i", sourceVideoPath,
             "-i", recordedAudioPath,
-            "-filter_complex", "[0:a]volume=1.0[a0];[1:a]volume=1.0[a1];[a0][a1]amix=inputs=2:duration=longest[aout]",
+            "-filter_complex", "[0:a]volume=${mediaVolume}[a0];[1:a]volume=${micVolume}[a1];[a0][a1]amix=inputs=2:duration=longest[aout]",
             "-map", "0:v:0",
             "-map", "[aout]",
             "-c:v", "copy",

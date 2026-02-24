@@ -40,10 +40,10 @@ else
 fi
 
 TOOLCHAIN_DIR="$SCRIPT_DIR/android-toolchain"
-QT_VERSION="6.5.3"
+QT_VERSION="6.7.3"
 NDK_VERSION="25.2.9519653"
-BUILD_TOOLS_VERSION="33.0.2"
-PLATFORM_VERSION="android-33"
+BUILD_TOOLS_VERSION="34.0.0"
+PLATFORM_VERSION="android-34"
 
 echo "╔══════════════════════════════════════════════════════════╗"
 echo "║       DubInstante Android APK Builder                   ║"
@@ -123,7 +123,7 @@ echo "✅ Qt $QT_VERSION Android arm64 ready"
 
 if [ ! -d "$QT_HOST_DIR" ]; then
     echo "📦 Downloading Qt $QT_VERSION host (desktop) tools..."
-    "$AQT_EXE" install-qt linux desktop "$QT_VERSION" gcc_64 \
+    "$AQT_EXE" install-qt linux desktop "$QT_VERSION" linux_gcc_64 \
         --outputdir "$TOOLCHAIN_DIR/Qt"
 fi
 echo "✅ Qt $QT_VERSION host tools ready"

@@ -54,6 +54,8 @@ class MainActivity : ComponentActivity() {
                     var rythmoText by remember { mutableStateOf("") }
                     var rythmoSpeed by remember { mutableStateOf(100f) }
 
+                    val context = LocalContext.current
+
                     // Recording & Export State
                     val audioRecorder = remember { AndroidAudioRecorder(context) }
                     val exportService = remember { AndroidExportService(context) }
@@ -68,7 +70,6 @@ class MainActivity : ComponentActivity() {
                         rythmoSpeed = nativeBridge.getRythmoSpeed().toFloat()
                     }
                     
-                    val context = LocalContext.current
                     val exoPlayer = remember {
                         ExoPlayer.Builder(context).build().apply {
                             playWhenReady = true

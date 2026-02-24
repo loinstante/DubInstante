@@ -64,8 +64,8 @@ dependencies {
     implementation("androidx.media3:media3-exoplayer:1.3.1")
     implementation("androidx.media3:media3-ui:1.3.1")
 
-    // FFmpegKit for Video/Audio Export processing
-    implementation("com.arthenica:ffmpeg-kit-full:4.5.1-1")
+    // FFmpegKit for Video/Audio Export processing (JitPack fork since official maven is retired)
+    implementation("com.github.microshow:RxFFmpeg:4.9.0")
 
     testImplementation("junit:junit:4.13.2")
 }

@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -30,13 +31,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
-    private val nativeBridge = NativeBridge()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Initialize JNI C++ Core integration
-        nativeBridge.initialize()
 
         setContent {
             MaterialTheme(colorScheme = darkColorScheme()) {
@@ -44,14 +41,16 @@ class MainActivity : ComponentActivity() {
                         modifier = Modifier.fillMaxSize(),
                         color = MaterialTheme.colorScheme.background
                 ) {
+                    val playbackViewModel: PlaybackViewModel = viewModel()
+
                     var selectedVideoUri by remember { mutableStateOf<String?>(null) }
                     var volume by remember { mutableStateOf(1.0f) }
                     var micVolume by remember { mutableStateOf(1.0f) }
-                    var currentPositionMs by remember { mutableStateOf(0L) }
 
                     // State linked to C++ via NativeBridge
-                    var rythmoText by remember { mutableStateOf("") }
-                    var rythmoSpeed by remember { mutableStateOf(100f) }
+                    val rythmoText by playbackViewModel.rythmoText.collectAsState()
+                    val rythmoSpeed by playbackViewModel.rythmoSpeed.collectAsState()
+                    val currentPositionMs by playbackViewModel.currentPositionMs.collectAsState()
 
                     val context = LocalContext.current
 
@@ -81,6 +80,7 @@ class MainActivity : ComponentActivity() {
                                                 uri,
                                                 volume,
                                                 micVolume,
+                                                currentPositionMs,
                                                 onProgress = { exportProgress = it },
                                                 onComplete = { success, msg, _ ->
                                                     isExporting = false
@@ -109,12 +109,6 @@ class MainActivity : ComponentActivity() {
                                     pendingExportAudioPath = null
                                 }
                             }
-
-                    // Initialize state from JNI on first load
-                    LaunchedEffect(Unit) {
-                        rythmoText = nativeBridge.getRythmoText()
-                        rythmoSpeed = nativeBridge.getRythmoSpeed().toFloat()
-                    }
 
                     val exoPlayer = remember {
                         ExoPlayer.Builder(context).build().apply { playWhenReady = true }
@@ -156,7 +150,7 @@ class MainActivity : ComponentActivity() {
                     LaunchedEffect(exoPlayer) {
                         while (true) {
                             if (exoPlayer.isPlaying) {
-                                currentPositionMs = exoPlayer.currentPosition
+                                playbackViewModel.updatePosition(exoPlayer.currentPosition)
                             }
                             kotlinx.coroutines.delay(16) // ~60fps sync
                         }
@@ -168,7 +162,7 @@ class MainActivity : ComponentActivity() {
                             ) { isGranted ->
                                 if (isGranted) {
                                     exoPlayer.seekTo(0)
-                                    currentPositionMs = 0
+                                    playbackViewModel.updatePosition(0L)
                                     audioRecorder.startRecording()
                                     exoPlayer.play()
                                     isRecording = true
@@ -189,7 +183,7 @@ class MainActivity : ComponentActivity() {
                                 uri?.let {
                                     selectedVideoUri = it.toString()
                                     // Pass the path to the C++ Core via JNI Bridge
-                                    nativeBridge.openVideo(it.toString())
+                                    playbackViewModel.openVideo(it.toString())
 
                                     val mediaItem = MediaItem.fromUri(uri)
                                     exoPlayer.setMediaItem(mediaItem)
@@ -257,14 +251,13 @@ class MainActivity : ComponentActivity() {
                         RythmoBand(
                                 text = rythmoText,
                                 onTextChanged = { newText ->
-                                    rythmoText = newText
-                                    nativeBridge.setRythmoText(newText)
+                                    playbackViewModel.setRythmoText(newText)
                                 },
                                 currentPositionMs = currentPositionMs,
                                 speedPixelsPerSecond = rythmoSpeed.toInt(),
                                 onSeekRequested = { newMs ->
                                     exoPlayer.seekTo(newMs)
-                                    currentPositionMs = newMs
+                                    playbackViewModel.updatePosition(newMs)
                                 },
                                 modifier = Modifier.fillMaxWidth(0.98f).height(90.dp)
                         )
@@ -282,7 +275,7 @@ class MainActivity : ComponentActivity() {
                                     onValueChange = {
                                         volume = it
                                         exoPlayer.volume = volume
-                                        nativeBridge.setVolume(it)
+                                        playbackViewModel.setVolume(it)
                                     },
                                     modifier = Modifier.weight(1f).padding(horizontal = 8.dp)
                             )
@@ -315,10 +308,7 @@ class MainActivity : ComponentActivity() {
                             Text("Speed:", fontSize = 16.sp, modifier = Modifier.width(60.dp))
                             Slider(
                                     value = rythmoSpeed,
-                                    onValueChange = {
-                                        rythmoSpeed = it
-                                        nativeBridge.setRythmoSpeed(it.toInt())
-                                    },
+                                    onValueChange = { playbackViewModel.setRythmoSpeed(it) },
                                     valueRange = 100f..999f,
                                     modifier = Modifier.weight(1f)
                             )
@@ -356,7 +346,7 @@ class MainActivity : ComponentActivity() {
                                                     ) == PackageManager.PERMISSION_GRANTED
                                             ) {
                                                 exoPlayer.seekTo(0)
-                                                currentPositionMs = 0
+                                                playbackViewModel.updatePosition(0L)
                                                 audioRecorder.startRecording()
                                                 exoPlayer.play()
                                                 isRecording = true

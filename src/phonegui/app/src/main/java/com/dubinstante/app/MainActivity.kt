@@ -189,7 +189,27 @@ class MainActivity : ComponentActivity() {
 
                     val videoPickerLauncher =
                             rememberLauncherForActivityResult(
-                                    contract = ActivityResultContracts.OpenDocument()
+                                    contract =
+                                            object : ActivityResultContracts.OpenDocument() {
+                                                override fun createIntent(
+                                                        context: android.content.Context,
+                                                        input: Array<String>
+                                                ): android.content.Intent {
+                                                    return super.createIntent(context, input)
+                                                            .apply {
+                                                                type = "video/mp4"
+                                                                putExtra(
+                                                                        android.content.Intent
+                                                                                .EXTRA_MIME_TYPES,
+                                                                        arrayOf("video/mp4")
+                                                                )
+                                                                addCategory(
+                                                                        android.content.Intent
+                                                                                .CATEGORY_OPENABLE
+                                                                )
+                                                            }
+                                                }
+                                            }
                             ) { uri: Uri? ->
                                 uri?.let {
                                     selectedVideoUri = it.toString()
@@ -340,7 +360,7 @@ class MainActivity : ComponentActivity() {
                         ) {
                             // Open Video Button
                             Button(
-                                    onClick = { videoPickerLauncher.launch(arrayOf("video/*")) },
+                                    onClick = { videoPickerLauncher.launch(arrayOf("video/mp4")) },
                                     modifier =
                                             Modifier.weight(1f).fillMaxHeight().padding(end = 8.dp)
                             ) { Text("Open Video", fontSize = 18.sp) }

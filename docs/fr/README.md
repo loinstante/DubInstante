@@ -440,34 +440,24 @@ L'application au format AppImage est disponible depuis l'onglet **Actions** (art
 ./deploy/build_appimage.sh
 ```
 
-### Android APK
+### Application Android
 
-La version Android de DubInstante se trouve dans `src/phonegui`. C'est une application Qt Quick autonome.
+La version Android de DubInstante se trouve dans `src/phonegui`. C'est une application native haute performance construite avec **Kotlin** et **Jetpack Compose**, interfaçant avec le cœur C++ via **JNI**.
 
 #### Build Automatisé (GitHub Actions)
 La méthode la plus simple pour obtenir l'APK est via **GitHub Actions** :
 1. Poussez vos modifications sur la branche `main`.
 2. Allez dans l'onglet **Actions** sur GitHub.
-3. Téléchargez l'artefact `DubInstante_Android_VERSION` du dernier run.
+3. Téléchargez l'artefact `DubInstante_Android` du dernier run.
 
-#### Build Local (Kubuntu/Ubuntu)
-Pour compiler l'APK localement sans installer Android Studio :
-
-1.  **Extraire un JDK 17 autonome** dans `src/phonegui/jdk-17.0.18+8`.
-2.  **Créer un fichier `.env`** dans `src/phonegui/` :
-    ```env
-    JAVA_HOME=./jdk-17.0.18+8
-    ```
-3.  **S'assurer que les prérequis** sont installés :
-    ```bash
-    sudo apt install python3-pip python3-venv wget unzip cmake
-    ```
-4.  **Lancer le script de setup & build** :
-    ```bash
-    cd src/phonegui
-    ./setup_and_build_apk.sh
-    ```
-    Ce script téléchargera automatiquement l'Android SDK, NDK et Qt pour Android dans un répertoire local `android-toolchain` (ignoré par git).
+#### Build Local
+Pour compiler l'APK localement :
+1. Ouvrez le projet dans **Android Studio** (dirigez-le vers `src/phonegui`).
+2. Ou via la ligne de commande :
+   ```bash
+   cd src/phonegui
+   ./gradlew assembleDebug
+   ```
 
 L'APK final se trouvera dans `src/phonegui/build-android/android-build/build/outputs/apk/`.
 
@@ -521,9 +511,10 @@ Le projet n'utilise **aucune bibliothèque C++ externe** en dehors de Qt 6. Les 
     - [x] Mode d'enregistrement plein écran (case à cocher)
     - [x] Menu popup des raccourcis
     - [x] Touche Échap pour quitter l'enregistrement plein écran
-- **v0.6.0 — Port Android** ✅
-    - [x] GUI spécifique Android (module `phonegui`)
-    - [x] Script de compilation APK local automatisé
+- **v0.6.0 — Port Android Natif** ✅
+    - [x] Interface Android Native (Kotlin/Jetpack Compose)
+    - [x] Intégration JNI avec le Cœur C++
+    - [x] Enregistrement et Export sur Mobile
     - [x] Pipeline CI GitHub Actions pour Android
 - **v0.7.0 — Prototype Web**
     - [ ] Prototype en ligne avec support des fichiers `.dbi`

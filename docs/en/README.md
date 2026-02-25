@@ -442,34 +442,24 @@ The AppImage version of the application is available from the **Actions** tab (C
 ./deploy/build_appimage.sh
 ```
 
-### Android APK
+### Android App
 
-The Android version of DubInstante is located in `src/phonegui`. It is a standalone Qt Quick application.
+The Android version of DubInstante is located in `src/phonegui`. It is a high-performance native application built with **Kotlin** and **Jetpack Compose**, interfacing with the C++ Core via **JNI**.
 
 #### Automated Build (GitHub Actions)
 The easiest way to get the APK is via **GitHub Actions**:
 1. Push your changes to the `main` branch.
 2. Go to the **Actions** tab on GitHub.
-3. Download the `DubInstante_Android_VERSION` artifact from the latest run.
+3. Download the `DubInstante_Android` artifact from the latest run.
 
-#### Local Build (Kubuntu/Ubuntu)
-To build the APK locally without installing Android Studio:
-
-1.  **Extract a standalone JDK 17** into `src/phonegui/jdk-17.0.18+8`.
-2.  **Create a `.env` file** in `src/phonegui/`:
-    ```env
-    JAVA_HOME=./jdk-17.0.18+8
-    ```
-3.  **Ensure prerequisites** are installed:
-    ```bash
-    sudo apt install python3-pip python3-venv wget unzip cmake
-    ```
-4.  **Run the setup & build script**:
-    ```bash
-    cd src/phonegui
-    ./setup_and_build_apk.sh
-    ```
-    This script will automatically download the Android SDK, NDK, and Qt for Android into a local `android-toolchain` directory (gitignored).
+#### Local Build
+To build the APK locally:
+1. Open the project in **Android Studio** (point to `src/phonegui`).
+2. Or use the command line:
+   ```bash
+   cd src/phonegui
+   ./gradlew assembleDebug
+   ```
 
 The resulting APK will be located in `src/phonegui/build-android/android-build/build/outputs/apk/`.
 
@@ -523,9 +513,10 @@ The project uses **no external C++ libraries** beyond Qt 6. External tools are i
     - [x] Fullscreen recording mode (checkbox toggle)
     - [x] Shortcuts popup menu
     - [x] Escape key exits fullscreen recording
-- **v0.6.0 — Android Port** ✅
-    - [x] Android Phone GUI (`phonegui` module)
-    - [x] Local APK build script with SDK/NDK/Qt automation
+- **v0.6.0 — Native Android Port** ✅
+    - [x] Native Android GUI (Kotlin/Jetpack Compose)
+    - [x] JNI Integration with C++ Core
+    - [x] Record & Export functionality on Mobile
     - [x] GitHub Actions Android CI pipeline
 - **v0.7.0 — Web Prototype**
     - [ ] Online prototype with `.dbi` file support

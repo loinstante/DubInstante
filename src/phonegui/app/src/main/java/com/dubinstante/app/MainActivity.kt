@@ -24,6 +24,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.media3.common.AudioAttributes
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -111,7 +113,16 @@ class MainActivity : ComponentActivity() {
                             }
 
                     val exoPlayer = remember {
-                        ExoPlayer.Builder(context).build().apply { playWhenReady = true }
+                        val audioAttributes =
+                                AudioAttributes.Builder()
+                                        .setUsage(C.USAGE_MEDIA)
+                                        .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                                        .build()
+
+                        ExoPlayer.Builder(context).build().apply {
+                            setAudioAttributes(audioAttributes, false)
+                            playWhenReady = true
+                        }
                     }
 
                     val handleStopRecording = {

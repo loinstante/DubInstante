@@ -43,15 +43,12 @@ class AndroidExportService(private val context: Context) {
         // 2. Construct identical ffmpeg command logic to desktop as an exact array of arguments
         // We use a filter_complex with amix to mix the original video's audio [0:a] and the mic
         // [1:a]
-        val commandArgs = mutableListOf("ffmpeg", "-y", "-threads", "0")
-
-        if (durationSeconds > 0) {
-            commandArgs.add("-t")
-            commandArgs.add(String.format(java.util.Locale.US, "%.3f", durationSeconds))
-        }
-
-        commandArgs.addAll(
-                listOf(
+        val commandArgs =
+                mutableListOf(
+                        "ffmpeg",
+                        "-y",
+                        "-threads",
+                        "0",
                         "-i",
                         sourceVideoPath,
                         "-i",
@@ -67,10 +64,15 @@ class AndroidExportService(private val context: Context) {
                         "-c:a",
                         "aac",
                         "-b:a",
-                        "192k",
-                        outputFile.absolutePath
+                        "192k"
                 )
-        )
+
+        if (durationSeconds > 0) {
+            commandArgs.add("-t")
+            commandArgs.add(String.format(java.util.Locale.US, "%.3f", durationSeconds))
+        }
+
+        commandArgs.add(outputFile.absolutePath)
 
         val argsArray = commandArgs.toTypedArray()
         Log.i("AndroidExportService", "Executing FFmpeg: ${argsArray.joinToString(" ")}")

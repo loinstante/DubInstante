@@ -39,7 +39,7 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 
 ---
 
-**DubInstante** - Making professional video dubbing accessible to everyone.  
+**DubInstante** - Making professional video dubbing accessible to everyone.
 **DubInstante** - Rendre le doublage vidéo professionnel accessible à tous.
 
 ## 🗺️ Roadmap

@@ -5,6 +5,16 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2026-02-25
+
+### Added
+- **Native Android App**: Transitioned from QML prototype to a high-performance native Android application (Kotlin/Jetpack Compose).
+- **JNI Integration**: Integrated the core C++ engine via Java Native Interface (JNI) for high-precision Rythmo synchronization.
+- **Enhanced Mobile UI**: Streamlined interface with compact header, integrated video player, and optimized Rythmo band for mobile screens.
+- **Audio & Export**: Native microphone capture and FFmpeg-powered video/audio mixing for Android.
+- **CI/CD Build**: Automated APK builds for the native app on GitHub Actions.
+- **Mobile Feedback**: Added quick-report links for mobile users to report bugs easily.
+
 ## [0.5.0] - 2026-02-16
 
 ### Added

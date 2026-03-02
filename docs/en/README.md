@@ -442,6 +442,27 @@ The AppImage version of the application is available from the **Actions** tab (C
 ./deploy/build_appimage.sh
 ```
 
+### Android App
+
+The Android version of DubInstante is located in `src/phonegui`. It is a high-performance native application built with **Kotlin** and **Jetpack Compose**, interfacing with the C++ Core via **JNI**.
+
+#### Automated Build (GitHub Actions)
+The easiest way to get the APK is via **GitHub Actions**:
+1. Push your changes to the `main` branch.
+2. Go to the **Actions** tab on GitHub.
+3. Download the `DubInstante_Android` artifact from the latest run.
+
+#### Local Build
+To build the APK locally:
+1. Open the project in **Android Studio** (point to `src/phonegui`).
+2. Or use the command line:
+   ```bash
+   cd src/phonegui
+   ./gradlew assembleDebug
+   ```
+
+The resulting APK will be located in `src/phonegui/build-android/android-build/build/outputs/apk/`.
+
 ---
 
 ## External Dependencies
@@ -488,15 +509,25 @@ The project uses **no external C++ libraries** beyond Qt 6. External tools are i
     - [x] Save/Load system with `.dbi` format
     - [x] ZIP archive bundling (project + video)
     - [x] Cross-platform compression
-    - [x] Full state persistence
 - **v0.5.0 — Fullscreen Recording & Shortcuts** ✅
     - [x] Fullscreen recording mode (checkbox toggle)
-    - [x] Ctrl+S stop recording shortcut
     - [x] Shortcuts popup menu
     - [x] Escape key exits fullscreen recording
-- **v0.6.0 — Customization**
-    - [ ] Custom rythmo band colors (background + text)
-    - [ ] Per-band independent settings
-    - [ ] Visual tweaks without layout impact
+- **v0.6.0 — Native Android Port** ✅
+    - [x] Native Android GUI (Kotlin/Jetpack Compose)
+    - [x] JNI Integration with C++ Core
+    - [x] Record & Export functionality on Mobile
+    - [x] GitHub Actions Android CI pipeline
+- **v0.7.0 — Web Prototype**
+    - [ ] Online prototype with `.dbi` file support
+- **v0.8.0 — Surprise**
+    - [ ] Secret features for the community
+- **v0.9.0 — Customization**
+    - [ ] Custom rythmo band colors and styles
+    - [ ] Independent band settings
+- **V1.0 — Stable Release**
+    - [ ] Stable launch on all platforms
+    - [ ] Final polish and surprises
 - **And more…**
-    - [ ] User suggestions welcome! 💡
+    - [ ] User-driven features! 💡
+```

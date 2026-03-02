@@ -46,9 +46,9 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 - **v0.4.0**: ✅ Project Management System / Gestion de Projet (.dbi + ZIP)
 - **v0.5.0**: ✅ Fullscreen Recording & Shortcuts / Enregistrement Plein Écran & Raccourcis
 - **v0.6.0**: ✅ Native Android App / Application Android Native (Beta)
-- **v0.7.0**: Online prototype with .dbi files possible (no beta avaible) / Prototype d'un site web avec prise en charge du .dbi
-- **v0.8.0**: Surprise for all of you / Surprise pour vous tous
-- **v0.9.0**: Customization & Independent Band Styling / Personnalisation & Styles de bandes
+- **v0.7.0**: ❌ Online prototype with .dbi files possible (no beta avaible) / Prototype d'un site web avec prise en charge du .dbi
+- **v0.8.0**: ⏭️ Surprise for all of you / Surprise pour vous tous
+- **v0.9.0**: 🛠️ Customization & Independent Band Styling / Personnalisation & Styles de bandes
 - **V1**: Stable launch on every platform possible with many surprises / Lancement d'une application stable toutes platforme
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !
 

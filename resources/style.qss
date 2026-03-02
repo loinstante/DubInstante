@@ -370,6 +370,11 @@ QMenuBar {
     border-bottom: 1px solid #e0e0e0;
 }
 
+QMenuBar#rightMenuBar {
+    border-bottom: none;
+    background: transparent;
+}
+
 QMenuBar::item {
     spacing: 3px;
     padding: 6px 10px;
@@ -384,6 +389,28 @@ QMenuBar::item:selected {
 
 QMenuBar::item:pressed {
     background-color: #d5d5d5;
+}
+
+QToolButton#accountButton {
+    padding: 6px 10px;
+    background: transparent;
+    border-radius: 4px;
+    color: #2c2c2c;
+    border: none;
+    margin: 4px 10px 4px 4px;
+}
+
+QToolButton#accountButton:hover {
+    background-color: #e5e5e5;
+}
+
+QToolButton#accountButton:pressed {
+    background-color: #0078d7;
+    color: white;
+}
+
+QToolButton#accountButton::menu-indicator {
+    image: none;
 }
 
 QMenu {

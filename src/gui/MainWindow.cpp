@@ -308,11 +308,10 @@ void MainWindow::createMenus() {
   rythmoMenu->addAction(m_actionExportRythmo);
 
   // === Account Menu (Right aligned) ===
-  QToolButton *accountButton = new QToolButton(this);
-  accountButton->setText(tr("Account"));
-  accountButton->setPopupMode(QToolButton::InstantPopup);
-
-  QMenu *accountMenu = new QMenu(this);
+  QMenuBar *rightMenuBar = new QMenuBar(menuBar);
+  rightMenuBar->setObjectName("rightMenuBar");
+  QMenu *accountMenu = rightMenuBar->addMenu(tr("Account"));
+  menuBar->setCornerWidget(rightMenuBar, Qt::TopRightCorner);
 
   QWidget *accountWidget = new QWidget(this);
   QVBoxLayout *accountLayout = new QVBoxLayout(accountWidget);
@@ -331,13 +330,9 @@ void MainWindow::createMenus() {
   accountLayout->addWidget(passwordEdit);
   accountLayout->addWidget(loginBtn);
 
-  QWidgetAction *accountAction = new QWidgetAction(this);
-  accountAction->setDefaultWidget(accountWidget);
-  accountMenu->addAction(accountAction);
-
-  accountButton->setMenu(accountMenu);
-
-  menuBar->setCornerWidget(accountButton, Qt::TopRightCorner);
+  QWidgetAction *accountDropdownAction = new QWidgetAction(this);
+  accountDropdownAction->setDefaultWidget(accountWidget);
+  accountMenu->addAction(accountDropdownAction);
 }
 
 void MainWindow::setupConnections() {

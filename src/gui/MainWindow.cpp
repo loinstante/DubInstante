@@ -303,6 +303,10 @@ void MainWindow::createMenus() {
   m_actionPersonalizeRythmo = new QAction(tr("Personnaliser"), this);
   rythmoMenu->addAction(m_actionPersonalizeRythmo);
 
+  m_actionExportRythmo = new QAction(tr("Exporter la bande rythmo"), this);
+  m_actionExportRythmo->setCheckable(true);
+  rythmoMenu->addAction(m_actionExportRythmo);
+
   // === Account Menu (Right aligned) ===
   QToolButton *accountButton = new QToolButton(this);
   accountButton->setText(tr("Account"));

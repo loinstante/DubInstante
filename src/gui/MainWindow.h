@@ -160,6 +160,7 @@ private:
   QAction *m_actionGlobalSettings;
 
   QAction *m_actionPersonalizeRythmo;
+  QAction *m_actionExportRythmo;
 
   // =========================================================================
   // State

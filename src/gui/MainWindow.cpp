@@ -54,6 +54,7 @@ MainWindow::MainWindow(QWidget *parent)
       m_recordingStartTimeMs(0) {
   loadStylesheet();
   setupUi();
+  createMenus();
   setupConnections();
   setupShortcuts();
 
@@ -139,30 +140,6 @@ void MainWindow::setupUi() {
   QHBoxLayout *controlsLayout = new QHBoxLayout();
   controlsLayout->setSpacing(10);
 
-  m_openButton =
-      new QPushButton(QIcon(":/resources/icons/folder_open.svg"), "", this);
-  m_openButton->setFixedSize(24, 24);
-  m_openButton->setFlat(true);
-  m_openButton->setToolTip(tr("Ouvrir une vidéo"));
-  controlsLayout->addWidget(m_openButton);
-
-  QPushButton *saveButton = new QPushButton(QIcon(":/resources/icons/stop.svg"),
-                                            "", this); // Placeholder for save
-  saveButton->setFixedSize(24, 24);
-  saveButton->setFlat(true);
-  saveButton->setToolTip(tr("Sauvegarder le projet (.dbi)"));
-  connect(saveButton, &QPushButton::clicked, this, &MainWindow::onSaveProject);
-  controlsLayout->addWidget(saveButton);
-
-  QPushButton *loadButton =
-      new QPushButton(QIcon(":/resources/icons/folder_open.svg"), "",
-                      this); // Placeholder for load
-  loadButton->setFixedSize(24, 24);
-  loadButton->setFlat(true);
-  loadButton->setToolTip(tr("Charger un projet (.dbi)"));
-  connect(loadButton, &QPushButton::clicked, this, &MainWindow::onLoadProject);
-  controlsLayout->addWidget(loadButton);
-
   m_playPauseButton =
       new QPushButton(QIcon(":/resources/icons/play.svg"), "", this);
   m_playPauseButton->setFixedSize(36, 36);
@@ -211,12 +188,6 @@ void MainWindow::setupUi() {
   m_recordButton->setCursor(Qt::PointingHandCursor);
   controlsLayout->addWidget(m_recordButton);
 
-  m_shortcutsButton = new QPushButton("⌨", this);
-  m_shortcutsButton->setFixedSize(36, 36);
-  m_shortcutsButton->setToolTip(tr("Raccourcis clavier"));
-  m_shortcutsButton->setCursor(Qt::PointingHandCursor);
-  controlsLayout->addWidget(m_shortcutsButton);
-
   mainLayout->addLayout(controlsLayout);
 
   // =========================================================================
@@ -241,9 +212,6 @@ void MainWindow::setupUi() {
   m_track2Container->setVisible(false);
   tracksLayout->addWidget(m_track2Container);
 
-  m_enableTrack2Check = new QCheckBox("Activer Piste 2", this);
-  tracksLayout->addWidget(m_enableTrack2Check);
-
   bottomControlsLayout->addLayout(tracksLayout);
   bottomControlsLayout->addStretch();
 
@@ -264,9 +232,6 @@ void MainWindow::setupUi() {
   m_textColorCheck = new QCheckBox("Texte Blanc", this);
   speedLayout->addWidget(m_textColorCheck);
 
-  m_fullscreenRecordingCheck = new QCheckBox("Fullscreen Recording", this);
-  speedLayout->addWidget(m_fullscreenRecordingCheck);
-
   bottomControlsLayout->addLayout(speedLayout);
 
   bottomControlsLayout->addSpacing(20);
@@ -285,13 +250,93 @@ void MainWindow::setupUi() {
       1, "TRACK 2: Ready for dubbing..."); // Initialize track 2
 }
 
+void MainWindow::createMenus() {
+  QMenuBar *menuBar = new QMenuBar(this);
+  setMenuBar(menuBar);
+
+  // === Files Menu ===
+  QMenu *filesMenu = menuBar->addMenu(tr("Files"));
+
+  m_actionOpenMp4 = new QAction(tr("Open MP4"), this);
+  connect(m_actionOpenMp4, &QAction::triggered, this, &MainWindow::onOpenFile);
+  filesMenu->addAction(m_actionOpenMp4);
+
+  m_actionLoadProject = new QAction(tr("Open save file"), this);
+  connect(m_actionLoadProject, &QAction::triggered, this,
+          &MainWindow::onLoadProject);
+  filesMenu->addAction(m_actionLoadProject);
+
+  m_actionSaveProject = new QAction(tr("Save .dbi / .zip"), this);
+  connect(m_actionSaveProject, &QAction::triggered, this,
+          &MainWindow::onSaveProject);
+  filesMenu->addAction(m_actionSaveProject);
+
+  // === Application Menu ===
+  QMenu *appMenu = menuBar->addMenu(tr("Application"));
+
+  m_actionExpertMode = new QAction(tr("Expert mode"), this);
+  m_actionExpertMode->setCheckable(true);
+  appMenu->addAction(m_actionExpertMode);
+  m_actionFullscreen = new QAction(tr("Fullscreen mode"), this);
+  m_actionFullscreen->setCheckable(true);
+  appMenu->addAction(m_actionFullscreen);
+
+  m_actionShortcuts = new QAction(tr("Changer raccourcis"), this);
+  connect(m_actionShortcuts, &QAction::triggered, this,
+          &MainWindow::showShortcutsPopup);
+  appMenu->addAction(m_actionShortcuts);
+
+  m_actionGlobalSettings = new QAction(tr("Paramètre global"), this);
+  appMenu->addAction(m_actionGlobalSettings);
+
+  // === Bande Rythmo Menu ===
+  QMenu *rythmoMenu = menuBar->addMenu(tr("Bande Rythmo"));
+
+  m_actionEnableTrack2 = new QAction(tr("Activer 2e piste"), this);
+  m_actionEnableTrack2->setCheckable(true);
+  connect(m_actionEnableTrack2, &QAction::toggled, this, [this](bool checked) {
+    m_track2Container->setVisible(checked);
+    m_rythmoOverlay->setTrack2Visible(checked);
+  });
+  rythmoMenu->addAction(m_actionEnableTrack2);
+
+  m_actionPersonalizeRythmo = new QAction(tr("Personnaliser"), this);
+  rythmoMenu->addAction(m_actionPersonalizeRythmo);
+
+  // === Account Menu (Right aligned) ===
+  QToolButton *accountButton = new QToolButton(this);
+  accountButton->setText(tr("Account"));
+  accountButton->setPopupMode(QToolButton::InstantPopup);
+
+  QMenu *accountMenu = new QMenu(this);
+
+  QWidget *accountWidget = new QWidget(this);
+  QVBoxLayout *accountLayout = new QVBoxLayout(accountWidget);
+  accountLayout->setContentsMargins(10, 10, 10, 10);
+
+  QLineEdit *emailEdit = new QLineEdit(accountWidget);
+  emailEdit->setPlaceholderText(tr("Email"));
+
+  QLineEdit *passwordEdit = new QLineEdit(accountWidget);
+  passwordEdit->setPlaceholderText(tr("Password"));
+  passwordEdit->setEchoMode(QLineEdit::Password);
+
+  QPushButton *loginBtn = new QPushButton(tr("Login"), accountWidget);
+
+  accountLayout->addWidget(emailEdit);
+  accountLayout->addWidget(passwordEdit);
+  accountLayout->addWidget(loginBtn);
+
+  QWidgetAction *accountAction = new QWidgetAction(this);
+  accountAction->setDefaultWidget(accountWidget);
+  accountMenu->addAction(accountAction);
+
+  accountButton->setMenu(accountMenu);
+
+  menuBar->setCornerWidget(accountButton, Qt::TopRightCorner);
+}
+
 void MainWindow::setupConnections() {
-  // =========================================================================
-  // File Operations
-  // =========================================================================
-
-  connect(m_openButton, &QPushButton::clicked, this, &MainWindow::onOpenFile);
-
   // =========================================================================
   // Playback Controls
   // =========================================================================
@@ -477,15 +522,6 @@ void MainWindow::setupConnections() {
   });
 
   // =========================================================================
-  // Track 2 Toggle
-  // =========================================================================
-
-  connect(m_enableTrack2Check, &QCheckBox::toggled, this, [this](bool checked) {
-    m_track2Container->setVisible(checked);
-    m_rythmoOverlay->setTrack2Visible(checked);
-  });
-
-  // =========================================================================
   // Recording
   // =========================================================================
 
@@ -504,10 +540,6 @@ void MainWindow::setupConnections() {
           &MainWindow::onError);
   connect(m_audioRecorder2, &AudioRecorder::errorOccurred, this,
           &MainWindow::onError);
-
-  // Shortcuts button
-  connect(m_shortcutsButton, &QPushButton::clicked, this,
-          &MainWindow::showShortcutsPopup);
 
   // =========================================================================
   // Export
@@ -568,7 +600,7 @@ void MainWindow::onSaveProject() {
   data.audioGain2 = m_track2Panel->gain();
   data.scrollSpeed = m_speedSpinBox->value();
   data.isTextWhite = m_textColorCheck->isChecked();
-  data.enableTrack2 = m_enableTrack2Check->isChecked();
+  data.enableTrack2 = m_actionEnableTrack2->isChecked();
   data.tracks << m_rythmoManager->text(0) << m_rythmoManager->text(1);
 
   if (saveWithVideo) {
@@ -643,7 +675,7 @@ void MainWindow::onLoadProject() {
   // Apply loaded data
   m_speedSpinBox->setValue(data.scrollSpeed);
   m_textColorCheck->setChecked(data.isTextWhite);
-  m_enableTrack2Check->setChecked(data.enableTrack2);
+  m_actionEnableTrack2->setChecked(data.enableTrack2);
 
   // Restore tracks
   if (data.tracks.size() > 0) {
@@ -740,12 +772,12 @@ void MainWindow::toggleRecording() {
 
     m_track1Panel->startRecording(QUrl::fromLocalFile(m_tempAudioPath1));
 
-    if (m_enableTrack2Check->isChecked()) {
+    if (m_actionEnableTrack2->isChecked()) {
       m_track2Panel->startRecording(QUrl::fromLocalFile(m_tempAudioPath2));
     }
 
-    // Enter fullscreen if checkbox is checked
-    if (m_fullscreenRecordingCheck->isChecked()) {
+    // Enter fullscreen if action is checked
+    if (m_actionFullscreen->isChecked()) {
       enterFullscreenRecording();
     }
 
@@ -758,14 +790,14 @@ void MainWindow::toggleRecording() {
     m_isRecording = true;
     m_recordButton->setText("STOP");
     m_exportProgressBar->setVisible(false);
-    m_openButton->setEnabled(false);
-    m_enableTrack2Check->setEnabled(false);
+    m_actionOpenMp4->setEnabled(false);
+    m_actionEnableTrack2->setEnabled(false);
 
   } else {
     m_playbackEngine->pause();
     m_track1Panel->stopRecording();
 
-    if (m_enableTrack2Check->isChecked()) {
+    if (m_actionEnableTrack2->isChecked()) {
       m_track2Panel->stopRecording();
     }
 
@@ -782,8 +814,8 @@ void MainWindow::toggleRecording() {
     m_isRecording = false;
     m_recordButton->setChecked(false);
     m_recordButton->setText("REC");
-    m_openButton->setEnabled(true);
-    m_enableTrack2Check->setEnabled(true);
+    m_actionOpenMp4->setEnabled(true);
+    m_actionEnableTrack2->setEnabled(true);
 
     // Prompt for save location
     QString currentVideo = property("currentVideoPath").toString();
@@ -803,7 +835,7 @@ void MainWindow::toggleRecording() {
       config.startTimeMs = m_recordingStartTimeMs;
       config.originalVolume = m_playbackEngine->volume();
 
-      if (m_enableTrack2Check->isChecked()) {
+      if (m_actionEnableTrack2->isChecked()) {
         config.secondAudioPath = m_tempAudioPath2;
       }
 
@@ -893,8 +925,7 @@ void MainWindow::setupShortcuts() {
 }
 
 void MainWindow::showShortcutsPopup() {
-  m_shortcutsMenu->popup(m_shortcutsButton->mapToGlobal(
-      QPoint(0, -m_shortcutsMenu->sizeHint().height())));
+  m_shortcutsMenu->popup(QCursor::pos());
 }
 
 // =============================================================================

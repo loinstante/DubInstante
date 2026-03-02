@@ -25,6 +25,12 @@
 #include <QShortcut>
 #include <QSpinBox>
 
+#include <QAction>
+#include <QLineEdit>
+#include <QMenuBar>
+#include <QToolButton>
+#include <QWidgetAction>
+
 // Forward declarations - Core layer
 class PlaybackEngine;
 class RythmoManager;
@@ -89,6 +95,7 @@ private slots:
 
 private:
   void setupUi();
+  void createMenus();
   void setupConnections();
   void setupShortcuts();
   void loadStylesheet();
@@ -117,7 +124,6 @@ private:
   TrackPanel *m_track2Panel;
 
   // Playback controls
-  QPushButton *m_openButton;
   QPushButton *m_playPauseButton;
   QPushButton *m_stopButton;
   ClickableSlider *m_positionSlider;
@@ -132,18 +138,28 @@ private:
   QPushButton *m_recordButton;
   QSpinBox *m_speedSpinBox;
   QCheckBox *m_textColorCheck;
-  QCheckBox *m_fullscreenRecordingCheck;
   QProgressBar *m_exportProgressBar;
 
   // Track 2 controls
   QWidget *m_track2Container;
-  QCheckBox *m_enableTrack2Check;
 
   // Fullscreen recording
   QFrame *m_videoFrame;
   QWidget *m_fullscreenContainer;
-  QPushButton *m_shortcutsButton;
   QMenu *m_shortcutsMenu;
+
+  // Menus and Actions
+  QAction *m_actionOpenMp4;
+  QAction *m_actionLoadProject;
+  QAction *m_actionSaveProject;
+
+  QAction *m_actionExpertMode;
+  QAction *m_actionEnableTrack2;
+  QAction *m_actionFullscreen;
+  QAction *m_actionShortcuts;
+  QAction *m_actionGlobalSettings;
+
+  QAction *m_actionPersonalizeRythmo;
 
   // =========================================================================
   // State

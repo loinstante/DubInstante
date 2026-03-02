@@ -361,3 +361,49 @@ QProgressBar::chunk {
                 stop:0 #0078d7, stop:1 #00a8ff);
     border-radius: 4px;
 }
+
+/* ============================================
+   MEMU BAR & MENUS - Hover State
+   ============================================ */
+QMenuBar {
+    background-color: #fafafa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+QMenuBar::item {
+    spacing: 3px;
+    padding: 6px 10px;
+    background: transparent;
+    border-radius: 4px;
+    color: #2c2c2c;
+}
+
+QMenuBar::item:selected {
+    background-color: #e5e5e5;
+}
+
+QMenuBar::item:pressed {
+    background-color: #d5d5d5;
+}
+
+QMenu {
+    background-color: #ffffff;
+    border: 1px solid #d5d5d5;
+    border-radius: 4px;
+    padding: 4px 0px;
+}
+
+QMenu::item {
+    padding: 6px 24px 6px 24px;
+    background-color: transparent;
+    color: #2c2c2c;
+}
+
+QMenu::item:selected {
+    background-color: #0078d7;
+    color: white;
+}
+
+QMenu::item:disabled {
+    color: #999999;
+}

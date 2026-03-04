@@ -16,13 +16,11 @@
 #ifndef RYTHMOWIDGET_H
 #define RYTHMOWIDGET_H
 
+#include "../core/RythmoManager.h"
 #include <QColor>
 #include <QFont>
 #include <QTimer>
 #include <QWidget>
-
-// Forward declaration to avoid including core header in GUI
-struct RythmoTrackData;
 
 /**
  * @class RythmoWidget
@@ -57,7 +55,9 @@ public:
   void setVisualStyle(VisualStyle style);
   VisualStyle visualStyle() const;
 
-  void setTextColor(const QColor &color);
+  void setTrackStyle(const RythmoTrackStyle &style);
+  RythmoTrackStyle trackStyle() const;
+
   void setSpeed(int speed);
   int speed() const;
 
@@ -166,7 +166,6 @@ protected:
 
 private:
   // Helpers
-  QFont getFont() const;
   int charWidth() const;
   int cursorIndex() const;
   qint64 charDurationMs() const;
@@ -186,9 +185,7 @@ private:
 
   // Visual configuration
   VisualStyle m_visualStyle;
-  int m_fontSize;
-  int m_verticalPadding;
-  QColor m_textColor;
+  RythmoTrackStyle m_style;
   QColor m_barColor;
   QColor m_playingBarColor;
 
@@ -196,7 +193,6 @@ private:
   int m_lastMouseX;
 
   // Font cache
-  mutable QFont m_cachedFont;
   mutable int m_cachedCharWidth;
 
   // Seek debouncing

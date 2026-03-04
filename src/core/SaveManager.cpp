@@ -32,7 +32,23 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   root["enable_track_2"] = cleanData.enableTrack2;
   root["scroll_speed"] = cleanData.scrollSpeed;
   root["is_text_white"] = cleanData.isTextWhite;
-  root["tracks"] = QJsonArray::fromStringList(cleanData.tracks);
+
+  QJsonArray tracksArray;
+  for (const auto &trackData : cleanData.tracks) {
+    QJsonObject trackObj;
+    trackObj["text"] = trackData.text;
+
+    // Save style parameters
+    QJsonObject styleObj;
+    styleObj["font_size"] = trackData.style.globalSize;
+    styleObj["text_color"] = trackData.style.textColor.name(QColor::HexArgb);
+    styleObj["bg_color"] =
+        trackData.style.backgroundColor.name(QColor::HexArgb);
+
+    trackObj["style"] = styleObj;
+    tracksArray.append(trackObj);
+  }
+  root["tracks"] = tracksArray;
 
   QJsonDocument doc(root);
   QByteArray jsonPayload = doc.toJson(QJsonDocument::Compact);
@@ -267,7 +283,27 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   QJsonArray tracksArray = root.value("tracks").toArray();
   data.tracks.clear();
   for (const auto &val : tracksArray) {
-    data.tracks.append(val.toString());
+    TrackSaveData trackData;
+    if (val.isString()) {
+      // Backwards Compatibility (v0.8.0 or older)
+      trackData.text = val.toString();
+      // Style remains default (Classic)
+    } else if (val.isObject()) {
+      // New format (v0.9.0+)
+      QJsonObject trackObj = val.toObject();
+      trackData.text = trackObj.value("text").toString("");
+
+      QJsonObject styleObj = trackObj.value("style").toObject();
+      if (!styleObj.isEmpty()) {
+        trackData.style.globalSize = styleObj.value("font_size").toInt(16);
+        trackData.style.font.setPointSize(trackData.style.globalSize);
+        trackData.style.textColor =
+            QColor(styleObj.value("text_color").toString("#FFFFFFFF"));
+        trackData.style.backgroundColor =
+            QColor(styleObj.value("bg_color").toString("#FF282828"));
+      }
+    }
+    data.tracks.append(trackData);
   }
 
   // Resolve relative path
@@ -292,7 +328,7 @@ SaveData SaveManager::sanitize(const SaveData &data) {
 
   // We do NOT trim tracks, as whitespace is timing!
   // for (int i = 0; i < clean.tracks.size(); ++i) {
-  //   clean.tracks[i] = clean.tracks[i].trimmed();
+  //   clean.tracks[i].text = clean.tracks[i].text.trimmed();
   // }
 
   return clean;

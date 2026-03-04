@@ -4,9 +4,22 @@
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QJsonObject>
+#include <QList>
 #include <QObject>
 #include <QString>
+#include <QStringList>
 #include <QUrl>
+
+#include "RythmoManager.h"
+
+/**
+ * @struct TrackSaveData
+ * @brief Saves track content and style.
+ */
+struct TrackSaveData {
+  QString text;
+  RythmoTrackStyle style;
+};
 
 /**
  * @struct SaveData
@@ -22,7 +35,9 @@ struct SaveData {
   bool enableTrack2;
   int scrollSpeed;
   bool isTextWhite;
-  QStringList tracks;
+
+  // Backwards compatibility: tracks list converted to struct
+  QList<TrackSaveData> tracks;
 };
 
 /**

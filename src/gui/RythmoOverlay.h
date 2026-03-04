@@ -62,9 +62,6 @@ public slots:
   /** @brief Sets scrolling speed for both tracks. */
   void setSpeed(int speed);
 
-  /** @brief Sets text color for both tracks. */
-  void setTextColor(const QColor &color);
-
   /** @brief Enable/disable text editing on both tracks. */
   void setEditable(bool editable);
 

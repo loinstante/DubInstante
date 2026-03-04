@@ -7,9 +7,19 @@
 
 #include <algorithm>
 
+RythmoTrackStyle::RythmoTrackStyle()
+    : font(QFontDatabase::systemFont(QFontDatabase::FixedFont)),
+      textColor(Qt::white),
+      backgroundColor(
+          QColor(40, 40, 40)), // Classic style has usually a dark background
+      globalSize(16) {
+  font.setPointSize(globalSize);
+  font.setBold(true);
+}
+
 RythmoManager::RythmoManager(QObject *parent)
     : QObject(parent), m_speed(DEFAULT_SPEED), m_currentPosition(0),
-      m_lastInsertPosition(-1), m_insertOffset(0), m_cachedCharWidth(-1) {
+      m_lastInsertPosition(-1), m_insertOffset(0) {
   // Initialize with at least 2 tracks (common use case)
   m_tracks.reserve(2);
 }
@@ -43,9 +53,10 @@ void RythmoManager::setText(int trackIndex, const QString &text) {
     RythmoTrackData data;
     data.trackIndex = trackIndex;
     data.text = text;
-    data.cursorIndex = cursorIndex(m_currentPosition);
+    data.cursorIndex = cursorIndex(trackIndex, m_currentPosition);
     data.positionMs = m_currentPosition;
     data.speed = m_speed;
+    data.style = trackStyle(trackIndex);
     emit trackDataChanged(data);
   }
 }
@@ -57,6 +68,31 @@ QString RythmoManager::text(int trackIndex) const {
   return m_tracks[trackIndex];
 }
 
+void RythmoManager::setTrackStyle(int trackIndex,
+                                  const RythmoTrackStyle &style) {
+  if (trackIndex < 0)
+    return;
+
+  ensureTrackExists(trackIndex);
+  m_trackStyles[trackIndex] = style;
+  invalidateFontCache(trackIndex);
+  emit trackStyleChanged(trackIndex, style);
+
+  // Also emit trackDataChanged to force a redraw
+  RythmoTrackData data;
+  data.trackIndex = trackIndex;
+  data.text = m_tracks[trackIndex];
+  data.cursorIndex = cursorIndex(trackIndex, m_currentPosition);
+  data.positionMs = m_currentPosition;
+  data.speed = m_speed;
+  data.style = style;
+  emit trackDataChanged(data);
+}
+
+RythmoTrackStyle RythmoManager::trackStyle(int trackIndex) const {
+  return m_trackStyles.value(trackIndex, RythmoTrackStyle());
+}
+
 void RythmoManager::insertCharacter(int trackIndex, const QString &character) {
   if (trackIndex < 0) {
     return;
@@ -64,7 +100,7 @@ void RythmoManager::insertCharacter(int trackIndex, const QString &character) {
 
   ensureTrackExists(trackIndex);
 
-  int idx = cursorIndex(m_currentPosition);
+  int idx = cursorIndex(trackIndex, m_currentPosition);
   QString &trackText = m_tracks[trackIndex];
 
   // Reset offset if position changed since last insert
@@ -91,7 +127,7 @@ void RythmoManager::deleteCharacter(int trackIndex, bool before) {
     return;
   }
 
-  int idx = cursorIndex(m_currentPosition);
+  int idx = cursorIndex(trackIndex, m_currentPosition);
   QString &trackText = m_tracks[trackIndex];
 
   // Account for insertion offset when calculating position
@@ -131,9 +167,10 @@ void RythmoManager::setSpeed(int pixelsPerSecond) {
       RythmoTrackData data;
       data.trackIndex = i;
       data.text = m_tracks[i];
-      data.cursorIndex = cursorIndex(m_currentPosition);
+      data.cursorIndex = cursorIndex(i, m_currentPosition);
       data.positionMs = m_currentPosition;
       data.speed = m_speed;
+      data.style = trackStyle(i);
       emit trackDataChanged(data);
     }
   }
@@ -145,25 +182,20 @@ int RythmoManager::speed() const { return m_speed; }
 // Position Calculations
 // =============================================================================
 
-QFont RythmoManager::getFont() const {
-  if (m_cachedCharWidth == -1) {
-    m_cachedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_cachedFont.setPointSize(DEFAULT_FONT_SIZE);
-    m_cachedFont.setBold(true);
-  }
-  return m_cachedFont;
+QFont RythmoManager::getFont(int trackIndex) const {
+  return trackStyle(trackIndex).font;
 }
 
-int RythmoManager::charWidth() const {
-  if (m_cachedCharWidth == -1) {
-    QFontMetrics fm(getFont());
-    m_cachedCharWidth = fm.horizontalAdvance('A');
+int RythmoManager::charWidth(int trackIndex) const {
+  if (!m_cachedCharWidths.contains(trackIndex)) {
+    QFontMetrics fm(getFont(trackIndex));
+    m_cachedCharWidths[trackIndex] = fm.horizontalAdvance('A');
   }
-  return m_cachedCharWidth;
+  return m_cachedCharWidths[trackIndex];
 }
 
-int RythmoManager::cursorIndex(qint64 positionMs) const {
-  int cw = charWidth();
+int RythmoManager::cursorIndex(int trackIndex, qint64 positionMs) const {
+  int cw = charWidth(trackIndex);
   if (cw <= 0) {
     return 0;
   }
@@ -172,8 +204,8 @@ int RythmoManager::cursorIndex(qint64 positionMs) const {
   return static_cast<int>(distancePixels / cw);
 }
 
-qint64 RythmoManager::charDurationMs() const {
-  int cw = charWidth();
+qint64 RythmoManager::charDurationMs(int trackIndex) const {
+  int cw = charWidth(trackIndex);
   if (cw <= 0 || m_speed <= 0) {
     return 40; // Fallback: approximately 1 frame at 25fps
   }
@@ -183,7 +215,9 @@ qint64 RythmoManager::charDurationMs() const {
 
 qint64 RythmoManager::currentPosition() const { return m_currentPosition; }
 
-void RythmoManager::invalidateFontCache() { m_cachedCharWidth = -1; }
+void RythmoManager::invalidateFontCache(int trackIndex) {
+  m_cachedCharWidths.remove(trackIndex);
+}
 
 // =============================================================================
 // Synchronization
@@ -197,15 +231,14 @@ void RythmoManager::sync(qint64 positionMs) {
   m_currentPosition = positionMs;
 
   // Emit updated data for all tracks
-  int cursor = cursorIndex(positionMs);
-
   for (int i = 0; i < m_tracks.size(); ++i) {
     RythmoTrackData data;
     data.trackIndex = i;
     data.text = m_tracks[i];
-    data.cursorIndex = cursor;
+    data.cursorIndex = cursorIndex(i, positionMs);
     data.positionMs = positionMs;
     data.speed = m_speed;
+    data.style = trackStyle(i);
     emit trackDataChanged(data);
   }
 }

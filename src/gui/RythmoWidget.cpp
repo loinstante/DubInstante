@@ -17,7 +17,6 @@
 RythmoWidget::RythmoWidget(QWidget *parent)
     : QWidget(parent), m_cursorIndex(0), m_currentPosition(0), m_speed(100),
       m_isPlaying(false), m_editable(true), m_visualStyle(Standalone),
-      m_fontSize(16), m_verticalPadding(4), m_textColor(QColor(34, 34, 34)),
       m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
       m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
@@ -50,12 +49,13 @@ RythmoWidget::VisualStyle RythmoWidget::visualStyle() const {
   return m_visualStyle;
 }
 
-void RythmoWidget::setTextColor(const QColor &color) {
-  if (m_textColor != color) {
-    m_textColor = color;
-    update();
-  }
+void RythmoWidget::setTrackStyle(const RythmoTrackStyle &style) {
+  m_style = style;
+  m_cachedCharWidth = -1;
+  update();
 }
+
+RythmoTrackStyle RythmoWidget::trackStyle() const { return m_style; }
 
 void RythmoWidget::setSpeed(int speed) {
   if (m_speed != speed && speed > 0) {
@@ -161,18 +161,9 @@ void RythmoWidget::animate() {
 // Helpers
 // =============================================================================
 
-QFont RythmoWidget::getFont() const {
-  if (m_cachedCharWidth == -1) {
-    m_cachedFont = QFontDatabase::systemFont(QFontDatabase::FixedFont);
-    m_cachedFont.setPointSize(m_fontSize);
-    m_cachedFont.setBold(true);
-  }
-  return m_cachedFont;
-}
-
 int RythmoWidget::charWidth() const {
   if (m_cachedCharWidth == -1) {
-    QFontMetrics fm(getFont());
+    QFontMetrics fm(m_style.font);
     m_cachedCharWidth = fm.horizontalAdvance('A');
   }
   return m_cachedCharWidth;
@@ -258,16 +249,19 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   double textStartX = targetX - pixelOffset;
 
   // 3. Draw band background
-  QColor bgColor = m_isPlaying ? m_playingBarColor : m_barColor;
+  QColor bgColor = m_style.backgroundColor;
+  // If playing, we might want to slightly lighten or darken it as a visual cue
+  if (m_isPlaying) {
+    bgColor = bgColor.lighter(110);
+  }
   painter.fillRect(bandRect, bgColor);
 
   // 4. Draw scrolling text (virtualized for performance)
   if (cw > 0 && !m_text.isEmpty()) {
-    QFont font = getFont();
-    painter.setFont(font);
-    painter.setPen(m_textColor);
+    painter.setFont(m_style.font);
+    painter.setPen(m_style.textColor);
 
-    int textY = bandY + (bandHeight + m_fontSize) / 2 - 2;
+    int textY = bandY + (bandHeight + m_style.globalSize) / 2 - 2;
 
     // Only render visible characters
     int firstVisibleIdx = std::max(0, static_cast<int>(-textStartX / cw));

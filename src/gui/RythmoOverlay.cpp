@@ -64,11 +64,6 @@ void RythmoOverlay::setSpeed(int speed) {
   m_rythmo2->setSpeed(speed);
 }
 
-void RythmoOverlay::setTextColor(const QColor &color) {
-  m_rythmo1->setTextColor(color);
-  m_rythmo2->setTextColor(color);
-}
-
 void RythmoOverlay::setEditable(bool editable) {
   m_rythmo1->setEditable(editable);
   m_rythmo2->setEditable(editable);

@@ -17,12 +17,27 @@
 #ifndef RYTHMOMANAGER_H
 #define RYTHMOMANAGER_H
 
+#include <QColor>
 #include <QFont>
 #include <QFontDatabase>
 #include <QFontMetrics>
+#include <QMap>
 #include <QObject>
 #include <QString>
 #include <QVector>
+
+/**
+ * @struct RythmoTrackStyle
+ * @brief Style data for a single track.
+ */
+struct RythmoTrackStyle {
+  QFont font;
+  QColor textColor;
+  QColor backgroundColor;
+  int globalSize;
+
+  RythmoTrackStyle();
+};
 
 /**
  * @struct RythmoTrackData
@@ -34,6 +49,7 @@ struct RythmoTrackData {
   int cursorIndex;
   qint64 positionMs;
   int speed;
+  RythmoTrackStyle style;
 };
 
 /**
@@ -86,6 +102,20 @@ public:
   QString text(int trackIndex) const;
 
   /**
+   * @brief Sets the style for a specific track.
+   * @param trackIndex Index of the track.
+   * @param style The new style to apply.
+   */
+  void setTrackStyle(int trackIndex, const RythmoTrackStyle &style);
+
+  /**
+   * @brief Gets the current style of a track.
+   * @param trackIndex Index of the track.
+   * @return The style of the track, or a default style if it doesn't exist.
+   */
+  RythmoTrackStyle trackStyle(int trackIndex) const;
+
+  /**
    * @brief Inserts a character at the cursor position for a track.
    * @param trackIndex Index of the track.
    * @param character The character to insert.
@@ -123,22 +153,27 @@ public:
   // =========================================================================
 
   /**
-   * @brief Calculates the cursor index for a given time position.
+   * @brief Calculates the cursor index for a given time position on a specific
+   * track.
+   * @param trackIndex Index of the track.
    * @param positionMs Time position in milliseconds.
    * @return Character index where the cursor should be.
    */
-  int cursorIndex(qint64 positionMs) const;
+  int cursorIndex(int trackIndex, qint64 positionMs) const;
 
   /**
-   * @brief Calculates the duration of one character in milliseconds.
+   * @brief Calculates the duration of one character in milliseconds for a
+   * specific track.
+   * @param trackIndex Index of the track.
    * @return Duration in ms based on current speed and font metrics.
    */
-  qint64 charDurationMs() const;
+  qint64 charDurationMs(int trackIndex) const;
 
   /**
-   * @brief Returns the character width in pixels (cached).
+   * @brief Returns the character width in pixels for a specific track (cached).
+   * @param trackIndex Index of the track.
    */
-  int charWidth() const;
+  int charWidth(int trackIndex) const;
 
   /**
    * @brief Returns the current playback position.
@@ -176,6 +211,13 @@ signals:
    */
   void textChanged(int trackIndex, const QString &text);
 
+  /**
+   * @brief Emitted when the style of a track changes.
+   * @param trackIndex Which track changed.
+   * @param style The new style applied.
+   */
+  void trackStyleChanged(int trackIndex, const RythmoTrackStyle &style);
+
   /** @brief Emitted when speed parameter changes. */
   void speedChanged(int speed);
 
@@ -193,30 +235,32 @@ private:
   void ensureTrackExists(int trackIndex);
 
   /**
-   * @brief Invalidates the cached font metrics.
+   * @brief Invalidates the cached font metrics for a specific track.
+   * @param trackIndex Index of the track.
    */
-  void invalidateFontCache();
+  void invalidateFontCache(int trackIndex);
 
   /**
-   * @brief Gets or creates the cached font.
+   * @brief Gets or creates the cached font for a specific track.
+   * @param trackIndex Index of the track.
    */
-  QFont getFont() const;
+  QFont getFont(int trackIndex) const;
 
   // =========================================================================
   // State
   // =========================================================================
 
-  QVector<QString> m_tracks; ///< Dynamic list of track texts
-  int m_speed;               ///< Scrolling speed (pixels/second)
-  qint64 m_currentPosition;  ///< Current playback position (ms)
+  QVector<QString> m_tracks;                 ///< Dynamic list of track texts
+  QMap<int, RythmoTrackStyle> m_trackStyles; ///< Track specific styles
+  int m_speed;              ///< Scrolling speed (pixels/second)
+  qint64 m_currentPosition; ///< Current playback position (ms)
 
   // Insertion tracking (for correct character order)
   qint64 m_lastInsertPosition; ///< Position when last insert occurred
   int m_insertOffset;          ///< Offset for consecutive inserts
 
-  // Font metrics cache
-  mutable QFont m_cachedFont;
-  mutable int m_cachedCharWidth;
+  // Font metrics cache mapped by track index
+  mutable QMap<int, int> m_cachedCharWidths;
 
   // Configuration
   static constexpr int DEFAULT_FONT_SIZE = 16;

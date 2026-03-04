@@ -16,6 +16,7 @@
 #include "ClickableSlider.h"
 #include "RythmoOverlay.h"
 #include "TrackPanel.h"
+#include "TrackSettingsDialog.h"
 #include "VideoWidget.h"
 
 // Utils includes
@@ -517,7 +518,18 @@ void MainWindow::setupConnections() {
 
   connect(m_textColorCheck, &QCheckBox::toggled, this, [this](bool checked) {
     QColor color = checked ? QColor(Qt::white) : QColor(34, 34, 34);
-    m_rythmoOverlay->setTextColor(color);
+    for (int i = 0; i < 2; ++i) {
+      RythmoTrackStyle style = m_rythmoManager->trackStyle(i);
+      style.textColor = color;
+      m_rythmoManager->setTrackStyle(i, style);
+    }
+  });
+
+  connect(m_actionPersonalizeRythmo, &QAction::triggered, this, [this]() {
+    TrackSettingsDialog *dialog =
+        new TrackSettingsDialog(m_rythmoManager, this);
+    dialog->setAttribute(Qt::WA_DeleteOnClose);
+    dialog->show();
   });
 
   // =========================================================================
@@ -531,6 +543,15 @@ void MainWindow::setupConnections() {
 
   connect(m_rythmoOverlay->track2(), &RythmoWidget::textChanged, this,
           [this](const QString &text) { m_rythmoManager->setText(1, text); });
+
+  // Update overlay styles when manager styles change
+  connect(m_rythmoManager, &RythmoManager::trackStyleChanged, this,
+          [this](int trackIndex, const RythmoTrackStyle &style) {
+            if (trackIndex == 0)
+              m_rythmoOverlay->track1()->setTrackStyle(style);
+            else if (trackIndex == 1)
+              m_rythmoOverlay->track2()->setTrackStyle(style);
+          });
 
   // Recording
   connect(m_recordButton, &QPushButton::clicked, this,
@@ -600,7 +621,16 @@ void MainWindow::onSaveProject() {
   data.scrollSpeed = m_speedSpinBox->value();
   data.isTextWhite = m_textColorCheck->isChecked();
   data.enableTrack2 = m_actionEnableTrack2->isChecked();
-  data.tracks << m_rythmoManager->text(0) << m_rythmoManager->text(1);
+
+  TrackSaveData track1Data;
+  track1Data.text = m_rythmoManager->text(0);
+  track1Data.style = m_rythmoManager->trackStyle(0);
+
+  TrackSaveData track2Data;
+  track2Data.text = m_rythmoManager->text(1);
+  track2Data.style = m_rythmoManager->trackStyle(1);
+
+  data.tracks << track1Data << track2Data;
 
   if (saveWithVideo) {
     // Check zip availability BEFORE launching thread (for specific error
@@ -678,12 +708,14 @@ void MainWindow::onLoadProject() {
 
   // Restore tracks
   if (data.tracks.size() > 0) {
-    m_rythmoManager->setText(0, data.tracks[0]);
-    m_rythmoOverlay->track1()->setText(data.tracks[0]);
+    m_rythmoManager->setText(0, data.tracks[0].text);
+    m_rythmoManager->setTrackStyle(0, data.tracks[0].style);
+    m_rythmoOverlay->track1()->setText(data.tracks[0].text);
   }
   if (data.tracks.size() > 1) {
-    m_rythmoManager->setText(1, data.tracks[1]);
-    m_rythmoOverlay->track2()->setText(data.tracks[1]);
+    m_rythmoManager->setText(1, data.tracks[1].text);
+    m_rythmoManager->setTrackStyle(1, data.tracks[1].style);
+    m_rythmoOverlay->track2()->setText(data.tracks[1].text);
   }
 
   // Restore video and volume

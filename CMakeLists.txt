@@ -57,6 +57,8 @@ set(GUI_SOURCES
     src/gui/RythmoOverlay.cpp
     src/gui/TrackPanel.h
     src/gui/TrackPanel.cpp
+    src/gui/TrackSettingsDialog.h
+    src/gui/TrackSettingsDialog.cpp
     src/gui/ClickableSlider.h
 )
 

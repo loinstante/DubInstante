@@ -5,6 +5,25 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.0] - 2026-03-04
+
+### Added
+- **Advanced Rythmo Band Customization**: Per-track styling system for the Rythmo band with independent font, text color, background color, and global size controls.
+- **Track Style Presets**: 6 built-in presets (Classic, Dark, Blue, Red, Green, Yellow) for quick visual customization.
+- **Track Settings Dialog**: New non-modal dialog (`TrackSettingsDialog`) accessible from the "Personalize Rythmo" menu with live preview, toggle track selector, font combo box, color pickers, and size control.
+- **Per-Track Font Selection**: `QFontComboBox` with scalable font filter for reliable cross-platform font selection.
+- **Live Preview**: Real-time animated preview widget in the settings dialog shows style changes instantly.
+
+### Changed
+- **RythmoManager**: Extended `RythmoTrackData` with `RythmoTrackStyle` struct. Font metrics (`charWidth`, `cursorIndex`, `charDurationMs`) are now calculated per-track based on the track's individual style.
+- **RythmoWidget**: Rendering now uses `RythmoTrackStyle` for font, text color, and background color instead of hardcoded values.
+- **SaveManager**: `SaveData.tracks` upgraded from `QStringList` to `QList<TrackSaveData>` to persist both text and style information per track.
+
+### Technical
+- **Backward Compatibility**: Old `.dbi` files (v0.8 and earlier) load correctly with a default "Classic" style applied to all tracks — no crashes.
+- **Zero Regression**: Existing `QVector`-based dynamic track system preserved. No hardcoding of track indices.
+- **Architecture Compliance**: Core layer (`RythmoTrackStyle`) uses only `QColor`/`QFont` — no `QWidget` dependencies. All UI logic remains in the GUI layer.
+
 ## [0.6.0] - 2026-02-25
 
 ### Added

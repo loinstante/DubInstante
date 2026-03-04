@@ -23,7 +23,8 @@
 - 🎙️ **Multi-Track Recording** / Enregistrement multipiste
 - 💾 **Project Save/Load** / Sauvegarde et chargement de projets (.dbi + ZIP)
 - 🎨 **Modern UI** / Interface moderne et professionnelle
-- 📤 **Export** / Exportation FFmpeg
+- �️ **Rythmo Customization** / Personnalisation avancée des bandes rythmo (polices, couleurs, préréglages)
+- �📤 **Export** / Exportation FFmpeg
 - 📱 **Android Support** / Application Native Android (Beta)
 
 ### Keyboard Shortcuts / Raccourcis Clavier
@@ -48,7 +49,9 @@ Open-source - Contributions welcome! / Contributions bienvenues!
 - **v0.6.0**: ✅ Native Android App / Application Android Native (Beta)
 - **v0.7.0**: ❌ Online prototype with .dbi files possible (no beta avaible) / Prototype d'un site web avec prise en charge du .dbi
 - **v0.8.0**: ⏭️ Surprise for all of you / Surprise pour vous tous
-- **v0.9.0**: 🛠️ Customization & Independent Band Styling / Personnalisation & Styles de bandes
+- **v0.9.0**: ✅ Customization & Independent Band Styling / Personnalisation & Styles de bandes
+- **v0.10.0**: 🛠️ Add 2 more rythmo band to acheive 4 like any other one in the market / Ajoute de 2 bande rythmo supplementaire afin d'en avoir 4 comme les autres sur le marché
+- **v0.11.0**: UI Remake for better useability / Refonte de l'interface utilisateur pour une meilleure utilisabilité
 - **V1**: Stable launch on every platform possible with many surprises / Lancement d'une application stable toutes platforme
 - **+** User-driven features! / Des idées d'utilisateurs bienvenues !
 

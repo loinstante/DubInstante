@@ -2,7 +2,7 @@
 
 > **DubInstante** est un studio de doublage vidéo professionnel.
 > Ce document couvre de manière exhaustive le code source des couches Core, GUI et Utils.
-> Dernière mise à jour : v0.5.0 (version CMake) — février 2026.
+> Dernière mise à jour : v0.9.0 (version CMake) — mars 2026.
 
 ## 📖 À qui s'adresse ce document ?
 
@@ -185,7 +185,7 @@ DubInstante/
 ├── CMakeLists.txt                    # Configuration build CMake
 ├── resources.qrc                     # Registre des ressources Qt (icons + QSS)
 ├── THECODE.md                        # 👈 Ce fichier
-├── CHANGELOG.md                      # Historique des versions (v0.0.0 → v0.6.0)
+├── CHANGELOG.md                      # Historique des versions (v0.0.0 → v0.9.0)
 ├── README.md                         # Présentation du projet
 ├── DubInstante.png                   # Logo / icône
 │
@@ -320,14 +320,24 @@ C'est la classe Core la plus complexe.
 #### Struct associée : `RythmoTrackData`
 
 ```cpp
+struct RythmoTrackStyle {
+    QFont font;              // Police de la piste (par défaut : monospace système, 16pt, bold)
+    QColor textColor;        // Couleur du texte (par défaut : noir)
+    QColor backgroundColor;  // Couleur de fond (par défaut : transparent)
+    int globalSize;          // Taille globale en points (par défaut : 16)
+};
+
 struct RythmoTrackData {
-    int trackIndex;      // Index de la piste (0-based, typiquement 0 ou 1)
-    QString text;        // Texte complet de la piste
-    int cursorIndex;     // Index du caractère sous le curseur de lecture
-    qint64 positionMs;   // Position temporelle courante en millisecondes
-    int speed;           // Vitesse de défilement en pixels/seconde
+    int trackIndex;          // Index de la piste (0-based)
+    QString text;            // Texte complet de la piste
+    int cursorIndex;         // Index du caractère sous le curseur
+    qint64 positionMs;       // Position temporelle courante (ms)
+    int speed;               // Vitesse de défilement (px/s)
+    RythmoTrackStyle style;  // Style visuel de la piste
 };
 ```
+
+La struct `RythmoTrackStyle` est stockée dans chaque piste et utilisée par le moteur de rendu pour personnaliser l'apparence indépendante de chaque bande rythmo.
 
 C'est la struct émise via `trackDataChanged`. Elle contient **tout ce dont l'UI a besoin** pour rendre une piste.
 
@@ -336,6 +346,7 @@ C'est la struct émise via `trackDataChanged`. Elle contient **tout ce dont l'UI
 | Membre | Type | Init | Rôle |
 |--------|------|------|------|
 | `m_tracks` | `QVector<QString>` | `reserve(2)` | Texte de chaque piste. Auto-expand. |
+| `m_trackStyles` | `QVector<RythmoTrackStyle>` | `reserve(2)` | Style visuel de chaque piste. Auto-expand avec style par défaut. |
 | `m_speed` | `int` | `100` | Vitesse de défilement (px/s) |
 | `m_currentPosition` | `qint64` | `0` | Dernière position reçue (ms) |
 | `m_lastInsertPosition` | `qint64` | `-1` | Position au moment de la dernière insertion |
@@ -431,6 +442,7 @@ Le vecteur s'auto-expand : `setText(5, "...")` crée les pistes 0-4 automatiquem
 | `textChanged` | `int, QString` | Quand le texte d'une piste change |
 | `speedChanged` | `int` | Quand la vitesse change |
 | `seekRequested` | `qint64` | Quand l'UI demande un seek |
+| `trackStyleChanged` | `int, RythmoTrackStyle` | Quand le style d'une piste change |
 
 ---
 
@@ -556,19 +568,26 @@ Sérialisation/désérialisation au format binaire `.dbi`. Obfuscation XOR + SHA
 #### Struct : `SaveData`
 
 ```cpp
+struct TrackSaveData {
+    QString text;               // Texte de la piste
+    RythmoTrackStyle style;     // Style visuel (police, couleurs, taille)
+};
+
 struct SaveData {
-    QString videoUrl;       // Chemin vidéo
-    float videoVolume;      // 0.0→1.0
-    QString audioInput1;    // Description device piste 1
-    float audioGain1;       // 0.0→1.0
-    QString audioInput2;    // Description device piste 2
-    float audioGain2;       // 0.0→1.0
-    bool enableTrack2;      // Piste 2 activée ?
-    int scrollSpeed;        // Vitesse (10→500)
-    bool isTextWhite;       // Texte blanc ?
-    QStringList tracks;     // Texte de chaque piste
+    QString videoUrl;           // Chemin vidéo
+    float videoVolume;          // 0.0→1.0
+    QString audioInput1;        // Description device piste 1
+    float audioGain1;           // 0.0→1.0
+    QString audioInput2;        // Description device piste 2
+    float audioGain2;           // 0.0→1.0
+    bool enableTrack2;          // Piste 2 activée ?
+    int scrollSpeed;            // Vitesse (10→500)
+    bool isTextWhite;           // Texte blanc ? (legacy, remplacé par RythmoTrackStyle)
+    QList<TrackSaveData> tracks; // Texte + style de chaque piste
 };
 ```
+
+> **Rétrocompatibilité :** Les anciens fichiers `.dbi` (≤ v0.8) stockaient les tracks comme un simple `QStringList`. Le `load()` détecte automatiquement l'ancien format (JSON string) vs le nouveau format (JSON object avec `text` + `style`), et applique un style "Classique" par défaut aux anciennes pistes.
 
 #### Membres privés
 
@@ -908,7 +927,51 @@ Attributs : `WA_TranslucentBackground`, `paintEvent` vide.
 
 #### Méthodes proxy
 
-Toutes les méthodes forward vers les deux pistes : `sync()`, `setPlaying()`, `setSpeed()`, `setTextColor()`, `setEditable()`.
+Toutes les méthodes forward vers les deux pistes : `sync()`, `setPlaying()`, `setSpeed()`, `setEditable()`.
+
+> **Note v0.9.0 :** `setTextColor()` a été supprimé. Le styling est désormais géré par `RythmoTrackStyle` via `setTrackStyle()`.
+
+---
+
+### TrackSettingsDialog
+
+📄 `src/gui/TrackSettingsDialog.h` / `.cpp` — **~300 lignes**
+
+#### Rôle
+
+Dialog non-modale de personnalisation des styles de bande rythmo. Permet de modifier indépendamment le style visuel de chaque piste.
+
+#### UI
+
+```
+QDialog (non-modal, 500px min)
+├── Sélecteur de piste : 2× QPushButton checkable ("Piste 1" / "Piste 2")
+├── Aperçu en direct : RythmoWidget animé avec le style courant
+├── Préréglages : 6× QPushButton (Classique, Sombre, Bleu, Rouge, Vert, Jaune)
+├── Réglages Fins :
+│   ├── Police : QFontComboBox (filtre ScalableFonts, non-editable)
+│   ├── Taille globale : QSpinBox (10→50)
+│   ├── Couleur Texte : QPushButton avec aperçu couleur + QColorDialog
+│   └── Couleur Fond : QPushButton avec aperçu couleur + QColorDialog
+└── Bouton Fermer
+```
+
+#### Connexions
+
+- Écoute `RythmoManager::trackStyleChanged` pour rester synchronisé en temps réel
+- Chaque contrôle modifie directement le style via `RythmoManager::setTrackStyle()`
+- L'aperçu se met à jour instantanément via `RythmoWidget::setTrackStyle()`
+
+#### Préréglages de couleurs
+
+| Preset | Texte | Fond |
+|--------|-------|------|
+| Classique | `#222222` (sombre) | `#FFFFFF` (blanc) |
+| Sombre | `#FFFFFF` (blanc) | `#222222` (sombre) |
+| Bleu | `#0078D7` (bleu) | `#FFFFFF` (blanc) |
+| Rouge | `#C23934` (rouge) | `#FFFFFF` (blanc) |
+| Vert | `#27AE60` (vert) | `#FFFFFF` (blanc) |
+| Jaune | `#F1C40F` (jaune) | `#FFFFFF` (blanc) |
 
 ---
 

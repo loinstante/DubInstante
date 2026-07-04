@@ -409,7 +409,9 @@ void GlobalSettingsDialog::loadSettings() {
     for (const QString &out : sm.preferredOutputs()) {
         QStringList parts = out.split("|");
         if (parts.size() >= 2) {
-            m_outputsList->addItem(QString("%1 -- %2 (%3)").arg(QString::number(count), parts[0], parts[1]));
+            auto *item = new QListWidgetItem(QString("%1 -- %2 (%3)").arg(QString::number(count), parts[0], parts[1]));
+            item->setData(Qt::UserRole, QString("%1|%2").arg(parts[0], parts[1]));
+            m_outputsList->addItem(item);
             count++;
         }
     }
@@ -433,7 +435,9 @@ void GlobalSettingsDialog::addPreferredOutput() {
 
     // Add to list widget immediately
     int count = m_outputsList->count() + 1;
-    m_outputsList->addItem(QString("%1 -- %2 (%3)").arg(QString::number(count), label, devDesc));
+    auto *item = new QListWidgetItem(QString("%1 -- %2 (%3)").arg(QString::number(count), label, devDesc));
+    item->setData(Qt::UserRole, QString("%1|%2").arg(label, devDesc));
+    m_outputsList->addItem(item);
 
     // Clear add fields
     m_newOutputNameEdit->clear();
@@ -469,21 +473,13 @@ void GlobalSettingsDialog::saveSettings() {
     // Audio settings
     sm.setDefaultMicrophone(m_defaultMicCombo->currentData().toString());
 
-    // Preferred outputs list
+    // Preferred outputs list ("label|device" carried in UserRole: display text
+    // is not parseable once the device name itself contains parentheses)
     QStringList outputs;
     for (int i = 0; i < m_outputsList->count(); ++i) {
-        QString text = m_outputsList->item(i)->text();
-        // parse e.g. "1 -- Casque Sony (Sony WH-1000XM4)"
-        int prefixIdx = text.indexOf(" -- ");
-        if (prefixIdx >= 0) {
-            QString content = text.mid(prefixIdx + 4);
-            int parenIdx = content.lastIndexOf(" (");
-            if (parenIdx >= 0) {
-                QString label = content.left(parenIdx);
-                QString dev = content.mid(parenIdx + 2);
-                dev.chop(1); // remove ending ')'
-                outputs.append(QString("%1|%2").arg(label, dev));
-            }
+        QString entry = m_outputsList->item(i)->data(Qt::UserRole).toString();
+        if (entry.contains('|')) {
+            outputs.append(entry);
         }
     }
     sm.setPreferredOutputs(outputs);

@@ -161,9 +161,15 @@ private:
      */
     bool validateConfig(const ExportConfig &config, QString &errorMessage) const;
 
+    /**
+     * @brief Deletes the partial output file after a failed or cancelled export.
+     */
+    void removePartialOutput();
+
     QProcess *m_process;
     qint64 m_totalDurationMs;
     QString m_errorAccumulator;
+    QString m_currentOutputPath;
     bool m_exportFinishedEmitted;
 };
 

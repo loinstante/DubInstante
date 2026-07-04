@@ -46,9 +46,9 @@ bool ExportService::isExporting() const
 
 void ExportService::startExport(const ExportConfig &config)
 {
-    // Check if already running
+    // Check if already running (no signal: it would wipe the running export's progress UI)
     if (isExporting()) {
-        emit exportFinished(false, "Un export est déjà en cours.");
+        qWarning() << "[ExportService] startExport ignored: an export is already running";
         return;
     }
     
@@ -60,6 +60,7 @@ void ExportService::startExport(const ExportConfig &config)
     }
     
     m_totalDurationMs = config.durationMs;
+    m_currentOutputPath = config.outputPath;
     m_exportFinishedEmitted = false;
     m_errorAccumulator.clear();
     emit progressChanged(0);
@@ -87,6 +88,8 @@ void ExportService::cancelExport()
 void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
     if (m_exportFinishedEmitted) {
+        // Cancelled or already reported: the process is done now, drop the partial file
+        removePartialOutput();
         return;
     }
     m_exportFinishedEmitted = true;
@@ -120,6 +123,7 @@ void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
                 detailedError = "Erreur inconnue de FFmpeg.";
             }
         }
+        removePartialOutput();
         emit exportFinished(false, "Échec de l'export: " + detailedError);
     }
 }
@@ -131,10 +135,18 @@ void ExportService::handleProcessError(QProcess::ProcessError error)
     }
     m_exportFinishedEmitted = true;
 
+    removePartialOutput();
     if (error == QProcess::FailedToStart) {
         emit exportFinished(false, "FFmpeg n'a pas pu démarrer. Est-il installé ?");
     } else {
         emit exportFinished(false, "Erreur lors de l'exécution de FFmpeg.");
+    }
+}
+
+void ExportService::removePartialOutput()
+{
+    if (!m_currentOutputPath.isEmpty() && QFile::exists(m_currentOutputPath)) {
+        QFile::remove(m_currentOutputPath);
     }
 }
 
@@ -291,8 +303,9 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
         args << "-pix_fmt" << "yuv420p";
     }
     
-    // Scale resolution if specified
-    if (!config.scaleResolution.isEmpty()) {
+    // Scale resolution if specified (-vf is incompatible with stream copy)
+    bool videoCopy = config.expertMode && config.videoCodec == "copy";
+    if (!config.scaleResolution.isEmpty() && !videoCopy) {
         args << "-vf" << QString("scale=%1").arg(config.scaleResolution);
     }
     
@@ -323,7 +336,8 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
     }
     
     int amixInputs = (includeOriginal ? 1 : 0) + 1 + extraCount;
-    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest[aout]").arg(amixInputs);
+    // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N
+    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest:normalize=0[aout]").arg(amixInputs);
     
     args << "-filter_complex" << filterComplex;
     args << "-map" << "0:v:0";

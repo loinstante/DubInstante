@@ -182,6 +182,7 @@ private:
   QSpinBox *m_speedSpinBox;
   QCheckBox *m_textColorCheck;
   QProgressBar *m_exportProgressBar;
+  QPushButton *m_exportCancelBtn;
 
   // Track count controls
   QLabel *m_trackCountLabel;

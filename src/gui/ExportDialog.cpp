@@ -553,23 +553,39 @@ void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
 
 void ExportDialog::populateFields()
 {
-    // 1. Fetch original video resolution via ffprobe
+    // 1. Probe resolution and audio presence in a single ffprobe call
+    bool hasAudioStream = true; // assume audio unless a successful probe says otherwise
     if (!m_sourceVideoPath.isEmpty() && QFile::exists(m_sourceVideoPath)) {
         QProcess probe;
-        probe.start("ffprobe", QStringList() << "-v" << "error" << "-select_streams" << "v:0" 
-                                             << "-show_entries" << "stream=width,height" 
-                                             << "-of" << "csv=s=x:p=0" << m_sourceVideoPath);
+        probe.start("ffprobe", QStringList() << "-v" << "error"
+                                             << "-show_entries" << "stream=codec_type,width,height"
+                                             << "-of" << "csv=p=0" << m_sourceVideoPath);
         if (probe.waitForFinished(1500)) {
-            QString output = QString::fromUtf8(probe.readAllStandardOutput()).trimmed();
-            QStringList parts = output.split('x');
-            if (parts.size() == 2) {
-                m_videoOriginalWidth = parts[0].toInt();
-                m_videoOriginalHeight = parts[1].toInt();
-                if (m_videoOriginalWidth > 0 && m_videoOriginalHeight > 0) {
-                    m_videoAspectRatio = static_cast<float>(m_videoOriginalWidth) / m_videoOriginalHeight;
+            hasAudioStream = false;
+            const QString output = QString::fromUtf8(probe.readAllStandardOutput());
+            const QStringList lines = output.split('\n', Qt::SkipEmptyParts);
+            for (const QString &line : lines) {
+                QStringList parts = line.trimmed().split(',');
+                if (parts.value(0) == "video" && parts.size() >= 3 && m_videoOriginalWidth <= 0) {
+                    m_videoOriginalWidth = parts[1].toInt();
+                    m_videoOriginalHeight = parts[2].toInt();
+                    if (m_videoOriginalWidth > 0 && m_videoOriginalHeight > 0) {
+                        m_videoAspectRatio = static_cast<float>(m_videoOriginalWidth) / m_videoOriginalHeight;
+                    }
+                } else if (parts.value(0) == "audio") {
+                    hasAudioStream = true;
                 }
             }
         }
+    }
+
+    // Video without audio: mixing [0:a] would make FFmpeg fail
+    if (!hasAudioStream) {
+        m_defaultOriginalVolume = 0.0f;
+        m_originalVolumeSlider->setValue(0);
+        m_originalVolumeSlider->setEnabled(false);
+        m_originalMuteBtn->setChecked(true);
+        m_originalMuteBtn->setEnabled(false);
     }
 
     if (m_videoOriginalWidth <= 0 || m_videoOriginalHeight <= 0) {
@@ -727,6 +743,10 @@ void ExportDialog::validateSettings()
             if (vCodec == "libx265" || vCodec == "libvpx-vp9") {
                 warning += tr("⚠️ HEVC ou VP9 ne sont pas recommandés dans AVI. Utilisez MP4 ou MKV.\n");
             }
+        }
+
+        if (vCodec == "copy" && !m_expResolutionCombo->currentData().toString().isEmpty()) {
+            warning += tr("⚠️ Le redimensionnement est ignoré en copie de flux vidéo (copy) : la résolution d'origine est conservée.\n");
         }
 
         if (m_expResolutionCombo->currentData().toString() == "custom" && vCodec != "copy") {

@@ -400,6 +400,10 @@ void MainWindow::setupUi() {
   m_exportProgressBar->setFixedWidth(132);
   group3Layout->addWidget(m_exportProgressBar);
 
+  m_exportCancelBtn = new QPushButton(tr("Annuler"), controlBar);
+  m_exportCancelBtn->setVisible(false);
+  group3Layout->addWidget(m_exportCancelBtn);
+
   controlBarLayout->addLayout(group3Layout);
 
   mainLayout->addWidget(controlBarHost);
@@ -756,6 +760,8 @@ void MainWindow::setupConnections() {
           &MainWindow::onExportProgress);
   connect(m_exportService, &ExportService::exportFinished, this,
           &MainWindow::onExportFinished);
+  connect(m_exportCancelBtn, &QPushButton::clicked, m_exportService,
+          &ExportService::cancelExport);
 
   connect(m_actionGlobalSettings, &QAction::triggered, this,
           &MainWindow::onOpenGlobalSettings);
@@ -1540,6 +1546,7 @@ void MainWindow::onExportProgress(int percentage) {
 
 void MainWindow::onExportFinished(bool success, const QString &message) {
   m_exportProgressBar->setVisible(false);
+  m_exportCancelBtn->setVisible(false);
 
   if (success) {
     QMessageBox::information(this, tr("Export"), message);
@@ -1555,7 +1562,8 @@ void MainWindow::showExportDialog() {
     return;
   }
   
-  if (m_tempAudioPaths.isEmpty() || m_tempAudioPaths[0].isEmpty()) {
+  if (!m_hasRecording.value(0, false) || m_tempAudioPaths.isEmpty() ||
+      m_tempAudioPaths[0].isEmpty()) {
     QMessageBox::warning(this, tr("Export"), tr("Aucun enregistrement audio trouvé à exporter."));
     return;
   }
@@ -1592,7 +1600,8 @@ void MainWindow::showExportDialog() {
   // Create list of extra audio tracks
   QStringList extraAudios;
   for (int i = 1; i < m_trackCount; ++i) {
-    if (m_tempAudioPaths.size() > i) {
+    // A track without a take must not block the export: pass an empty path
+    if (m_hasRecording.value(i, false) && m_tempAudioPaths.size() > i) {
       extraAudios.append(m_tempAudioPaths[i]);
     } else {
       extraAudios.append("");
@@ -1617,6 +1626,7 @@ void MainWindow::showExportDialog() {
     // Set UI progress indicators
     m_exportProgressBar->setVisible(true);
     m_exportProgressBar->setValue(0);
+    m_exportCancelBtn->setVisible(true);
     
     m_exportService->startExport(config);
   }

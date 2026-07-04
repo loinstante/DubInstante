@@ -18,6 +18,7 @@
 
 #include "../core/RythmoManager.h"
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QTimer>
 #include <QWidget>
@@ -202,7 +203,8 @@ private:
   // Animation & Smoothness
   QTimer *m_animationTimer;
   qint64 m_lastSyncPosition = 0;
-  qint64 m_lastSyncTime = 0; // System time (ms) at last sync
+  qint64 m_lastSyncTime = 0;  // Monotonic time (ms) at last sync
+  QElapsedTimer m_syncClock; // Monotonic clock, immune to system time changes
 
 private slots:
   void animate();

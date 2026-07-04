@@ -832,7 +832,7 @@ ExportConfig ExportDialog::exportConfig() const
     config.trackOffsetsMs = m_trackOffsetsMs;
 
     // Time Range
-    if (m_rangeCombo->currentIndex() == 0) { // Section enregistrée
+    if (m_rangeCombo->currentData().toString() == "last") {
         config.durationMs = m_lastRecordedDurationMs;
     } else {
         config.durationMs = -1;

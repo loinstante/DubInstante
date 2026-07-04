@@ -255,9 +255,9 @@ private:
   int m_speed;              ///< Scrolling speed (pixels/second)
   qint64 m_currentPosition; ///< Current playback position (ms)
 
-  // Insertion tracking (for correct character order)
-  qint64 m_lastInsertPosition; ///< Position when last insert occurred
-  int m_insertOffset;          ///< Offset for consecutive inserts
+  // Insertion tracking (for correct character order), per track
+  QMap<int, qint64> m_lastInsertPositions; ///< Position at last insert, by track
+  QMap<int, int> m_insertOffsets;          ///< Consecutive-insert offset, by track
 
   // Font metrics cache mapped by track index
   mutable QMap<int, int> m_cachedCharWidths;

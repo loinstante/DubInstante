@@ -12,7 +12,6 @@
 #include <QMouseEvent>
 #include <QPainter>
 
-#include <QDateTime>
 #include <algorithm>
 
 RythmoWidget::RythmoWidget(QWidget *parent)
@@ -22,6 +21,7 @@ RythmoWidget::RythmoWidget(QWidget *parent)
       m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
       m_lastSyncPosition(0), m_lastSyncTime(0) {
+  m_syncClock.start();
   m_seekTimer->setSingleShot(true);
   connect(m_seekTimer, &QTimer::timeout, this, &RythmoWidget::triggerSeek);
 
@@ -108,7 +108,7 @@ void RythmoWidget::setPlaying(bool playing) {
     if (m_isPlaying) {
       // Start animation loop
       m_lastSyncPosition = m_currentPosition;
-      m_lastSyncTime = QDateTime::currentMSecsSinceEpoch();
+      m_lastSyncTime = m_syncClock.elapsed();
       m_animationTimer->start();
     } else {
       // Stop animation loop
@@ -122,7 +122,7 @@ void RythmoWidget::setPlaying(bool playing) {
 void RythmoWidget::sync(qint64 positionMs) {
   // Always update anchor points for interpolation
   m_lastSyncPosition = positionMs;
-  m_lastSyncTime = QDateTime::currentMSecsSinceEpoch();
+  m_lastSyncTime = m_syncClock.elapsed();
 
   // If not animating (paused), update strictly to valid position
   if (!m_isPlaying) {
@@ -144,7 +144,7 @@ void RythmoWidget::animate() {
   if (!m_isPlaying)
     return;
 
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
+  qint64 now = m_syncClock.elapsed();
   qint64 elapsed = now - m_lastSyncTime;
 
   // Extrapolate position based on time elapsed since last sync

@@ -33,8 +33,10 @@ bool ExportService::isFFmpegAvailable() const
 {
     QProcess check;
     check.start("ffmpeg", QStringList() << "-version");
-    check.waitForFinished(3000);
-    return (check.exitCode() == 0);
+    if (!check.waitForStarted(3000) || !check.waitForFinished(3000)) {
+        return false;
+    }
+    return check.exitStatus() == QProcess::NormalExit && check.exitCode() == 0;
 }
 
 bool ExportService::isExporting() const

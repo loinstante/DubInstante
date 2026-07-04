@@ -18,8 +18,7 @@ RythmoTrackStyle::RythmoTrackStyle()
 }
 
 RythmoManager::RythmoManager(QObject *parent)
-    : QObject(parent), m_speed(DEFAULT_SPEED), m_currentPosition(0),
-      m_lastInsertPosition(-1), m_insertOffset(0) {
+    : QObject(parent), m_speed(DEFAULT_SPEED), m_currentPosition(0) {
   // Initialize with at least 2 tracks (common use case)
   m_tracks.reserve(2);
 }
@@ -103,13 +102,13 @@ void RythmoManager::insertCharacter(int trackIndex, const QString &character) {
   int idx = cursorIndex(trackIndex, m_currentPosition);
   QString &trackText = m_tracks[trackIndex];
 
-  // Reset offset if position changed since last insert
-  if (m_currentPosition != m_lastInsertPosition) {
-    m_insertOffset = 0;
-    m_lastInsertPosition = m_currentPosition;
+  // Reset offset if position changed since last insert on this track
+  if (m_currentPosition != m_lastInsertPositions.value(trackIndex, -1)) {
+    m_insertOffsets[trackIndex] = 0;
+    m_lastInsertPositions[trackIndex] = m_currentPosition;
   }
 
-  int actualIdx = idx + m_insertOffset;
+  int actualIdx = idx + m_insertOffsets.value(trackIndex);
 
   // Pad with spaces if cursor is beyond text length
   while (trackText.length() < actualIdx) {
@@ -117,7 +116,7 @@ void RythmoManager::insertCharacter(int trackIndex, const QString &character) {
   }
 
   trackText.insert(actualIdx, character);
-  m_insertOffset++; // Next character goes after this one
+  m_insertOffsets[trackIndex]++; // Next character goes after this one
 
   emit textChanged(trackIndex, trackText);
 }
@@ -130,15 +129,19 @@ void RythmoManager::deleteCharacter(int trackIndex, bool before) {
   int idx = cursorIndex(trackIndex, m_currentPosition);
   QString &trackText = m_tracks[trackIndex];
 
-  // Account for insertion offset when calculating position
-  int actualIdx = idx + m_insertOffset;
+  // Offset only applies while still at the position of the last insert
+  if (m_currentPosition != m_lastInsertPositions.value(trackIndex, -1)) {
+    m_insertOffsets[trackIndex] = 0;
+    m_lastInsertPositions[trackIndex] = m_currentPosition;
+  }
+  int actualIdx = idx + m_insertOffsets.value(trackIndex);
 
   if (before) {
     // Backspace behavior - delete character before current position
     if (actualIdx > 0 && actualIdx <= trackText.length()) {
       trackText.remove(actualIdx - 1, 1);
-      if (m_insertOffset > 0) {
-        m_insertOffset--; // Maintain offset alignment
+      if (m_insertOffsets.value(trackIndex) > 0) {
+        m_insertOffsets[trackIndex]--; // Maintain offset alignment
       }
       emit textChanged(trackIndex, trackText);
     }

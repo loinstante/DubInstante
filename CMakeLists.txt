@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(DubInstante VERSION 0.5.0 LANGUAGES CXX)
+project(DubInstante VERSION 0.12.0 LANGUAGES CXX)
 
 # =============================================================================
 # C++ Configuration
@@ -144,6 +144,9 @@ target_include_directories(DubInstante PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/gui
     ${CMAKE_CURRENT_SOURCE_DIR}/src/utils
 )
+
+# Single source of truth for the application version
+target_compile_definitions(DubInstante PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
 # =============================================================================
 # Link Libraries

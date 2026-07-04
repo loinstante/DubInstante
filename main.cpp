@@ -37,7 +37,7 @@ int main(int argc, char *argv[])
     
     // Application metadata
     app.setApplicationName("DubInstante");
-    app.setApplicationVersion("1.4.0");
+    app.setApplicationVersion(APP_VERSION);
     app.setOrganizationName("DubInstante");
     
     // Create and show main window

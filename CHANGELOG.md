@@ -5,6 +5,24 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-07-04
+
+### Fixed
+- **Export Time Range**: "Tout le projet" and "Dernier enregistrement" were inverted, truncating full exports to the last take's duration.
+- **Export Mix Volumes**: `amix` no longer attenuates each track by the number of inputs (`normalize=0`); user-set volumes are now respected.
+- **Export with Idle Tracks**: A track without any recorded take no longer blocks the export.
+- **Partial Export Cleanup**: Failed or cancelled exports now delete the incomplete output file, and a Cancel button is available during export.
+- **Project Save Integrity**: `.dbi` saves are now atomic — a disk-full or crash mid-write can no longer destroy the previous save. Corrupted or oversized files are rejected on load.
+- **Font Persistence**: Per-track font family and weight are now saved and restored (older files fall back to the Classic style).
+- **Preview After Recording**: Previews reload only once the recorded WAV is finalized, fixing intermittent silent previews right after stopping.
+- **Frame Extractor Stability**: The FFmpeg worker is now thread-safe, survives audio-only or corrupted files, and reports errors through a dialog instead of crashing.
+- **Audio Output Profiles**: Profiles whose device name contains parentheses (common on Windows) are no longer corrupted on save.
+- **Large Project Archives**: ZIP archiving now uses the destination volume for temporary files (instead of a RAM-backed tmpfs), pre-checks free space, and stores video without recompression.
+- **Autosave Completeness**: Autosave now serializes recording metadata (takes, durations, paths), matching manual saves.
+
+### Changed
+- **Unified Version**: The application version now comes from CMake (`0.12.0`) — release candidate for human testing before v1.0.0.
+
 ## [0.11.0] - 2026-03-31
 
 ### Fixed

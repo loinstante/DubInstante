@@ -7,6 +7,7 @@
 #include <QFileInfo>
 #include <QProcess>
 #include <QSaveFile>
+#include <QStorageInfo>
 #include <QTemporaryDir>
 #include <QtEndian>
 #include <QtGlobal>
@@ -128,8 +129,28 @@ bool SaveManager::isZipAvailable(QString *errorMessage) {
 bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
                                 const QStringList &tempAudioPaths, QString *errorMessage) {
 
-  // 1. Create temporary directory
-  QTemporaryDir tempDir;
+  QString videoSource = data.videoUrl;
+  if (videoSource.startsWith("file://")) {
+    videoSource = QUrl(videoSource).toLocalFile();
+  }
+
+  // 0. Pre-check space on the destination volume: temp copy + stored zip ~= 2x video
+  const qint64 videoSize = QFileInfo(videoSource).size();
+  QStorageInfo storage(QFileInfo(zipPath).absolutePath());
+  if (storage.isValid() && storage.isReady() &&
+      storage.bytesAvailable() < 2 * videoSize + 64LL * 1024 * 1024) {
+    qWarning() << "Not enough space on destination volume for zip archive";
+    if (errorMessage)
+      *errorMessage = QObject::tr(
+          "Espace disque insuffisant sur le volume de destination.\n"
+          "L'archive nécessite environ %1 Mo libres.")
+          .arg((2 * videoSize + 64LL * 1024 * 1024) / (1024 * 1024));
+    return false;
+  }
+
+  // 1. Create temporary directory on the destination volume:
+  // the system temp is often a RAM-backed tmpfs too small for large videos
+  QTemporaryDir tempDir(QFileInfo(zipPath).absolutePath() + "/.dbi_tmp_XXXXXX");
   if (!tempDir.isValid()) {
     qWarning() << "Failed to create temporary directory";
     if (errorMessage)
@@ -154,11 +175,6 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   }
 
   // 3. Copy video file
-  QString videoSource = data.videoUrl;
-  if (videoSource.startsWith("file://")) {
-    videoSource = QUrl(videoSource).toLocalFile();
-  }
-
   QString videoDest = tempDir.filePath(videoFileName);
   if (!QFile::copy(videoSource, videoDest)) {
     qWarning() << "Failed to copy video file to temp dir:" << videoSource;
@@ -221,9 +237,10 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
        << QString("Compress-Archive -Path '%1' -DestinationPath '%2' -Force")
               .arg(escapedSource, escapedDest);
 #else
-  // On macOS and Linux, 'zip' is standard
+  // On macOS and Linux, 'zip' is standard.
+  // -0 stores without recompressing: the video payload is already compressed
   zipProcess.setProgram("zip");
-  args << "-r" << zipPath << ".";
+  args << "-0" << "-r" << zipPath << ".";
 #endif
 
   zipProcess.setArguments(args);

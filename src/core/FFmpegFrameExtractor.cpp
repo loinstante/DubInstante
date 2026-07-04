@@ -130,14 +130,26 @@ bool FFmpegWorker::openFile(const QString &filePath) {
 
     // Allocate RGB buffer
     int numBytes = av_image_get_buffer_size(AV_PIX_FMT_BGRA, m_codecContext->width, m_codecContext->height, 1);
+    if (numBytes <= 0) {
+        emit errorOccurred("Invalid video dimensions");
+        return false;
+    }
     m_rgbBuffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
-    
+    if (!m_rgbBuffer) {
+        emit errorOccurred("Could not allocate frame buffer");
+        return false;
+    }
+
     av_image_fill_arrays(m_rgbFrame->data, m_rgbFrame->linesize, m_rgbBuffer,
                          AV_PIX_FMT_BGRA, m_codecContext->width, m_codecContext->height, 1);
 
     m_swsContext = sws_getContext(m_codecContext->width, m_codecContext->height, m_codecContext->pix_fmt,
                                   m_codecContext->width, m_codecContext->height, AV_PIX_FMT_BGRA,
                                   SWS_BILINEAR, nullptr, nullptr, nullptr);
+    if (!m_swsContext) {
+        emit errorOccurred("Could not initialize video scaler");
+        return false;
+    }
 
     return true;
 }
@@ -169,10 +181,13 @@ void FFmpegWorker::process() {
 
         if (needOpenFile) {
             closeFile();
-            openFile(targetFile);
+            if (!openFile(targetFile)) {
+                closeFile(); // Purge partially initialized state
+            }
         }
 
-        if (!m_formatContext || targetMs < 0) {
+        if (!m_formatContext || !m_codecContext || m_videoStreamIndex < 0 ||
+            !m_swsContext || !m_rgbBuffer || targetMs < 0) {
             continue;
         }
 
@@ -243,8 +258,9 @@ FFmpegFrameExtractor::FFmpegFrameExtractor(QObject *parent)
     connect(m_workerThread, &QThread::started, m_worker, &FFmpegWorker::process);
     connect(m_workerThread, &QThread::finished, m_worker, &QObject::deleteLater);
     
-    // Forward the extracted frame signal
+    // Forward the extracted frame and error signals
     connect(m_worker, &FFmpegWorker::frameExtracted, this, &FFmpegFrameExtractor::frameExtracted, Qt::QueuedConnection);
+    connect(m_worker, &FFmpegWorker::errorOccurred, this, &FFmpegFrameExtractor::errorOccurred, Qt::QueuedConnection);
 
     m_workerThread->start();
 }

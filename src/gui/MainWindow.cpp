@@ -790,6 +790,13 @@ void MainWindow::setTrackCount(int count) {
     m_audioRecorders.append(recorder);
     connect(recorder, &AudioRecorder::errorOccurred, this,
             &MainWindow::onError);
+    // Reload previews only once the WAV is finalized (stop() is asynchronous)
+    connect(recorder, &AudioRecorder::recorderStateChanged, this,
+            [this](QMediaRecorder::RecorderState state) {
+              if (state == QMediaRecorder::StoppedState && !m_isRecording) {
+                refreshPreviewSources();
+              }
+            });
 
     // Create TrackWidget
     TrackWidget *panel = new TrackWidget(idx + 1, 
@@ -975,10 +982,11 @@ void MainWindow::connectTrack(int index) {
   });
 
   // Navigation (frame stepping via RythmoWidget arrow keys)
-  qreal fps = m_playbackEngine->videoFrameRate();
-  int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
+  // fps is read at key press time: it is unknown until video metadata loads
   connect(widget, &RythmoWidget::navigationRequested, this,
-          [this, frameStep](bool forward) {
+          [this](bool forward) {
+            qreal fps = m_playbackEngine->videoFrameRate();
+            qint64 frameStep = (fps > 0) ? static_cast<qint64>(1000.0 / fps) : 40;
             qint64 delta = forward ? frameStep : -frameStep;
             m_playbackEngine->seek(m_playbackEngine->position() + delta);
           });
@@ -1002,6 +1010,34 @@ void MainWindow::onOpenFile() {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
     setProperty("currentVideoPath", fileName);
   }
+}
+
+SaveData MainWindow::collectSaveData() {
+  SaveData data;
+  data.videoUrl = property("currentVideoPath").toString();
+  data.videoVolume = m_playbackEngine->volume();
+  data.trackCount = m_trackCount;
+  data.scrollSpeed = m_speedSpinBox->value();
+  data.isTextWhite = m_textColorCheck->isChecked();
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    TrackAudioSaveData audioData;
+    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
+    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
+    audioData.hasRecording = m_hasRecording.value(i, false);
+    audioData.recordStartMs = m_trackRecordStartMs.value(i, 0);
+    audioData.recordDurationMs = m_trackRecordDurationMs.value(i, 0);
+    data.audioTracks.append(audioData);
+  }
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    TrackSaveData trackData;
+    trackData.text = m_rythmoManager->text(i);
+    trackData.style = m_rythmoManager->trackStyle(i);
+    data.tracks.append(trackData);
+  }
+
+  return data;
 }
 
 void MainWindow::onSaveProject() {
@@ -1030,12 +1066,7 @@ void MainWindow::onSaveProject() {
     fileName += suffix;
   }
 
-  SaveData data;
-  data.videoUrl = property("currentVideoPath").toString();
-  data.videoVolume = m_playbackEngine->volume();
-  data.trackCount = m_trackCount;
-  data.scrollSpeed = m_speedSpinBox->value();
-  data.isTextWhite = m_textColorCheck->isChecked();
+  SaveData data = collectSaveData();
 
   // Setup audio sub-directory for this project
   QFileInfo fi(fileName);
@@ -1058,41 +1089,26 @@ void MainWindow::onSaveProject() {
       dir.mkdir(audioDirName);
   }
 
-  // Save audio tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackAudioSaveData audioData;
-    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
-    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
-    audioData.hasRecording = m_hasRecording.value(i, false);
-    audioData.recordStartMs = m_trackRecordStartMs.value(i, 0);
-    audioData.recordDurationMs = m_trackRecordDurationMs.value(i, 0);
+  // Attach project-relative audio paths and copy takes next to the .dbi
+  for (int i = 0; i < data.audioTracks.size(); ++i) {
+    TrackAudioSaveData &audioData = data.audioTracks[i];
+    if (!audioData.hasRecording)
+      continue;
 
-    if (audioData.hasRecording) {
-        QString tempPath = m_tempAudioPaths.value(i);
-        QString destFilename = QString("track_%1.wav").arg(i + 1);
-        
-        // Always populate the relative path for serialization
-        audioData.audioFilePath = audioDirName + "/" + destFilename;
-        
-        // Only physically copy files here if NOT saving as zip
-        if (!saveWithVideo) {
-            QString destPath = audioDir.absoluteFilePath(destFilename);
-            if (QFile::exists(tempPath)) {
-                if (QFile::exists(destPath)) QFile::remove(destPath);
-                QFile::copy(tempPath, destPath);
-            }
+    QString tempPath = m_tempAudioPaths.value(i);
+    QString destFilename = QString("track_%1.wav").arg(i + 1);
+
+    // Always populate the relative path for serialization
+    audioData.audioFilePath = audioDirName + "/" + destFilename;
+
+    // Only physically copy files here if NOT saving as zip
+    if (!saveWithVideo) {
+        QString destPath = audioDir.absoluteFilePath(destFilename);
+        if (QFile::exists(tempPath)) {
+            if (QFile::exists(destPath)) QFile::remove(destPath);
+            QFile::copy(tempPath, destPath);
         }
     }
-    
-    data.audioTracks.append(audioData);
-  }
-
-  // Save rythmo tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackSaveData trackData;
-    trackData.text = m_rythmoManager->text(i);
-    trackData.style = m_rythmoManager->trackStyle(i);
-    data.tracks.append(trackData);
   }
 
   if (saveWithVideo) {
@@ -1134,8 +1150,10 @@ void MainWindow::onSaveProject() {
               }
             });
 
-    QFuture<bool> future = QtConcurrent::run([this, fileName, data]() {
-      return m_saveManager->saveWithMedia(fileName, data, m_tempAudioPaths);
+    // Copy: the worker thread must not read members owned by the GUI thread
+    const QStringList audioPaths = m_tempAudioPaths;
+    QFuture<bool> future = QtConcurrent::run([this, fileName, data, audioPaths]() {
+      return m_saveManager->saveWithMedia(fileName, data, audioPaths);
     });
     watcher->setFuture(future);
 
@@ -1430,8 +1448,7 @@ void MainWindow::toggleRecording() {
     m_recordButton->setText("REC GLOBAL");
     m_actionOpenMp4->setEnabled(true);
 
-    // Reload preview sources for freshly recorded tracks
-    refreshPreviewSources();
+    // Preview sources reload via recorderStateChanged once each WAV is finalized
 
     // Show post-recording notification bar (replaces showExportDialog)
     showPostRecordBar();
@@ -1849,27 +1866,13 @@ void MainWindow::onAutoSaveTriggered() {
 
   QString autosaveFile = dir.filePath("autosave_backup.dbi");
 
-  SaveData data;
-  data.videoUrl = property("currentVideoPath").toString();
-  data.videoVolume = m_playbackEngine->volume();
-  data.trackCount = m_trackCount;
-  data.scrollSpeed = m_speedSpinBox->value();
-  data.isTextWhite = m_textColorCheck->isChecked();
+  SaveData data = collectSaveData();
 
-  // Save audio tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackAudioSaveData audioData;
-    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
-    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
-    data.audioTracks.append(audioData);
-  }
-
-  // Save rythmo tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackSaveData trackData;
-    trackData.text = m_rythmoManager->text(i);
-    trackData.style = m_rythmoManager->trackStyle(i);
-    data.tracks.append(trackData);
+  // Autosave keeps the temp WAV paths: takes are recoverable without a copy pass
+  for (int i = 0; i < data.audioTracks.size(); ++i) {
+    if (data.audioTracks[i].hasRecording) {
+      data.audioTracks[i].audioFilePath = m_tempAudioPaths.value(i);
+    }
   }
 
   if (m_saveManager->save(autosaveFile, data)) {

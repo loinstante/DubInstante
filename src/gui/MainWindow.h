@@ -42,6 +42,7 @@ class RythmoManager;
 class AudioRecorder;
 class ExportService;
 class SaveManager;
+struct SaveData;
 
 // GUI includes
 class VideoWidget;
@@ -134,6 +135,7 @@ private:
   void refreshPreviewSources();
   void showPostRecordBar();
   void hidePostRecordBar();
+  SaveData collectSaveData();
 
   // Dynamic track management
   void setTrackCount(int count);

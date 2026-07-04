@@ -553,49 +553,60 @@ void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
 
 void ExportDialog::populateFields()
 {
-    // 1. Probe resolution and audio presence in a single ffprobe call
-    bool hasAudioStream = true; // assume audio unless a successful probe says otherwise
+    // 1. Defaults right away; the async ffprobe below refines them on arrival
+    // (a blocking probe froze the dialog up to 1.5 s on slow/network storage)
+    m_videoOriginalWidth = 1920;
+    m_videoOriginalHeight = 1080;
+    m_videoAspectRatio = 1.777f;
+    m_customWidthSpin->setValue(m_videoOriginalWidth);
+    m_customHeightSpin->setValue(m_videoOriginalHeight);
+
     if (!m_sourceVideoPath.isEmpty() && QFile::exists(m_sourceVideoPath)) {
-        QProcess probe;
-        probe.start("ffprobe", QStringList() << "-v" << "error"
-                                             << "-show_entries" << "stream=codec_type,width,height"
-                                             << "-of" << "csv=p=0" << m_sourceVideoPath);
-        if (probe.waitForFinished(1500)) {
-            hasAudioStream = false;
-            const QString output = QString::fromUtf8(probe.readAllStandardOutput());
+        auto *probe = new QProcess(this);
+        connect(probe, &QProcess::errorOccurred, probe, &QObject::deleteLater);
+        connect(probe, &QProcess::finished, this,
+                [this, probe](int exitCode, QProcess::ExitStatus exitStatus) {
+            const QString output = QString::fromUtf8(probe->readAllStandardOutput());
+            probe->deleteLater();
+            if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+                return; // keep defaults, assume the source has audio
+            }
+
+            bool hasAudioStream = false;
+            int width = 0;
+            int height = 0;
             const QStringList lines = output.split('\n', Qt::SkipEmptyParts);
             for (const QString &line : lines) {
                 QStringList parts = line.trimmed().split(',');
-                if (parts.value(0) == "video" && parts.size() >= 3 && m_videoOriginalWidth <= 0) {
-                    m_videoOriginalWidth = parts[1].toInt();
-                    m_videoOriginalHeight = parts[2].toInt();
-                    if (m_videoOriginalWidth > 0 && m_videoOriginalHeight > 0) {
-                        m_videoAspectRatio = static_cast<float>(m_videoOriginalWidth) / m_videoOriginalHeight;
-                    }
+                if (parts.value(0) == "video" && parts.size() >= 3 && width <= 0) {
+                    width = parts[1].toInt();
+                    height = parts[2].toInt();
                 } else if (parts.value(0) == "audio") {
                     hasAudioStream = true;
                 }
             }
-        }
-    }
 
-    // Video without audio: mixing [0:a] would make FFmpeg fail
-    if (!hasAudioStream) {
-        m_defaultOriginalVolume = 0.0f;
-        m_originalVolumeSlider->setValue(0);
-        m_originalVolumeSlider->setEnabled(false);
-        m_originalMuteBtn->setChecked(true);
-        m_originalMuteBtn->setEnabled(false);
-    }
+            if (width > 0 && height > 0) {
+                m_videoOriginalWidth = width;
+                m_videoOriginalHeight = height;
+                m_videoAspectRatio = static_cast<float>(width) / height;
+                m_customWidthSpin->setValue(width);
+                m_customHeightSpin->setValue(height);
+            }
 
-    if (m_videoOriginalWidth <= 0 || m_videoOriginalHeight <= 0) {
-        m_videoOriginalWidth = 1920;
-        m_videoOriginalHeight = 1080;
-        m_videoAspectRatio = 1.777f;
+            // Video without audio: mixing [0:a] would make FFmpeg fail
+            if (!hasAudioStream) {
+                m_defaultOriginalVolume = 0.0f;
+                m_originalVolumeSlider->setValue(0);
+                m_originalVolumeSlider->setEnabled(false);
+                m_originalMuteBtn->setChecked(true);
+                m_originalMuteBtn->setEnabled(false);
+            }
+        });
+        probe->start("ffprobe", QStringList() << "-v" << "error"
+                                              << "-show_entries" << "stream=codec_type,width,height"
+                                              << "-of" << "csv=p=0" << m_sourceVideoPath);
     }
-
-    m_customWidthSpin->setValue(m_videoOriginalWidth);
-    m_customHeightSpin->setValue(m_videoOriginalHeight);
 
     // 2. Set default output path
     if (!m_sourceVideoPath.isEmpty()) {

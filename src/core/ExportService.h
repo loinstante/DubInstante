@@ -163,6 +163,8 @@ private:
 
     QProcess *m_process;
     qint64 m_totalDurationMs;
+    QString m_errorAccumulator;
+    bool m_exportFinishedEmitted;
 };
 
 #endif // EXPORTSERVICE_H

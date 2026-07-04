@@ -7,12 +7,15 @@
 
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
+#include <QStorageInfo>
 
 ExportService::ExportService(QObject *parent)
     : QObject(parent)
     , m_process(new QProcess(this))
     , m_totalDurationMs(0)
+    , m_exportFinishedEmitted(false)
 {
     connect(m_process, &QProcess::finished,
             this, &ExportService::handleProcessFinished);
@@ -55,17 +58,21 @@ void ExportService::startExport(const ExportConfig &config)
     }
     
     m_totalDurationMs = config.durationMs;
+    m_exportFinishedEmitted = false;
+    m_errorAccumulator.clear();
     emit progressChanged(0);
     
     QStringList args = buildFFmpegArgs(config);
     
     qDebug() << "[ExportService] Starting FFmpeg with args:" << args;
+    m_process->setStandardOutputFile(QProcess::nullDevice());
     m_process->start("ffmpeg", args);
 }
 
 void ExportService::cancelExport()
 {
     if (isExporting()) {
+        m_exportFinishedEmitted = true;
         m_process->kill();
         emit exportFinished(false, "Export annulé par l'utilisateur.");
     }
@@ -77,17 +84,51 @@ void ExportService::cancelExport()
 
 void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    if (m_exportFinishedEmitted) {
+        return;
+    }
+    m_exportFinishedEmitted = true;
+
     if (exitStatus == QProcess::NormalExit && exitCode == 0) {
         emit progressChanged(100);
         emit exportFinished(true, "Export réussi !");
     } else {
-        QString error = m_process->readAllStandardError();
-        emit exportFinished(false, "Échec de l'export: " + error);
+        QString remaining = m_process->readAllStandardError();
+        m_errorAccumulator.append(remaining);
+
+        QString detailedError;
+        if (m_errorAccumulator.contains("No space left on device", Qt::CaseInsensitive) ||
+            m_errorAccumulator.contains("disk full", Qt::CaseInsensitive) ||
+            m_errorAccumulator.contains("no space", Qt::CaseInsensitive)) {
+            detailedError = "Espace disque insuffisant sur le périphérique de destination.";
+        } else {
+            QStringList lines = m_errorAccumulator.split('\n', Qt::SkipEmptyParts);
+            QStringList lastLines;
+            int count = 0;
+            for (int i = lines.size() - 1; i >= 0 && count < 3; --i) {
+                QString line = lines[i].trimmed();
+                if (!line.isEmpty() && !line.startsWith("frame=") && !line.startsWith("size=")) {
+                    lastLines.prepend(line);
+                    count++;
+                }
+            }
+            if (!lastLines.isEmpty()) {
+                detailedError = lastLines.join("\n");
+            } else {
+                detailedError = "Erreur inconnue de FFmpeg.";
+            }
+        }
+        emit exportFinished(false, "Échec de l'export: " + detailedError);
     }
 }
 
 void ExportService::handleProcessError(QProcess::ProcessError error)
 {
+    if (m_exportFinishedEmitted) {
+        return;
+    }
+    m_exportFinishedEmitted = true;
+
     if (error == QProcess::FailedToStart) {
         emit exportFinished(false, "FFmpeg n'a pas pu démarrer. Est-il installé ?");
     } else {
@@ -97,12 +138,22 @@ void ExportService::handleProcessError(QProcess::ProcessError error)
 
 void ExportService::parseProgressOutput()
 {
+    QString output = m_process->readAllStandardError();
+    if (output.isEmpty()) {
+        return;
+    }
+
+    m_errorAccumulator.append(output);
+    // Limit memory usage (keep last 20KB)
+    if (m_errorAccumulator.size() > 50000) {
+        m_errorAccumulator = m_errorAccumulator.right(20000);
+    }
+
+    qDebug() << "[FFmpeg]" << output;
+
     if (m_totalDurationMs <= 0) {
         return;
     }
-    
-    QString output = m_process->readAllStandardError();
-    qDebug() << "[FFmpeg]" << output;
     
     // Parse time from FFmpeg output
     // Formats: time=00:00:00.00 or time=123.45
@@ -159,6 +210,16 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
     if (config.outputPath.isEmpty()) {
         errorMessage = "Erreur: Chemin de sortie non spécifié.";
         return false;
+    }
+
+    // Pre-check disk space
+    QStorageInfo storage(QFileInfo(config.outputPath).absolutePath());
+    if (storage.isValid() && storage.isReady()) {
+        qint64 freeBytes = storage.bytesAvailable();
+        if (freeBytes < 100LL * 1024 * 1024) { // Less than 100 MB
+            errorMessage = "Erreur: Espace disque critique (moins de 100 Mo disponibles) sur le périphérique de destination.";
+            return false;
+        }
     }
     
     return true;

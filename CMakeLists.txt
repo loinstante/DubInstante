@@ -158,3 +158,19 @@ target_link_libraries(DubInstante PRIVATE
     Qt6::Concurrent
     PkgConfig::FFMPEG
 )
+
+# =============================================================================
+# Tests (opt-in: cmake --build . --target test_savemanager)
+# =============================================================================
+
+add_executable(test_savemanager EXCLUDE_FROM_ALL
+    tests/test_savemanager.cpp
+    src/core/SaveManager.h
+    src/core/SaveManager.cpp
+    src/core/RythmoManager.h
+    src/core/RythmoManager.cpp
+)
+target_include_directories(test_savemanager PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+)
+target_link_libraries(test_savemanager PRIVATE Qt6::Gui)

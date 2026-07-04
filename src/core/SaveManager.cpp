@@ -6,6 +6,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QSaveFile>
 #include <QTemporaryDir>
 #include <QtEndian>
 #include <QtGlobal>
@@ -51,6 +52,8 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
     // Save style parameters
     QJsonObject styleObj;
     styleObj["font_size"] = trackData.style.globalSize;
+    styleObj["font_family"] = trackData.style.font.family();
+    styleObj["font_bold"] = trackData.style.font.bold();
     styleObj["text_color"] = trackData.style.textColor.name(QColor::HexArgb);
     styleObj["bg_color"] =
         trackData.style.backgroundColor.name(QColor::HexArgb);
@@ -65,30 +68,30 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   QByteArray maskedPayload = applyXorMask(jsonPayload);
   QByteArray checksum = calculateChecksum(jsonPayload);
 
-  QFile file(filePath);
+  // Atomic write: the previous save survives a disk-full or crash mid-write
+  QSaveFile file(filePath);
   if (!file.open(QIODevice::WriteOnly)) {
     qWarning() << "Failed to open file for writing:" << filePath;
     return false;
   }
 
-  // Header
-  file.write(m_header);
-
-  // Version & Flags
-  file.putChar(static_cast<char>(m_version));
-  file.putChar(0); // Flags
-
-  // Payload Size & Data (little-endian for cross-platform portability)
   quint32 payloadSize =
       qToLittleEndian(static_cast<quint32>(maskedPayload.size()));
-  file.write(reinterpret_cast<const char *>(&payloadSize), sizeof(payloadSize));
-  file.write(maskedPayload);
 
-  // Checksum
-  file.write(checksum);
+  bool ok = file.write(m_header) == m_header.size();
+  ok = ok && file.putChar(static_cast<char>(m_version));
+  ok = ok && file.putChar(0); // Flags
+  ok = ok && file.write(reinterpret_cast<const char *>(&payloadSize),
+                        sizeof(payloadSize)) == sizeof(payloadSize);
+  ok = ok && file.write(maskedPayload) == maskedPayload.size();
+  ok = ok && file.write(checksum) == checksum.size();
 
-  file.close();
-  return true;
+  if (!ok) {
+    qWarning() << "Failed to write save data:" << filePath;
+    file.cancelWriting();
+    return false;
+  }
+  return file.commit();
 }
 
 bool SaveManager::isZipAvailable(QString *errorMessage) {
@@ -280,6 +283,13 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     return false;
   quint32 payloadSize = qFromLittleEndian(payloadSizeLE);
 
+  constexpr quint32 kMaxPayloadSize = 64 * 1024 * 1024;
+  if (payloadSize == 0 || payloadSize > kMaxPayloadSize ||
+      static_cast<qint64>(payloadSize) > file.size()) {
+    qWarning() << "Invalid payload size:" << payloadSize;
+    return false;
+  }
+
   // Payload
   QByteArray maskedPayload = file.read(payloadSize);
   if (maskedPayload.size() != static_cast<int>(payloadSize))
@@ -345,6 +355,11 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
       QJsonObject styleObj = trackObj.value("style").toObject();
       if (!styleObj.isEmpty()) {
         trackData.style.globalSize = styleObj.value("font_size").toInt(16);
+        QString fontFamily = styleObj.value("font_family").toString();
+        if (!fontFamily.isEmpty()) {
+          trackData.style.font.setFamily(fontFamily);
+        }
+        trackData.style.font.setBold(styleObj.value("font_bold").toBool(true));
         trackData.style.font.setPointSize(trackData.style.globalSize);
         trackData.style.textColor =
             QColor(styleObj.value("text_color").toString("#FFFFFFFF"));
@@ -365,6 +380,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   }
 
   file.close();
+  data = sanitize(data);
   return true;
 }
 

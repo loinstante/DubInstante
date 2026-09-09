@@ -15,6 +15,7 @@
 #include <QAudioDevice>
 #include <QAudioOutput>
 #include <QCheckBox>
+#include <QCloseEvent>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QActionGroup>
@@ -83,6 +84,7 @@ protected:
   void keyPressEvent(QKeyEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
   void changeEvent(QEvent *event) override;
+  void closeEvent(QCloseEvent *event) override;
 
 private slots:
   // File operations
@@ -136,6 +138,15 @@ private:
   void showPostRecordBar();
   void hidePostRecordBar();
   SaveData collectSaveData();
+  QString autosaveFilePath() const;
+  void checkForAutosaveRecovery();
+  bool loadProjectFrom(const QString &path);
+  void openVideoDialog();
+  void setDirty(bool dirty);
+  void updateWindowTitle();
+  bool maybeSaveChanges();
+  void cleanupTempAudioFiles();
+  void purgeStaleTempAudioFiles();
 
   // Dynamic track management
   void setTrackCount(int count);
@@ -223,6 +234,11 @@ private:
   QTimer *m_recordDurationTimer;
   qint64 m_lastRecordedDurationMs;
   qint64 m_recordingStartTimeMs;
+
+  // Project state & Autosave recovery
+  bool m_isDirty;
+  QString m_currentProjectPath;
+  int m_lastLoadLostTracksCount;
 
   // Per-track recording state
   QVector<bool> m_hasRecording;

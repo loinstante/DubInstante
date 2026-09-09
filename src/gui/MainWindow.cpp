@@ -32,11 +32,15 @@
 
 #include <QDir>
 #include <QGraphicsDropShadowEffect>
+#include <QCloseEvent>
+#include <QCoreApplication>
+#include <QDateTime>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QMessageBox>
 #include <QResizeEvent>
 #include <QStandardPaths>
@@ -61,6 +65,7 @@ MainWindow::MainWindow(QWidget *parent)
       m_trackCount(0), m_previousVolume(100), m_isRecording(false),
       m_isFullscreenRecording(false), m_lastRecordedDurationMs(0),
       m_recordingStartTimeMs(0),
+      m_isDirty(false), m_lastLoadLostTracksCount(0),
       m_autoSaveTimer(new QTimer(this)),
       m_countdownTimer(new QTimer(this)),
       m_countdownRemaining(0),
@@ -106,10 +111,24 @@ MainWindow::MainWindow(QWidget *parent)
   }
 
   // Window configuration
-  setWindowTitle("DubInstante - Studio");
+  updateWindowTitle();
   resize(900, 600);
   setMinimumSize(800, 500);
   setWindowState(Qt::WindowMaximized);
+
+  // Construire l'interface a émis des signaux de mutation (peuplement des combos,
+  // volumes par défaut) : un projet vierge n'est pas modifié pour autant.
+  setDirty(false);
+
+  // Différé : le constructeur s'exécute avant show(), un dialogue modal n'aurait
+  // pas de fenêtre derrière lui — et la restauration peut en ouvrir un second
+  // pour relier une vidéo introuvable. La purge passe après, sinon elle
+  // supprimerait les WAV d'une sauvegarde de plus de sept jours avant qu'on ait
+  // proposé de la restaurer.
+  QTimer::singleShot(0, this, [this]() {
+    checkForAutosaveRecovery();
+    purgeStaleTempAudioFiles();
+  });
 }
 
 // =============================================================================
@@ -707,6 +726,8 @@ void MainWindow::setupConnections() {
           m_rythmoOverlay, &RythmoOverlay::setSpeed);
   connect(m_speedSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
           m_rythmoManager, &RythmoManager::setSpeed);
+  connect(m_speedSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this]() { setDirty(true); });
 
     connect(m_speedDownButton, &QPushButton::clicked, this, [this]() {
       m_speedSpinBox->setValue(qMax(m_speedSpinBox->minimum(),
@@ -746,6 +767,7 @@ void MainWindow::setupConnections() {
             if (w) {
               w->setTrackStyle(style);
             }
+            setDirty(true);
           });
 
   // Recording
@@ -826,6 +848,7 @@ void MainWindow::setTrackCount(int count) {
         if (idx < m_previewOutputs.size()) {
             m_previewOutputs[idx]->setVolume(static_cast<float>(vol) / 100.0f);
         }
+        setDirty(true);
     });
 
     // Populate combo with real system audio devices
@@ -853,6 +876,7 @@ void MainWindow::setTrackCount(int count) {
     connect(panel, &TrackWidget::inputDeviceIndexChanged, this,
             [this, idx](int deviceIndex) {
                 if (idx >= m_audioRecorders.size()) return;
+                setDirty(true);
                 AudioRecorder *rec = m_audioRecorders[idx];
                 QList<QAudioDevice> devs = rec->availableDevices();
                 
@@ -880,9 +904,12 @@ void MainWindow::setTrackCount(int count) {
       dialog->show();
     });
 
-    // Setup temp audio path
+    // Setup temp audio path (unique par instance : deux applications lancées
+    // en parallèle ne doivent pas écrire dans le même WAV)
     m_tempAudioPaths.append(
-        tempDir + QString("/temp_dub_%1.wav").arg(idx + 1));
+        tempDir + QString("/dubinstante_%1_track_%2.wav")
+                      .arg(QCoreApplication::applicationPid())
+                      .arg(idx + 1));
 
     // Initialize RythmoManager text for this track
     m_rythmoManager->setText(idx, "");
@@ -941,6 +968,8 @@ void MainWindow::setTrackCount(int count) {
             .arg(m_trackCount)
             .arg(m_trackCount > 1 ? "s" : ""));
   }
+
+  setDirty(true);
 }
 
 void MainWindow::connectTrack(int index) {
@@ -995,6 +1024,7 @@ void MainWindow::connectTrack(int index) {
   connect(widget, &RythmoWidget::textChanged, this,
           [this, index](const QString &text) {
             m_rythmoManager->setText(index, text);
+            setDirty(true);
           });
 }
 
@@ -1003,12 +1033,21 @@ void MainWindow::connectTrack(int index) {
 // =============================================================================
 
 void MainWindow::onOpenFile() {
+  if (!maybeSaveChanges())
+    return;
+  openVideoDialog();
+}
+
+// Sans garde de sauvegarde : appelée aussi par loadProjectFrom() pour relier une
+// vidéo introuvable, au milieu d'un chargement déjà engagé.
+void MainWindow::openVideoDialog() {
   QString fileName = QFileDialog::getOpenFileName(this, tr("Ouvrir"), "",
                                                   tr("Vidéos MP4 (*.mp4)"));
 
   if (!fileName.isEmpty()) {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
     setProperty("currentVideoPath", fileName);
+    setDirty(true);
   }
 }
 
@@ -1141,6 +1180,10 @@ void MainWindow::onSaveProject() {
               watcher->deleteLater();
 
               if (result) {
+                QFile::remove(autosaveFilePath());
+                m_currentProjectPath = fileName;
+                setDirty(false);
+                updateWindowTitle();
                 statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
               } else {
                 QMessageBox::critical(
@@ -1159,6 +1202,10 @@ void MainWindow::onSaveProject() {
 
   } else {
     if (m_saveManager->save(fileName, data)) {
+      QFile::remove(autosaveFilePath());
+      m_currentProjectPath = fileName;
+      setDirty(false);
+      updateWindowTitle();
       statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
     } else {
       QMessageBox::critical(this, tr("Erreur"),
@@ -1168,18 +1215,29 @@ void MainWindow::onSaveProject() {
 }
 
 void MainWindow::onLoadProject() {
+  if (!maybeSaveChanges())
+    return;
+
   QString fileName = QFileDialog::getOpenFileName(
       this, tr("Charger un projet"), "", tr("DubInstante Project (*.dbi)"));
 
   if (fileName.isEmpty())
     return;
 
+  if (loadProjectFrom(fileName)) {
+    m_currentProjectPath = fileName;
+    setDirty(false);
+    updateWindowTitle();
+  }
+}
+
+bool MainWindow::loadProjectFrom(const QString &path) {
   SaveData data;
-  if (!m_saveManager->load(fileName, data)) {
+  if (!m_saveManager->load(path, data)) {
     QMessageBox::critical(
         this, tr("Erreur"),
         tr("Le fichier est corrompu ou d'une version incompatible."));
-    return;
+    return false;
   }
 
   // Apply loaded data
@@ -1210,7 +1268,7 @@ void MainWindow::onLoadProject() {
       QMessageBox::warning(
           this, tr("Relink"),
           tr("La vidéo est introuvable. Veuillez la localiser."));
-      onOpenFile(); // Simple relink via open file dialog
+      openVideoDialog(); // Simple relink via open file dialog
     } else {
       m_playbackEngine->openFile(QUrl::fromLocalFile(localPath));
       setProperty("currentVideoPath", localPath);
@@ -1220,9 +1278,10 @@ void MainWindow::onLoadProject() {
   m_playbackEngine->setVolume(data.videoVolume);
 
   // Restore audio device selection and gain
-  QFileInfo fi(fileName);
+  QFileInfo fi(path);
   QDir dir = fi.absoluteDir();
 
+  m_lastLoadLostTracksCount = 0;
   for (int i = 0; i < qMin(data.audioTracks.size(), m_trackCount); ++i) {
     m_trackPanels[i]->setInputDevice(data.audioTracks[i].audioInput);
     m_trackPanels[i]->setVolume(static_cast<int>(data.audioTracks[i].audioGain * 100));
@@ -1237,10 +1296,13 @@ void MainWindow::onLoadProject() {
         QString savedWavPath = dir.absoluteFilePath(data.audioTracks[i].audioFilePath);
         if (QFile::exists(savedWavPath)) {
             QString tempPath = m_tempAudioPaths.value(i);
-            if (QFile::exists(tempPath)) QFile::remove(tempPath);
-            QFile::copy(savedWavPath, tempPath);
+            if (savedWavPath != tempPath) {
+                if (QFile::exists(tempPath)) QFile::remove(tempPath);
+                QFile::copy(savedWavPath, tempPath);
+            }
         } else {
             m_hasRecording[i] = false; // file is missing
+            m_lastLoadLostTracksCount++;
         }
     }
   }
@@ -1249,6 +1311,7 @@ void MainWindow::onLoadProject() {
   refreshPreviewSources();
 
   statusBar()->showMessage(tr("Projet chargé"), 3000);
+  return true;
 }
 
 // =============================================================================
@@ -1440,6 +1503,7 @@ void MainWindow::toggleRecording() {
     m_rythmoOverlay->setEditable(true);
 
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
+    setDirty(true);
 
     m_isRecording = false;
     m_recordDurationTimer->stop();
@@ -1853,18 +1917,152 @@ void MainWindow::onOpenGlobalSettings() {
   }
 }
 
+QString MainWindow::autosaveFilePath() const {
+  return QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))
+      .filePath("autosave_backup.dbi");
+}
+
+void MainWindow::checkForAutosaveRecovery() {
+  QString autosaveFile = autosaveFilePath();
+  if (!QFile::exists(autosaveFile)) {
+    return;
+  }
+
+  QFileInfo fi(autosaveFile);
+  QDateTime dt = fi.lastModified();
+  QString dateStr = QLocale::system().toString(dt, QLocale::ShortFormat);
+
+  QMessageBox msgBox(QMessageBox::Question,
+                     tr("Récupération"),
+                     tr("Une sauvegarde automatique du %1 a été trouvée. "
+                        "DubInstante s'est probablement fermé de façon inattendue.\n"
+                        "Voulez-vous restaurer ce travail ?")
+                         .arg(dateStr),
+                     QMessageBox::NoButton,
+                     this);
+
+  QPushButton *restoreBtn =
+      msgBox.addButton(tr("Restaurer"), QMessageBox::AcceptRole);
+  QPushButton *ignoreBtn =
+      msgBox.addButton(tr("Ignorer"), QMessageBox::DestructiveRole);
+  msgBox.setDefaultButton(restoreBtn);
+
+  bool timerWasActive = m_autoSaveTimer->isActive();
+  if (timerWasActive) {
+    m_autoSaveTimer->stop();
+  }
+
+  msgBox.exec();
+
+  if (msgBox.clickedButton() == restoreBtn) {
+    if (loadProjectFrom(autosaveFile)) {
+      m_currentProjectPath.clear();
+      setDirty(true);
+      if (m_lastLoadLostTracksCount > 0) {
+        statusBar()->showMessage(
+            tr("Projet restauré. %1 enregistrement(s) introuvable(s).")
+                .arg(m_lastLoadLostTracksCount),
+            8000);
+      } else {
+        statusBar()->showMessage(tr("Projet restauré"), 3000);
+      }
+    } else {
+      // Illisible : écartée du chemin de démarrage pour ne pas reproposer le
+      // même dialogue à chaque lancement, mais conservée pour inspection.
+      QFile::remove(autosaveFile + ".corrupt");
+      QFile::rename(autosaveFile, autosaveFile + ".corrupt");
+    }
+  } else if (msgBox.clickedButton() == ignoreBtn) {
+    QFile::remove(autosaveFile);
+  }
+  // Dialogue fermé sans choix (Échap, croix) : la sauvegarde est conservée et
+  // sera reproposée au prochain lancement. Seul un clic sur Ignorer la détruit.
+
+  if (timerWasActive) {
+    m_autoSaveTimer->start();
+  }
+}
+
+void MainWindow::setDirty(bool dirty) {
+  if (m_isDirty == dirty) {
+    return;
+  }
+  m_isDirty = dirty;
+  updateWindowTitle();
+}
+
+void MainWindow::updateWindowTitle() {
+  QString title = m_currentProjectPath.isEmpty()
+                      ? QStringLiteral("DubInstante - Studio")
+                      : QStringLiteral("%1 — DubInstante")
+                            .arg(QFileInfo(m_currentProjectPath).completeBaseName());
+  if (m_isDirty) {
+    title.prepend(QStringLiteral("* "));
+  }
+  setWindowTitle(title);
+}
+
+bool MainWindow::maybeSaveChanges() {
+  if (!m_isDirty) {
+    return true;
+  }
+
+  QMessageBox::StandardButton reply = QMessageBox::warning(
+      this, tr("Modifications non enregistrées"),
+      tr("Le projet a été modifié. Voulez-vous enregistrer avant de continuer ?"),
+      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+      QMessageBox::Save);
+
+  if (reply == QMessageBox::Cancel) {
+    return false;
+  }
+  if (reply == QMessageBox::Discard) {
+    return true;
+  }
+
+  onSaveProject();
+  // ponytail: l'archive .zip est écrite en tâche de fond, m_isDirty ne retombe
+  // qu'à la fin du QFutureWatcher. La fermeture est donc annulée et l'utilisateur
+  // la relance une fois la barre de progression terminée. Passer à une fermeture
+  // différée si ce détour devient gênant.
+  return !m_isDirty;
+}
+
+void MainWindow::cleanupTempAudioFiles() {
+  for (const QString &path : m_tempAudioPaths) {
+    QFile::remove(path);
+  }
+}
+
+void MainWindow::purgeStaleTempAudioFiles() {
+  QDir tempDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+  const QDateTime cutoff = QDateTime::currentDateTime().addDays(-7);
+  const QFileInfoList orphans = tempDir.entryInfoList(
+      QStringList(QStringLiteral("dubinstante_*_track_*.wav")), QDir::Files);
+  for (const QFileInfo &fi : orphans) {
+    if (fi.lastModified() < cutoff) {
+      QFile::remove(fi.absoluteFilePath());
+    }
+  }
+}
+
 void MainWindow::onAutoSaveTriggered() {
   if (m_isRecording) {
     return; // Don't auto-save during active recording to prevent performance issues
   }
 
-  QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-  QDir dir(appDataPath);
+  // Rien à perdre : ni projet vierge ni projet déjà enregistré ne doivent laisser
+  // un fichier derrière eux, sinon le prochain démarrage annonce un arrêt anormal
+  // alors que le .dbi est à jour.
+  if (!m_isDirty) {
+    return;
+  }
+
+  QString autosaveFile = autosaveFilePath();
+  QDir dir = QFileInfo(autosaveFile).absoluteDir();
   if (!dir.exists()) {
     dir.mkpath(".");
   }
-
-  QString autosaveFile = dir.filePath("autosave_backup.dbi");
 
   SaveData data = collectSaveData();
 
@@ -2055,4 +2253,21 @@ void MainWindow::changeEvent(QEvent *event) {
     }
   }
   QMainWindow::changeEvent(event);
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  // Avant toute chose : finaliser les WAV en cours. La finalisation est
+  // asynchrone, le temps du dialogue lui suffit.
+  if (m_isRecording) {
+    toggleRecording();
+  }
+
+  if (!maybeSaveChanges()) {
+    event->ignore();
+    return;
+  }
+
+  QFile::remove(autosaveFilePath());
+  cleanupTempAudioFiles();
+  QMainWindow::closeEvent(event);
 }

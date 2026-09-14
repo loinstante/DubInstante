@@ -187,3 +187,16 @@ target_include_directories(test_exportservice PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_exportservice PRIVATE Qt6::Core)
+
+add_executable(test_exportdialog EXCLUDE_FROM_ALL
+    tests/test_exportdialog.cpp
+    src/gui/ExportDialog.h
+    src/gui/ExportDialog.cpp
+    src/core/ExportService.h
+    src/core/ExportService.cpp
+)
+target_include_directories(test_exportdialog PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+)
+target_link_libraries(test_exportdialog PRIVATE Qt6::Widgets)

@@ -43,6 +43,15 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
     validateSettings();
 }
 
+ExportDialog::~ExportDialog()
+{
+    // A still-pending ffprobe is a child destroyed after the widgets: ~QProcess can then
+    // deliver finished(), whose handler would write to the already-deleted widgets.
+    for (QProcess *probe : findChildren<QProcess *>(QString(), Qt::FindDirectChildrenOnly)) {
+        probe->disconnect(this);
+    }
+}
+
 void ExportDialog::setupUi()
 {
     setObjectName("exportSettingsDialog");

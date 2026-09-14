@@ -29,7 +29,7 @@ public:
                           const QVector<bool> &currentTrackMutes,
                           const QVector<int> &trackNumbers,
                           QWidget *parent = nullptr);
-    ~ExportDialog() override = default;
+    ~ExportDialog() override;
 
     ExportConfig exportConfig() const;
 

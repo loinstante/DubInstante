@@ -77,10 +77,47 @@ void checkPreexistingOutputSurvives(const QByteArray &pathEnv) {
   }
 }
 
+// Export audio lists are renumbered (first recorded track = primary), so a missing take
+// must be reported by file name, not by a track number the user would not recognise.
+void checkMissingExtraAudioIsNamed() {
+  QTemporaryDir dir;
+  assert(dir.isValid());
+
+  const QString videoPath = dir.filePath("source.mp4");
+  const QString audioPath = dir.filePath("track2.wav");
+  const QString missingPath = dir.filePath("track3_missing.wav");
+  QFile(videoPath).open(QIODevice::WriteOnly);
+  QFile(audioPath).open(QIODevice::WriteOnly);
+
+  ExportService service;
+  ExportConfig config;
+  config.videoPath = videoPath;
+  config.audioPath = audioPath;
+  config.extraAudioPaths = {QString(), missingPath};
+  config.outputPath = dir.filePath("output_double.mp4");
+
+  bool finishedSuccess = true;
+  QString message;
+  QObject::connect(&service, &ExportService::exportFinished,
+                   [&](bool success, const QString &msg) {
+                     finishedSuccess = success;
+                     message = msg;
+                   });
+
+  // Validation fails synchronously, before ffmpeg is started.
+  service.startExport(config);
+
+  assert(!finishedSuccess);
+  assert(message.contains(missingPath));
+  assert(!service.isExporting());
+}
+
 }  // namespace
 
 int main(int argc, char *argv[]) {
   QCoreApplication app(argc, argv);
+
+  checkMissingExtraAudioIsNamed();
 
   // ffmpeg missing from PATH: errorOccurred(FailedToStart) only.
   checkPreexistingOutputSurvives("/nonexistent-path-for-test");

@@ -27,6 +27,7 @@ public:
                           float currentOriginalVolume,
                           const QVector<float> &currentTrackVolumes,
                           const QVector<bool> &currentTrackMutes,
+                          const QVector<int> &trackNumbers,
                           QWidget *parent = nullptr);
     ~ExportDialog() override = default;
 
@@ -64,6 +65,8 @@ private:
     float m_defaultOriginalVolume;
     QVector<float> m_defaultTrackVolumes;
     QVector<bool> m_defaultTrackMutes;
+    // Real track numbers shown to the user, aligned with primary + extra audios
+    QVector<int> m_trackNumbers;
 
     // Track original size to calculate custom resolution aspect ratio
     int m_videoOriginalWidth;

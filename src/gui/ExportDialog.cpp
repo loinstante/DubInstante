@@ -20,6 +20,7 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
                           float currentOriginalVolume,
                           const QVector<float> &currentTrackVolumes,
                           const QVector<bool> &currentTrackMutes,
+                          const QVector<int> &trackNumbers,
                           QWidget *parent)
     : QDialog(parent)
     , m_sourceVideoPath(sourceVideo)
@@ -31,6 +32,7 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
     , m_defaultOriginalVolume(currentOriginalVolume)
     , m_defaultTrackVolumes(currentTrackVolumes)
     , m_defaultTrackMutes(currentTrackMutes)
+    , m_trackNumbers(trackNumbers)
     , m_videoOriginalWidth(0)
     , m_videoOriginalHeight(0)
     , m_videoAspectRatio(1.777f)
@@ -426,15 +428,12 @@ void ExportDialog::setupUi()
     m_audioTracksLayout->addWidget(origRow);
 
     // Mic tracks
-    int micIndex = 1;
     if (!m_primaryAudioPath.isEmpty()) {
-        addTrackRow(scrollWidget, tr("Micro 1 (Princ.)"), 0);
-        micIndex++;
+        addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(0, 1)), 0);
     }
     for (int i = 0; i < m_extraAudioPaths.size(); ++i) {
         if (!m_extraAudioPaths[i].isEmpty()) {
-            addTrackRow(scrollWidget, tr("Micro %1").arg(micIndex), i + 1);
-            micIndex++;
+            addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(i + 1, i + 2)), i + 1);
         }
     }
 

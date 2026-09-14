@@ -259,14 +259,20 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
         return false;
     }
     
+    // Audio lists are renumbered for export (first recorded track = primary): name the file,
+    // a track number here would not match what the user sees.
+    const auto missingAudioMessage = [](const QString &path) {
+        return QString("Erreur: L'enregistrement audio est introuvable : %1").arg(path);
+    };
+
     if (!QFile::exists(config.audioPath)) {
-        errorMessage = "Erreur: L'enregistrement de la Piste 1 est introuvable.";
+        errorMessage = missingAudioMessage(config.audioPath);
         return false;
     }
-    
-    for (int i = 0; i < config.extraAudioPaths.size(); ++i) {
-        if (!config.extraAudioPaths[i].isEmpty() && !QFile::exists(config.extraAudioPaths[i])) {
-            errorMessage = QString("Erreur: L'enregistrement de la Piste %1 est introuvable.").arg(i + 2);
+
+    for (const QString &extraPath : config.extraAudioPaths) {
+        if (!extraPath.isEmpty() && !QFile::exists(extraPath)) {
+            errorMessage = missingAudioMessage(extraPath);
             return false;
         }
     }

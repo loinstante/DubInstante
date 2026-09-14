@@ -1677,62 +1677,69 @@ void MainWindow::showExportDialog() {
     return;
   }
   
-  if (!m_hasRecording.value(0, false) || m_tempAudioPaths.isEmpty() ||
-      m_tempAudioPaths[0].isEmpty()) {
+  QVector<int> recordedTracks;
+  QStringList missingTracks;
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (!m_hasRecording.value(i, false)) {
+      continue;
+    }
+    if (i < m_tempAudioPaths.size() && !m_tempAudioPaths[i].isEmpty() &&
+        QFile::exists(m_tempAudioPaths[i])) {
+      recordedTracks.append(i);
+    } else {
+      // Take marked as recorded but its WAV is gone (failed recording, failed copy on load)
+      missingTracks.append(tr("Piste %1").arg(i + 1));
+    }
+  }
+  if (recordedTracks.isEmpty()) {
     QMessageBox::warning(this, tr("Export"), tr("Aucun enregistrement audio trouvé à exporter."));
     return;
   }
-
-  // Construct current volumes and mutes list
-  QVector<float> currentTrackVolumes;
-  QVector<bool> currentTrackMutes;
-
-  // Primary track (index 0)
-  if (m_trackPanels.size() > 0) {
-    float vol = m_trackPanels[0]->currentVolume() / 100.0f;
-    currentTrackVolumes.append(vol);
-    currentTrackMutes.append(vol < 0.01f);
-  } else {
-    currentTrackVolumes.append(1.0f);
-    currentTrackMutes.append(false);
+  if (!missingTracks.isEmpty()) {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, tr("Export"),
+        tr("Le fichier audio est introuvable pour : %1.\n"
+           "Exporter sans ces pistes ?").arg(missingTracks.join(", ")),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+      return;
+    }
   }
 
-  // Extra tracks (indices 1+)
-  for (int i = 1; i < m_trackCount; ++i) {
-    if (m_trackPanels.size() > i) {
-      float vol = m_trackPanels[i]->currentVolume() / 100.0f;
-      currentTrackVolumes.append(vol);
-      currentTrackMutes.append(vol < 0.01f);
-    } else {
-      currentTrackVolumes.append(1.0f);
-      currentTrackMutes.append(false);
+  // Export-local renumbering: the first track with a take becomes the primary audio,
+  // so an unarmed track 1 does not block the export. All lists follow recordedTracks order.
+  QStringList extraAudios;
+  QVector<qint64> trackOffsetsMs;
+  QVector<float> currentTrackVolumes;
+  QVector<bool> currentTrackMutes;
+  QVector<int> trackNumbers;
+  for (int k = 0; k < recordedTracks.size(); ++k) {
+    const int track = recordedTracks[k];
+    if (k > 0) {
+      extraAudios.append(m_tempAudioPaths[track]);
     }
+    trackOffsetsMs.append(m_trackRecordStartMs.value(track, 0));
+    const float vol = track < m_trackPanels.size()
+        ? m_trackPanels[track]->currentVolume() / 100.0f : 1.0f;
+    currentTrackVolumes.append(vol);
+    currentTrackMutes.append(vol < 0.01f);
+    trackNumbers.append(track + 1);
   }
 
   float originalVol = m_playbackEngine->volume();
   bool originalMuted = m_volumeMuteButton->isChecked();
 
-  // Create list of extra audio tracks
-  QStringList extraAudios;
-  for (int i = 1; i < m_trackCount; ++i) {
-    // A track without a take must not block the export: pass an empty path
-    if (m_hasRecording.value(i, false) && m_tempAudioPaths.size() > i) {
-      extraAudios.append(m_tempAudioPaths[i]);
-    } else {
-      extraAudios.append("");
-    }
-  }
-
   ExportDialog dialog(
       currentVideo,
-      m_tempAudioPaths[0],
+      m_tempAudioPaths[recordedTracks.first()],
       extraAudios,
       m_lastRecordedDurationMs,
       m_lastRecordedStartMs,
-      m_trackRecordStartMs,
+      trackOffsetsMs,
       originalMuted ? 0.0f : originalVol,
       currentTrackVolumes,
       currentTrackMutes,
+      trackNumbers,
       this
   );
 

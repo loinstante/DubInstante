@@ -50,6 +50,7 @@
 #include <QFutureWatcher>
 #include <QProgressDialog>
 #include <QtConcurrent>
+#include <algorithm>
 #include <limits>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -70,6 +71,8 @@ MainWindow::MainWindow(QWidget *parent)
       m_countdownTimer(new QTimer(this)),
       m_countdownRemaining(0),
       m_countdownLabel(nullptr),
+      m_postRecordBar(nullptr),
+      m_postRecordLabel(nullptr),
       m_outputDevicesGroup(new QActionGroup(this)) {
   applyTheme();
   setupUi();
@@ -178,7 +181,10 @@ void MainWindow::updateVolumeIcon(int value) {
   }
 }
 
-void MainWindow::showPostRecordBar() {
+void MainWindow::showPostRecordBar(const QString &message) {
+    if (!message.isEmpty() && m_postRecordLabel) {
+        m_postRecordLabel->setText(message);
+    }
     m_postRecordBar->setVisible(true);
 }
 
@@ -450,9 +456,9 @@ void MainWindow::setupUi() {
   QHBoxLayout *prLayout = new QHBoxLayout(m_postRecordBar);
   prLayout->setContentsMargins(12, 6, 12, 6);
 
-  QLabel *prLabel = new QLabel(tr("✅ Enregistrement terminé !"), m_postRecordBar);
-  prLabel->setProperty("cssClass", "settingsLabel");
-  prLayout->addWidget(prLabel);
+  m_postRecordLabel = new QLabel(tr("✅ Enregistrement terminé !"), m_postRecordBar);
+  m_postRecordLabel->setProperty("cssClass", "settingsLabel");
+  prLayout->addWidget(m_postRecordLabel);
   prLayout->addStretch();
 
   QPushButton *listenBtn = new QPushButton(tr("▶ Écouter"), m_postRecordBar);
@@ -814,10 +820,15 @@ void MainWindow::setTrackCount(int count) {
     m_audioRecorders.append(recorder);
     connect(recorder, &AudioRecorder::errorOccurred, this,
             &MainWindow::onError);
-    // Reload previews only once the WAV is finalized (stop() is asynchronous)
+    // Validate the take and reload previews only once the WAV is finalized
+    // (stop() is asynchronous)
     connect(recorder, &AudioRecorder::recorderStateChanged, this,
-            [this](QMediaRecorder::RecorderState state) {
-              if (state == QMediaRecorder::StoppedState && !m_isRecording) {
+            [this, idx](QMediaRecorder::RecorderState state) {
+              if (state != QMediaRecorder::StoppedState) {
+                return;
+              }
+              checkRecordedTake(idx);
+              if (!m_isRecording) {
                 refreshPreviewSources();
               }
             });
@@ -1504,12 +1515,20 @@ void MainWindow::toggleRecording() {
   } else {
     m_playbackEngine->pause();
 
+    // stop() is asynchronous: each take is validated by checkRecordedTake() once its
+    // recorder reports StoppedState. Register every armed track before stopping any,
+    // so a recorder stopping synchronously cannot report the result on a partial set.
+    for (int i = 0; i < m_trackCount; ++i) {
+      if (m_trackPanels[i]->isArmed()) {
+        m_trackRecordDurationMs[i] = m_recordingTimer.elapsed();
+        m_pendingTakeChecks.append(i);
+      }
+    }
+
     // Stop recording on ARMED tracks only
     for (int i = 0; i < m_trackCount; ++i) {
       if (m_trackPanels[i]->isArmed()) {
         m_audioRecorders[i]->stopRecording();
-        m_hasRecording[i] = true;
-        m_trackRecordDurationMs[i] = m_recordingTimer.elapsed();
       }
       // Stop unarmed preview playback
       if (i < m_previewPlayers.size()) {
@@ -1540,11 +1559,51 @@ void MainWindow::toggleRecording() {
     m_recordButton->setText("REC GLOBAL");
     m_actionOpenMp4->setEnabled(true);
 
-    // Preview sources reload via recorderStateChanged once each WAV is finalized
-
-    // Show post-recording notification bar (replaces showExportDialog)
-    showPostRecordBar();
+    // A recorder that already stopped (failed to start, device lost mid-take)
+    // will not emit StoppedState again: validate its take now.
+    const QList<int> pending = m_pendingTakeChecks;
+    for (int i : pending) {
+      if (m_audioRecorders[i]->recorderState() == QMediaRecorder::StoppedState) {
+        checkRecordedTake(i);
+      }
+    }
+    // Other previews reload via recorderStateChanged once each WAV is finalized
+    refreshPreviewSources();
   }
+}
+
+void MainWindow::checkRecordedTake(int trackIndex) {
+  if (!m_pendingTakeChecks.removeOne(trackIndex) || trackIndex >= m_hasRecording.size()) {
+    return;
+  }
+
+  // A WAV header alone is 44 bytes: a file this small holds no audio
+  const QFileInfo take(m_tempAudioPaths.value(trackIndex));
+  m_hasRecording[trackIndex] = take.exists() && take.size() > 1024;
+  if (!m_hasRecording[trackIndex]) {
+    m_failedTakeTracks.append(trackIndex);
+  }
+  if (!m_pendingTakeChecks.isEmpty()) {
+    return;
+  }
+
+  // Show post-recording notification bar (replaces showExportDialog)
+  QString message = tr("✅ Enregistrement terminé !");
+  if (!m_failedTakeTracks.isEmpty()) {
+    std::sort(m_failedTakeTracks.begin(), m_failedTakeTracks.end());
+    QStringList trackNumbers;
+    for (int track : m_failedTakeTracks) {
+      trackNumbers << QString::number(track + 1);
+    }
+    message = m_failedTakeTracks.size() == 1
+        ? tr("Enregistrement terminé, mais la piste %1 n'a produit aucun audio. "
+             "Vérifiez le microphone sélectionné.").arg(trackNumbers.first())
+        : tr("Enregistrement terminé, mais les pistes %1 n'ont produit aucun audio. "
+             "Vérifiez le microphone sélectionné.").arg(trackNumbers.join(", "));
+    m_failedTakeTracks.clear();
+  }
+  showPostRecordBar(message);
+  statusBar()->showMessage(message, 5000);
 }
 
 // =============================================================================
@@ -2222,6 +2281,46 @@ void MainWindow::onCountdownTick() {
 }
 
 void MainWindow::startRecordingProcess() {
+  int armedCount = 0;
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (m_trackPanels[i]->isArmed()) {
+      armedCount++;
+    }
+  }
+
+  if (armedCount == 0) {
+    if (m_countdownLabel) {
+      m_countdownLabel->hide();
+    }
+    m_recordButton->setChecked(false);
+    m_recordButton->setText("● REC GLOBAL");
+    QMessageBox::warning(this, tr("Enregistrement"),
+                         tr("Aucune piste n'est armée. Armez au moins une piste avant "
+                            "de lancer l'enregistrement."));
+    return;
+  }
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (m_trackPanels[i]->isArmed()) {
+      QString dev = m_trackPanels[i]->currentInputDevice();
+      if (dev.isEmpty() || dev == "Aucune entrée" || dev == tr("Aucune entrée")) {
+        if (m_countdownLabel) {
+          m_countdownLabel->hide();
+        }
+        m_recordButton->setChecked(false);
+        m_recordButton->setText("● REC GLOBAL");
+        QMessageBox::warning(this, tr("Enregistrement"),
+                             tr("La piste %1 est armée mais aucun microphone n'est sélectionné.")
+                                 .arg(i + 1));
+        return;
+      }
+    }
+  }
+
+  // Results of a previous take still finalizing no longer apply
+  m_pendingTakeChecks.clear();
+  m_failedTakeTracks.clear();
+
   // Record from the current playhead position (punch-in support)
   m_recordingStartTimeMs = m_playbackEngine->position();
 
@@ -2230,6 +2329,10 @@ void MainWindow::startRecordingProcess() {
       // --- ARMED: Record this track ---
       // Step 1: Release any existing preview file handle
       releasePreviewSource(i);
+      if (QFile::exists(m_tempAudioPaths[i])) {
+        QFile::remove(m_tempAudioPaths[i]);
+      }
+      m_hasRecording[i] = false;
 
       // Step 2: Start recording
       m_audioRecorders[i]->startRecording(

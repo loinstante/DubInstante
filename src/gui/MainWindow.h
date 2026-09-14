@@ -136,7 +136,8 @@ private:
   void updateVolumeIcon(int value);
   void releasePreviewSource(int trackIndex);
   void refreshPreviewSources();
-  void showPostRecordBar();
+  void showPostRecordBar(const QString &message = QString());
+  void checkRecordedTake(int trackIndex);
   void hidePostRecordBar();
   SaveData collectSaveData();
   QString autosaveFilePath() const;
@@ -223,6 +224,7 @@ private:
 
   // Post-record notification bar
   QWidget *m_postRecordBar;
+  QLabel *m_postRecordLabel;
 
   // =========================================================================
   // State
@@ -250,6 +252,9 @@ private:
   QVector<bool> m_hasRecording;
   QVector<qint64> m_trackRecordStartMs;
   QVector<qint64> m_trackRecordDurationMs;
+  // Armed tracks whose recorder has not reached StoppedState yet, and takes found empty
+  QList<int> m_pendingTakeChecks;
+  QList<int> m_failedTakeTracks;
 
   // Preview playback
   QVector<QMediaPlayer *> m_previewPlayers;

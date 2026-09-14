@@ -89,8 +89,6 @@ MainWindow::MainWindow(QWidget *parent)
   // Setup countdown connection
   connect(m_countdownTimer, &QTimer::timeout, this, &MainWindow::onCountdownTick);
 
-  // Restore Expert Mode checkbox
-  m_actionExpertMode->setChecked(SettingsManager::instance().expertMode());
 
   // Create initial track (always start with 1)
   setTrackCount(1);
@@ -172,7 +170,7 @@ void MainWindow::applyTheme() {
 
 void MainWindow::updateVolumeIcon(int value) {
   if (value == 0) {
-    m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_off.svg"));
+    m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_mute.svg"));
   } else if (value < 50) {
     m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_low.svg"));
   } else {
@@ -538,9 +536,6 @@ void MainWindow::createMenus() {
   // === Application Menu ===
   QMenu *appMenu = mb->addMenu(tr("Application"));
 
-  m_actionExpertMode = new QAction(tr("Expert mode"), this);
-  m_actionExpertMode->setCheckable(true);
-  appMenu->addAction(m_actionExpertMode);
   m_actionFullscreen = new QAction(tr("Fullscreen mode"), this);
   m_actionFullscreen->setCheckable(true);
   appMenu->addAction(m_actionFullscreen);
@@ -577,10 +572,6 @@ void MainWindow::createMenus() {
 
   m_actionPersonalizeRythmo = new QAction(tr("Personnaliser"), this);
   rythmoMenu->addAction(m_actionPersonalizeRythmo);
-
-  m_actionExportRythmo = new QAction(tr("Exporter la bande rythmo"), this);
-  m_actionExportRythmo->setCheckable(true);
-  rythmoMenu->addAction(m_actionExportRythmo);
 
   // === Audio Menu ===
   m_audioMenu = mb->addMenu(tr("Audio"));
@@ -1937,8 +1928,6 @@ void MainWindow::onOpenGlobalSettings() {
       m_autoSaveTimer->start(sm.autoSaveInterval() * 60 * 1000);
     }
     
-    // Update expert mode action state
-    m_actionExpertMode->setChecked(sm.expertMode());
     
     // Update dynamic audio menu
     updateAudioMenu();

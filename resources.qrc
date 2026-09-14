@@ -4,15 +4,11 @@
         <file>resources/style_dark.qss</file>
     <file>resources/icons/play.svg</file>
     <file>resources/icons/pause.svg</file>
-    <file>resources/icons/stop.svg</file>
-    <file>resources/icons/record.svg</file>
         <file>resources/icons/volume.svg</file>
         <file>resources/icons/volume_low.svg</file>
         <file>resources/icons/volume_mute.svg</file>
     <file>resources/icons/arrow_left.svg</file>
     <file>resources/icons/arrow_right.svg</file>
-    <file>resources/icons/arrow_up.svg</file>
-    <file>resources/icons/arrow_down.svg</file>
     <file>resources/icons/folder_open.svg</file>
   </qresource>
 </RCC>

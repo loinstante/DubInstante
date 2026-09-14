@@ -119,11 +119,7 @@ void TrackWidget::setupUi(const QString& title, const QString& badgeColor)
     colorBox->setFixedSize(14, 14);
     colorBox->setStyleSheet(QString("background-color: %1; border-radius: 3px;").arg(badgeColor));
 
-    QLabel *badgeText = new QLabel(QString("Texte %1").arg(title.split(" ").last()), this); // Demo text depending on track
-    badgeText->setProperty("cssClass", "color-badge-text");
-
     badgeLayout->addWidget(colorBox);
-    badgeLayout->addWidget(badgeText);
     badgeLayout->addStretch();
 
     mainLayout->addLayout(badgeLayout);

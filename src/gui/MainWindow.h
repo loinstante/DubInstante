@@ -213,12 +213,10 @@ private:
   QAction *m_actionSaveProject;
   QAction *m_actionManualExport;
 
-  QAction *m_actionExpertMode;
   QAction *m_actionFullscreen;
   QAction *m_actionGlobalSettings;
 
   QAction *m_actionPersonalizeRythmo;
-  QAction *m_actionExportRythmo;
 
   // Post-record notification bar
   QWidget *m_postRecordBar;

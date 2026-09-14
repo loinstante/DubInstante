@@ -1145,7 +1145,19 @@ void MainWindow::onSaveProject() {
         QString destPath = audioDir.absoluteFilePath(destFilename);
         if (QFile::exists(tempPath)) {
             if (QFile::exists(destPath)) QFile::remove(destPath);
-            QFile::copy(tempPath, destPath);
+            // Un échec doit faire échouer la sauvegarde : le projet resterait
+            // sinon marqué enregistré et closeEvent détruirait le WAV
+            // temporaire, seule copie de la prise.
+            if (!QFile::copy(tempPath, destPath)) {
+                QMessageBox::critical(
+                    this, tr("Erreur"),
+                    tr("Impossible de copier l'enregistrement de la piste %1 "
+                       "vers :\n%2\n\nVérifiez l'espace disque ou les "
+                       "permissions. Le projet n'a pas été sauvegardé.")
+                        .arg(i + 1)
+                        .arg(QDir::toNativeSeparators(destPath)));
+                return;
+            }
         }
     }
   }

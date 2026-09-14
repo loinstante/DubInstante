@@ -205,7 +205,12 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
               QString sourcePath = tempAudioPaths[i];
               if (QFile::exists(sourcePath)) {
                   QString destFilename = QString("track_%1.wav").arg(i + 1);
-                  QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename));
+                  if (!QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
+                      qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
+                      if (errorMessage)
+                          *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
+                      return false;
+                  }
               }
           }
       }

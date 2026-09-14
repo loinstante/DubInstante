@@ -17,6 +17,7 @@ ExportService::ExportService(QObject *parent)
     , m_process(new QProcess(this))
     , m_totalDurationMs(0)
     , m_exportFinishedEmitted(false)
+    , m_outputExistedBefore(false)
 {
     connect(m_process, &QProcess::finished,
             this, &ExportService::handleProcessFinished);
@@ -90,6 +91,11 @@ void ExportService::startExport(const ExportConfig &config)
     m_currentOutputPath = config.outputPath;
     m_exportFinishedEmitted = false;
     m_errorAccumulator.clear();
+
+    QFileInfo outputInfo(m_currentOutputPath);
+    m_outputExistedBefore = outputInfo.exists();
+    m_outputMTimeBefore = m_outputExistedBefore ? outputInfo.lastModified() : QDateTime();
+
     emit progressChanged(0);
     
     QStringList args = buildFFmpegArgs(config);
@@ -122,6 +128,7 @@ void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
     m_exportFinishedEmitted = true;
 
     if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+        resetOutputTracking();
         emit progressChanged(100);
         emit exportFinished(true, "Export réussi !");
     } else {
@@ -172,9 +179,25 @@ void ExportService::handleProcessError(QProcess::ProcessError error)
 
 void ExportService::removePartialOutput()
 {
-    if (!m_currentOutputPath.isEmpty() && QFile::exists(m_currentOutputPath)) {
+    // Only remove what this run actually wrote: a file that pre-existed at the output
+    // path (e.g. a previous successful export) and that ffmpeg never touched must survive.
+    const QFileInfo fi(m_currentOutputPath);
+    const bool wasWrittenByThisRun = !m_currentOutputPath.isEmpty() && fi.exists()
+        && (!m_outputExistedBefore || fi.lastModified() != m_outputMTimeBefore);
+    if (wasWrittenByThisRun) {
         QFile::remove(m_currentOutputPath);
     }
+
+    // A crash emits both errorOccurred and finished, so this runs twice per export:
+    // the second call must be a no-op, not treat the kept file as written by this run.
+    resetOutputTracking();
+}
+
+void ExportService::resetOutputTracking()
+{
+    m_currentOutputPath.clear();
+    m_outputExistedBefore = false;
+    m_outputMTimeBefore = QDateTime();
 }
 
 void ExportService::parseProgressOutput()

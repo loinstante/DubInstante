@@ -177,3 +177,13 @@ target_include_directories(test_savemanager PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_savemanager PRIVATE Qt6::Gui)
+
+add_executable(test_exportservice EXCLUDE_FROM_ALL
+    tests/test_exportservice.cpp
+    src/core/ExportService.h
+    src/core/ExportService.cpp
+)
+target_include_directories(test_exportservice PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+)
+target_link_libraries(test_exportservice PRIVATE Qt6::Core)

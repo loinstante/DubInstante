@@ -13,6 +13,7 @@
 #ifndef EXPORTSERVICE_H
 #define EXPORTSERVICE_H
 
+#include <QDateTime>
 #include <QObject>
 #include <QProcess>
 #include <QString>
@@ -169,11 +170,18 @@ private:
      */
     void removePartialOutput();
 
+    /**
+     * @brief Forgets the output tracked for the current run, making removePartialOutput() a no-op.
+     */
+    void resetOutputTracking();
+
     QProcess *m_process;
     qint64 m_totalDurationMs;
     QString m_errorAccumulator;
     QString m_currentOutputPath;
     bool m_exportFinishedEmitted;
+    bool m_outputExistedBefore;
+    QDateTime m_outputMTimeBefore;
 };
 
 #endif // EXPORTSERVICE_H

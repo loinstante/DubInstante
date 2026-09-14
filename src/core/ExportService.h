@@ -31,6 +31,7 @@ struct ExportConfig {
     QStringList extraAudioPaths;    ///< Optional: paths to additional audio tracks
     QString outputPath;             ///< Absolute path for output file
     qint64 durationMs;              ///< Recording duration in milliseconds (-1 for full)
+    qint64 rangeStartMs;            ///< Start of the exported range, in source video time (0 = from the beginning)
     QVector<qint64> trackOffsetsMs; ///< Start time offsets for each audio track
     float originalVolume;           ///< Volume of original video audio (0.0 to 1.0)
     QVector<float> trackVolumes;    ///< Volumes for primary and extra tracks (0.0 to 2.0)
@@ -50,6 +51,7 @@ struct ExportConfig {
     
     ExportConfig()
         : durationMs(-1)
+        , rangeStartMs(0)
         , originalVolume(1.0f)
         , speedPreset("medium")
         , crf(21)

@@ -247,35 +247,27 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
     args << "-y";
     args << "-threads" << "0";
     
-    // Input seeking (fast seek)
-    // NOTE: -ss is no longer used for start time because it trims the video.
-    // Instead, we use -itsoffset for audio sync below.
-    
-    // Video Input
-    args << "-i" << config.videoPath;   // [0]
-    
-    // Primary Audio Input
-    if (config.trackOffsetsMs.size() > 0 && config.trackOffsetsMs[0] > 0) {
-        args << "-itsoffset" << QString::number(config.trackOffsetsMs[0] / 1000.0, 'f', 3);
+    // Input-side seek: frame-accurate when re-encoding and resets output timestamps to zero
+    if (config.rangeStartMs > 0) {
+        args << "-ss" << QString::number(config.rangeStartMs / 1000.0, 'f', 3);
     }
+    args << "-i" << config.videoPath;   // [0]
+
+    // Timeline offsets are applied with adelay/atrim in the filter graph:
+    // amix discards input timestamps, so an input-side offset would be lost there.
+    // trackOffsetsMs[0] is the primary track, trackOffsetsMs[j] the j-th audio input.
+    QVector<qint64> audioOffsetsMs;
     args << "-i" << config.audioPath;   // [1]
-    
+    audioOffsetsMs.append(config.trackOffsetsMs.value(0, 0));
+
     // Add extra audio tracks: [2], [3], ...
     for (int i = 0; i < config.extraAudioPaths.size(); ++i) {
-        const QString &extraPath = config.extraAudioPaths[i];
-        if (!extraPath.isEmpty()) {
-            if (config.trackOffsetsMs.size() > i + 1 && config.trackOffsetsMs[i + 1] > 0) {
-                args << "-itsoffset" << QString::number(config.trackOffsetsMs[i + 1] / 1000.0, 'f', 3);
-            }
-            args << "-i" << extraPath;
+        if (!config.extraAudioPaths[i].isEmpty()) {
+            args << "-i" << config.extraAudioPaths[i];
+            audioOffsetsMs.append(config.trackOffsetsMs.value(i + 1, 0));
         }
     }
-    
-    // Count total extra tracks actually added
-    int extraCount = 0;
-    for (const QString &extraPath : config.extraAudioPaths) {
-        if (!extraPath.isEmpty()) extraCount++;
-    }
+    int extraCount = audioOffsetsMs.size() - 1;
     
     if (config.expertMode) {
         // Video Codec
@@ -317,14 +309,18 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
         filterComplex += QString("[0:a]volume=%1[a0];").arg(config.originalVolume);
     }
     
-    // Primary track
-    float primaryVol = (config.trackVolumes.size() > 0) ? config.trackVolumes[0] : 1.0f;
-    filterComplex += QString("[1:a]volume=%1[a1];").arg(primaryVol);
-    
-    // Extra tracks: input indices start at 2
-    for (int i = 0; i < extraCount; ++i) {
-        float extraVol = (config.trackVolumes.size() > i + 1) ? config.trackVolumes[i + 1] : 1.0f;
-        filterComplex += QString("[%1:a]volume=%2[a%3];").arg(i + 2).arg(extraVol).arg(i + 2);
+    // Recorded tracks: input indices start at 1. [0:a] needs no shift, the input -ss already aligned it.
+    for (int j = 1; j <= audioOffsetsMs.size(); ++j) {
+        float vol = config.trackVolumes.value(j - 1, 1.0f);
+        qint64 shiftMs = audioOffsetsMs[j - 1] - config.rangeStartMs;
+        QString timing;
+        if (shiftMs > 0) {
+            timing = QString("adelay=%1:all=1,").arg(shiftMs);
+        } else if (shiftMs < 0) {
+            // Take started before the exported range: drop the part that precedes it
+            timing = QString("atrim=start=%1,asetpts=PTS-STARTPTS,").arg(QString::number(-shiftMs / 1000.0, 'f', 3));
+        }
+        filterComplex += QString("[%1:a]%2volume=%3[a%1];").arg(j).arg(timing).arg(vol);
     }
     
     // AMIX: combine all audio streams

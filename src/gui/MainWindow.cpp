@@ -64,7 +64,7 @@ MainWindow::MainWindow(QWidget *parent)
       ,
       m_trackCount(0), m_previousVolume(100), m_isRecording(false),
       m_isFullscreenRecording(false), m_lastRecordedDurationMs(0),
-      m_recordingStartTimeMs(0),
+      m_lastRecordedStartMs(0), m_recordingStartTimeMs(0),
       m_isDirty(false), m_lastLoadLostTracksCount(0),
       m_autoSaveTimer(new QTimer(this)),
       m_countdownTimer(new QTimer(this)),
@@ -1503,6 +1503,7 @@ void MainWindow::toggleRecording() {
     m_rythmoOverlay->setEditable(true);
 
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
+    m_lastRecordedStartMs = m_recordingStartTimeMs;
     setDirty(true);
 
     m_isRecording = false;
@@ -1694,6 +1695,7 @@ void MainWindow::showExportDialog() {
       m_tempAudioPaths[0],
       extraAudios,
       m_lastRecordedDurationMs,
+      m_lastRecordedStartMs,
       m_trackRecordStartMs,
       originalMuted ? 0.0f : originalVol,
       currentTrackVolumes,

@@ -15,6 +15,7 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
                           const QString &primaryAudio,
                           const QStringList &extraAudios,
                           qint64 lastRecordedDurationMs,
+                          qint64 lastRecordedStartMs,
                           const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
                           const QVector<float> &currentTrackVolumes,
@@ -25,6 +26,7 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
     , m_primaryAudioPath(primaryAudio)
     , m_extraAudioPaths(extraAudios)
     , m_lastRecordedDurationMs(lastRecordedDurationMs)
+    , m_lastRecordedStartMs(lastRecordedStartMs)
     , m_trackOffsetsMs(trackOffsetsMs)
     , m_defaultOriginalVolume(currentOriginalVolume)
     , m_defaultTrackVolumes(currentTrackVolumes)
@@ -471,6 +473,7 @@ void ExportDialog::setupUi()
     connect(m_formatCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::onFormatChanged);
     connect(m_browseButton, &QPushButton::clicked, this, &ExportDialog::onBrowseClicked);
     connect(m_advancedCheck, &QCheckBox::toggled, this, &ExportDialog::onAdvancedToggled);
+    connect(m_rangeCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::validateSettings);
     
     // Expert connections
     connect(m_expFormatCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::onFormatChanged);
@@ -756,6 +759,10 @@ void ExportDialog::validateSettings()
             }
         }
 
+        if (vCodec == "copy" && m_rangeCombo->currentData().toString() == "last") {
+            warning += tr("⚠️ Copie du flux vidéo : la découpe sera calée sur l'image-clé la plus proche, le début peut décaler de quelques images.\n");
+        }
+
         if (vCodec == "copy" && !m_expResolutionCombo->currentData().toString().isEmpty()) {
             warning += tr("⚠️ Le redimensionnement est ignoré en copie de flux vidéo (copy) : la résolution d'origine est conservée.\n");
         }
@@ -864,9 +871,11 @@ ExportConfig ExportDialog::exportConfig() const
 
     // Time Range
     if (m_rangeCombo->currentData().toString() == "last") {
-        config.durationMs = m_lastRecordedDurationMs;
+        config.durationMs   = m_lastRecordedDurationMs;
+        config.rangeStartMs = m_lastRecordedStartMs;
     } else {
-        config.durationMs = -1;
+        config.durationMs   = -1;
+        config.rangeStartMs = 0;
     }
     
     config.expertMode = m_advancedCheck->isChecked();

@@ -233,6 +233,7 @@ private:
   QElapsedTimer m_recordingTimer;
   QTimer *m_recordDurationTimer;
   qint64 m_lastRecordedDurationMs;
+  qint64 m_lastRecordedStartMs;
   qint64 m_recordingStartTimeMs;
 
   // Project state & Autosave recovery

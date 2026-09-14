@@ -33,6 +33,7 @@
 
 #include <QAction>
 #include <QLineEdit>
+#include <QLockFile>
 #include <QMenuBar>
 #include <QToolButton>
 #include <QWidgetAction>
@@ -139,6 +140,7 @@ private:
   void hidePostRecordBar();
   SaveData collectSaveData();
   QString autosaveFilePath() const;
+  void discardAutosave();
   void checkForAutosaveRecovery();
   bool loadProjectFrom(const QString &path);
   void openVideoDialog();
@@ -240,6 +242,8 @@ private:
   bool m_isDirty;
   QString m_currentProjectPath;
   int m_lastLoadLostTracksCount;
+  QLockFile m_autosaveLock{autosaveFilePath() + QStringLiteral(".lock")};
+  bool m_ownsAutosave = false;
 
   // Per-track recording state
   QVector<bool> m_hasRecording;

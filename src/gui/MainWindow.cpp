@@ -120,12 +120,26 @@ MainWindow::MainWindow(QWidget *parent)
   // volumes par défaut) : un projet vierge n'est pas modifié pour autant.
   setDirty(false);
 
+  // Une seule instance possède la sauvegarde automatique : sans ce verrou, une
+  // seconde instance proposerait de restaurer celle de la première, puis la
+  // supprimerait en se fermant. Le verrou d'une instance plantée est repris
+  // (processus disparu).
+  // ponytail: les instances suivantes ne sont pas protégées contre un crash ;
+  // passer à une sauvegarde par instance si l'usage multi-fenêtre se répand.
+  QDir().mkpath(QFileInfo(autosaveFilePath()).absolutePath());
+  m_autosaveLock.setStaleLockTime(0);
+  m_ownsAutosave = m_autosaveLock.tryLock(0);
+
   // Différé : le constructeur s'exécute avant show(), un dialogue modal n'aurait
   // pas de fenêtre derrière lui — et la restauration peut en ouvrir un second
   // pour relier une vidéo introuvable. La purge passe après, sinon elle
   // supprimerait les WAV d'une sauvegarde de plus de sept jours avant qu'on ait
-  // proposé de la restaurer.
+  // proposé de la restaurer. Réservée elle aussi au propriétaire du verrou : une
+  // instance secondaire ne purge pas les prises d'une autre encore ouverte.
   QTimer::singleShot(0, this, [this]() {
+    if (!m_ownsAutosave) {
+      return;
+    }
     checkForAutosaveRecovery();
     purgeStaleTempAudioFiles();
   });
@@ -1196,7 +1210,7 @@ void MainWindow::onSaveProject() {
               watcher->deleteLater();
 
               if (result) {
-                QFile::remove(autosaveFilePath());
+                discardAutosave();
                 m_currentProjectPath = fileName;
                 setDirty(false);
                 updateWindowTitle();
@@ -1218,7 +1232,7 @@ void MainWindow::onSaveProject() {
 
   } else {
     if (m_saveManager->save(fileName, data)) {
-      QFile::remove(autosaveFilePath());
+      discardAutosave();
       m_currentProjectPath = fileName;
       setDirty(false);
       updateWindowTitle();
@@ -1945,6 +1959,12 @@ QString MainWindow::autosaveFilePath() const {
       .filePath("autosave_backup.dbi");
 }
 
+void MainWindow::discardAutosave() {
+  if (m_ownsAutosave) {
+    QFile::remove(autosaveFilePath());
+  }
+}
+
 void MainWindow::checkForAutosaveRecovery() {
   QString autosaveFile = autosaveFilePath();
   if (!QFile::exists(autosaveFile)) {
@@ -1998,8 +2018,8 @@ void MainWindow::checkForAutosaveRecovery() {
   } else if (msgBox.clickedButton() == ignoreBtn) {
     QFile::remove(autosaveFile);
   }
-  // Dialogue fermé sans choix (Échap, croix) : la sauvegarde est conservée et
-  // sera reproposée au prochain lancement. Seul un clic sur Ignorer la détruit.
+  // Sans bouton de rôle Reject, QMessageBox ignore Échap et la croix : le choix
+  // est imposé, et seul un clic sur Ignorer détruit la sauvegarde.
 
   if (timerWasActive) {
     m_autoSaveTimer->start();
@@ -2076,8 +2096,9 @@ void MainWindow::onAutoSaveTriggered() {
 
   // Rien à perdre : ni projet vierge ni projet déjà enregistré ne doivent laisser
   // un fichier derrière eux, sinon le prochain démarrage annonce un arrêt anormal
-  // alors que le .dbi est à jour.
-  if (!m_isDirty) {
+  // alors que le .dbi est à jour. Une instance secondaire écraserait la
+  // sauvegarde de celle qui possède le verrou.
+  if (!m_isDirty || !m_ownsAutosave) {
     return;
   }
 
@@ -2280,8 +2301,10 @@ void MainWindow::changeEvent(QEvent *event) {
 
 void MainWindow::closeEvent(QCloseEvent *event) {
   // Avant toute chose : finaliser les WAV en cours. La finalisation est
-  // asynchrone, le temps du dialogue lui suffit.
-  if (m_isRecording) {
+  // asynchrone, le temps du dialogue lui suffit. Un compte à rebours est annulé
+  // aussi : les dialogues ci-dessous font tourner la boucle d'événements, il
+  // lancerait l'enregistrement dessous.
+  if (m_isRecording || m_countdownTimer->isActive()) {
     toggleRecording();
   }
 
@@ -2290,7 +2313,21 @@ void MainWindow::closeEvent(QCloseEvent *event) {
     return;
   }
 
-  QFile::remove(autosaveFilePath());
+  if (m_exportService->isExporting()) {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, tr("Export en cours"),
+        tr("Un export est en cours. Quitter maintenant l'interrompra et "
+           "supprimera le fichier incomplet.\nQuitter quand même ?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+      event->ignore();
+      return;
+    }
+    // L'arrêt de ffmpeg et la suppression du fichier sont faits par le
+    // destructeur d'ExportService.
+  }
+
+  discardAutosave();
   cleanupTempAudioFiles();
   QMainWindow::closeEvent(event);
 }

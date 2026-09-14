@@ -9,6 +9,7 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
+#include <QStandardPaths>
 #include <QStorageInfo>
 
 ExportService::ExportService(QObject *parent)
@@ -42,14 +43,27 @@ ExportService::~ExportService()
 // Public Methods
 // =============================================================================
 
-bool ExportService::isFFmpegAvailable() const
+bool ExportService::isFFmpegAvailable(QString *errorMessage)
 {
-    QProcess check;
-    check.start("ffmpeg", QStringList() << "-version");
-    if (!check.waitForStarted(3000) || !check.waitForFinished(3000)) {
-        return false;
+    const bool ffmpegFound = !QStandardPaths::findExecutable("ffmpeg").isEmpty();
+    const bool ffprobeFound = !QStandardPaths::findExecutable("ffprobe").isEmpty();
+
+    if (ffmpegFound && ffprobeFound) {
+        return true;
     }
-    return check.exitStatus() == QProcess::NormalExit && check.exitCode() == 0;
+
+    if (errorMessage) {
+        const QString toolName = !ffmpegFound ? "FFmpeg" : "FFprobe";
+        *errorMessage = QObject::tr(
+            "%1 est introuvable sur ce système. Il est nécessaire pour exporter.\n\n"
+            "Debian / Ubuntu : sudo apt install ffmpeg\n"
+            "Fedora : sudo dnf install ffmpeg\n"
+            "Arch : sudo pacman -S ffmpeg\n"
+            "macOS (Homebrew) : brew install ffmpeg\n"
+            "Windows : https://ffmpeg.org/download.html").arg(toolName);
+    }
+
+    return false;
 }
 
 bool ExportService::isExporting() const

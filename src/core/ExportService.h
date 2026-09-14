@@ -118,10 +118,11 @@ public:
     void cancelExport();
     
     /**
-     * @brief Checks if FFmpeg is available on the system.
-     * @return true if FFmpeg is installed and accessible.
+     * @brief Checks if FFmpeg and FFprobe are available on the system.
+     * @param errorMessage Optional pointer to store installation instructions if missing.
+     * @return true if both FFmpeg and FFprobe are installed and accessible.
      */
-    bool isFFmpegAvailable() const;
+    static bool isFFmpegAvailable(QString *errorMessage = nullptr);
     
     /**
      * @brief Returns whether an export is currently in progress.

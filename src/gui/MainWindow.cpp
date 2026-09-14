@@ -1678,6 +1678,12 @@ void MainWindow::showExportDialog() {
     QMessageBox::warning(this, tr("Export"), tr("Aucune vidéo chargée."));
     return;
   }
+
+  QString ffmpegError;
+  if (!ExportService::isFFmpegAvailable(&ffmpegError)) {
+    QMessageBox::warning(this, tr("Export"), ffmpegError);
+    return;
+  }
   
   if (!m_hasRecording.value(0, false) || m_tempAudioPaths.isEmpty() ||
       m_tempAudioPaths[0].isEmpty()) {

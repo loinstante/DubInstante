@@ -25,6 +25,19 @@ ExportService::ExportService(QObject *parent)
             this, &ExportService::parseProgressOutput);
 }
 
+ExportService::~ExportService()
+{
+    if (!isExporting()) {
+        return;
+    }
+    // Destroyed mid-export (application closed): the receivers of our signals may already
+    // be half-destroyed, so stop listening before killing, then drop the truncated file.
+    m_process->disconnect(this);
+    m_process->kill();
+    m_process->waitForFinished(3000);
+    removePartialOutput();
+}
+
 // =============================================================================
 // Public Methods
 // =============================================================================
@@ -332,8 +345,10 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
     }
     
     int amixInputs = (includeOriginal ? 1 : 0) + 1 + extraCount;
-    // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N
-    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest:normalize=0[aout]").arg(amixInputs);
+    // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N.
+    // apad: the mix ends with the last take when the original audio is muted, and -shortest
+    // would cut the video there; padding lets the video stream set the end.
+    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest:normalize=0,apad[aout]").arg(amixInputs);
     
     args << "-filter_complex" << filterComplex;
     args << "-map" << "0:v:0";

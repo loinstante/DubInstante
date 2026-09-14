@@ -98,7 +98,7 @@ class ExportService : public QObject {
 
 public:
     explicit ExportService(QObject *parent = nullptr);
-    ~ExportService() override = default;
+    ~ExportService() override;
 
     // =========================================================================
     // Export Operations

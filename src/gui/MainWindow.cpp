@@ -1047,6 +1047,10 @@ void MainWindow::openVideoDialog() {
   if (!fileName.isEmpty()) {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
     setProperty("currentVideoPath", fileName);
+    // La dernière prise appartenait à la vidéo précédente : l'export ne doit
+    // plus proposer sa plage.
+    m_lastRecordedDurationMs = 0;
+    m_lastRecordedStartMs = 0;
     setDirty(true);
   }
 }
@@ -1251,6 +1255,11 @@ bool MainWindow::loadProjectFrom(const QString &path) {
         tr("Le fichier est corrompu ou d'une version incompatible."));
     return false;
   }
+
+  // La plage « Dernier enregistrement » n'est pas sérialisée : celle de la
+  // session précédente ne correspond pas au projet chargé.
+  m_lastRecordedDurationMs = 0;
+  m_lastRecordedStartMs = 0;
 
   // Apply loaded data
   m_speedSpinBox->setValue(data.scrollSpeed);

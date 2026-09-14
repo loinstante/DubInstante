@@ -154,6 +154,9 @@ private:
   void setTrackCount(int count);
   void connectTrack(int index);
 
+  // Playback helpers
+  qint64 frameStepMs() const;
+
   // =========================================================================
   // Core Services (Business Logic)
   // =========================================================================

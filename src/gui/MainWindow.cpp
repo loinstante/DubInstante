@@ -593,11 +593,11 @@ void MainWindow::setupConnections() {
   });
 
   connect(m_stepBackButton, &QPushButton::clicked, this, [this]() {
-    m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - 40));
+    m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStepMs()));
   });
 
   connect(m_stepForwardButton, &QPushButton::clicked, this, [this]() {
-    m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + 40));
+    m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStepMs()));
   });
 
   connect(m_stopButton, &QPushButton::clicked, this, [this]() {
@@ -647,12 +647,9 @@ void MainWindow::setupConnections() {
 
   // Frame stepping configuration
   connect(m_playbackEngine, &PlaybackEngine::metaDataChanged, this, [this]() {
-    qreal fps = m_playbackEngine->videoFrameRate();
-    if (fps > 0) {
-      int frameDurationMs = static_cast<int>(1000.0 / fps);
-      m_positionSlider->setSingleStep(frameDurationMs);
-      m_positionSlider->setPageStep(frameDurationMs * 10);
-    }
+    const int step = static_cast<int>(frameStepMs());
+    m_positionSlider->setSingleStep(step);
+    m_positionSlider->setPageStep(10 * step);
   });
 
   // =========================================================================
@@ -1016,12 +1013,9 @@ void MainWindow::connectTrack(int index) {
   });
 
   // Navigation (frame stepping via RythmoWidget arrow keys)
-  // fps is read at key press time: it is unknown until video metadata loads
   connect(widget, &RythmoWidget::navigationRequested, this,
           [this](bool forward) {
-            qreal fps = m_playbackEngine->videoFrameRate();
-            qint64 frameStep = (fps > 0) ? static_cast<qint64>(1000.0 / fps) : 40;
-            qint64 delta = forward ? frameStep : -frameStep;
+            qint64 delta = forward ? frameStepMs() : -frameStepMs();
             m_playbackEngine->seek(m_playbackEngine->position() + delta);
           });
 
@@ -1031,6 +1025,13 @@ void MainWindow::connectTrack(int index) {
             m_rythmoManager->setText(index, text);
             setDirty(true);
           });
+}
+
+qint64 MainWindow::frameStepMs() const {
+  const qreal fps = m_playbackEngine ? m_playbackEngine->videoFrameRate() : 0.0;
+  if (fps <= 0.0)
+    return 40; // aucune métadonnée : 25 fps par défaut
+  return qMax(1LL, static_cast<qint64>(qRound(1000.0 / fps)));
 }
 
 // =============================================================================
@@ -1861,17 +1862,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     }
 
     if (!m_shortcutFrameBack.isEmpty() && pressedSeq == m_shortcutFrameBack) {
-      qreal fps = m_playbackEngine->videoFrameRate();
-      int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
-      m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStep));
+      m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStepMs()));
       event->accept();
       return;
     }
 
     if (!m_shortcutFrameForward.isEmpty() && pressedSeq == m_shortcutFrameForward) {
-      qreal fps = m_playbackEngine->videoFrameRate();
-      int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
-      m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStep));
+      m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStepMs()));
       event->accept();
       return;
     }

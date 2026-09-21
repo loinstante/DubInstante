@@ -50,6 +50,9 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   for (const auto &trackData : cleanData.tracks) {
     QJsonObject trackObj;
     trackObj["text"] = trackData.text;
+    // The time grid is stored, not recomputed on load: font metrics differ
+    // from one machine to the next (72 vs 96 dpi, substituted family).
+    trackObj["char_ms"] = trackData.charMs;
 
     // Save style parameters
     QJsonObject styleObj;
@@ -525,6 +528,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
       // New format (v0.9.0+)
       QJsonObject trackObj = val.toObject();
       trackData.text = trackObj.value("text").toString("");
+      trackData.charMs = trackObj.value("char_ms").toDouble(0.0);
 
       QJsonObject styleObj = trackObj.value("style").toObject();
       if (!styleObj.isEmpty()) {
@@ -558,6 +562,12 @@ SaveData SaveManager::sanitize(const SaveData &data) {
   for (int i = 0; i < clean.audioTracks.size(); ++i) {
     clean.audioTracks[i].audioGain =
         qBound(0.0f, clean.audioTracks[i].audioGain, 1.0f);
+  }
+
+  // Widest legitimate grid: 50 pt at 10 px/s stays under 10 s per character
+  for (TrackSaveData &track : clean.tracks) {
+    if (!(track.charMs >= 1.0 && track.charMs <= 10000.0))
+      track.charMs = 0.0;
   }
 
   return clean;

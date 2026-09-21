@@ -1129,6 +1129,8 @@ SaveData MainWindow::collectSaveData() {
     TrackSaveData trackData;
     trackData.text = m_rythmoManager->text(i);
     trackData.style = m_rythmoManager->trackStyle(i);
+    if (const RythmoWidget *w = m_rythmoOverlay->track(i))
+      trackData.charMs = w->charMs();
     saveData.tracks.append(trackData);
   }
 
@@ -1450,8 +1452,11 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
     m_rythmoManager->setText(i, saveData.tracks[i].text);
     m_rythmoManager->setTrackStyle(i, saveData.tracks[i].style);
     RythmoWidget *w = m_rythmoOverlay->track(i);
-    if (w)
+    if (w) {
       w->setText(saveData.tracks[i].text);
+      // After style and speed: a file without a stored grid derives it from them
+      w->setCharMs(saveData.tracks[i].charMs);
+    }
   }
 
   // Paths come from a file that may have been written by someone else

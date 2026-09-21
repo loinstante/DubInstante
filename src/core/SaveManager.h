@@ -19,6 +19,9 @@
 struct TrackSaveData {
   QString text;
   RythmoTrackStyle style;
+  // Duration of one character in ms. 0 = not stored (older file):
+  // the band then derives it from the font and the speed, as it always did.
+  double charMs = 0.0;
 };
 
 /**

@@ -31,6 +31,7 @@ SaveData makeSampleData() {
   track.style.font.setBold(false);
   track.style.textColor = QColor("#FF112233");
   track.style.backgroundColor = QColor("#80445566");
+  track.charMs = 108.3125;
   data.tracks.append(track);
 
   TrackAudioSaveData audio;
@@ -79,6 +80,7 @@ int main(int argc, char *argv[]) {
   CHECK(loaded.isTextWhite == false);
   CHECK(loaded.tracks.size() == 1);
   CHECK(loaded.tracks[0].text == "Bonjour le monde");
+  CHECK(loaded.tracks[0].charMs == 108.3125); // exact in binary: no tolerance
   CHECK(loaded.tracks[0].style.globalSize == 22);
   CHECK(loaded.tracks[0].style.font.family() == "Liberation Mono");
   CHECK(loaded.tracks[0].style.font.bold() == false);
@@ -130,9 +132,11 @@ int main(int argc, char *argv[]) {
   SaveData dirty = makeSampleData();
   dirty.trackCount = 99;
   dirty.scrollSpeed = 100000;
+  dirty.tracks[0].charMs = -5.0;
   CHECK(manager.save(dirtyPath, dirty));
   SaveData cleaned;
   CHECK(manager.load(dirtyPath, cleaned));
+  CHECK(cleaned.tracks[0].charMs == 0.0); // falls back to the derived grid
   CHECK(cleaned.trackCount >= 1 && cleaned.trackCount <= 4);
   CHECK(cleaned.scrollSpeed >= 10 && cleaned.scrollSpeed <= 500);
 

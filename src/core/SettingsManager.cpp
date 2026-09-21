@@ -5,7 +5,44 @@ SettingsManager& SettingsManager::instance() {
     return inst;
 }
 
-SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {}
+SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
+    migrateLegacyShortcuts();
+}
+
+void SettingsManager::migrateLegacyShortcuts() {
+    QSettings settings;
+    if (settings.value("shortcuts_migration_version", 0).toInt() >= 1) {
+        return;
+    }
+
+    settings.beginGroup("shortcuts");
+
+    // record_stop used to default to Ctrl+S, which now belongs to "project_save".
+    // Only the old default is dropped, not a deliberate user rebind.
+    if (QKeySequence(settings.value("record_stop").toString()) == QKeySequence("Ctrl+S")) {
+        settings.remove("record_stop");
+    }
+
+    // A new default must not steal a key the user already gave to another
+    // action: that action would silently stop working. Leave the new one unset.
+    const QStringList storedActions = settings.childKeys();
+    const QStringList changedDefaults = {"record_stop", "project_save", "project_save_as"};
+    for (const QString &actionId : changedDefaults) {
+        if (settings.contains(actionId)) {
+            continue;
+        }
+        const QKeySequence newDefault = defaultShortcut(actionId);
+        for (const QString &other : storedActions) {
+            if (QKeySequence(settings.value(other).toString()) == newDefault) {
+                settings.setValue(actionId, "none");
+                break;
+            }
+        }
+    }
+
+    settings.endGroup();
+    settings.setValue("shortcuts_migration_version", 1);
+}
 
 QString SettingsManager::theme() const {
     QSettings settings;
@@ -104,7 +141,13 @@ QKeySequence SettingsManager::defaultShortcut(const QString &actionId) const {
     if (actionId == "video_seek_back_5s") return QKeySequence(Qt::SHIFT | Qt::Key_Left);
     if (actionId == "video_seek_forward_5s") return QKeySequence(Qt::SHIFT | Qt::Key_Right);
     if (actionId == "record_start") return QKeySequence("Ctrl+R");
-    if (actionId == "record_stop") return QKeySequence("Ctrl+S");
+    if (actionId == "record_stop") return QKeySequence(Qt::Key_Escape);
+    if (actionId == "project_save") return QKeySequence(QKeySequence::Save); // Ctrl+S
+    if (actionId == "project_save_as") {
+        // Qt only binds SaveAs on GNOME and macOS: empty on KDE and Windows
+        const QKeySequence saveAs(QKeySequence::SaveAs);
+        return saveAs.isEmpty() ? QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_S) : saveAs;
+    }
     if (actionId == "audio_volume_up") return QKeySequence(Qt::Key_Up);
     if (actionId == "audio_volume_down") return QKeySequence(Qt::Key_Down);
     if (actionId == "audio_volume_mute") return QKeySequence("M");

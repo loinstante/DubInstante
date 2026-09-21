@@ -37,6 +37,11 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
         "audio_volume_mute"
     };
 
+    m_projectActions = {
+        "project_save",
+        "project_save_as"
+    };
+
     setupUi();
     populateAudioDevices();
     loadSettings();
@@ -319,6 +324,7 @@ void GlobalSettingsDialog::setupUi() {
     createCategoryGroup(tr("Contrôles Vidéo"), m_videoActions, scrollLayout);
     createCategoryGroup(tr("Enregistrement"), m_recordActions, scrollLayout);
     createCategoryGroup(tr("Contrôles Audio"), m_audioActions, scrollLayout);
+    createCategoryGroup(tr("Projet"), m_projectActions, scrollLayout);
 
     scrollArea->setWidget(scrollContent);
     shortcutsLayout->addWidget(scrollArea, 1);
@@ -417,7 +423,7 @@ void GlobalSettingsDialog::loadSettings() {
     }
 
     // Load shortcuts
-    QStringList allActions = m_videoActions + m_recordActions + m_audioActions;
+    QStringList allActions = m_videoActions + m_recordActions + m_audioActions + m_projectActions;
     for (const QString &actionId : allActions) {
         m_tempShortcuts[actionId] = sm.shortcut(actionId);
     }
@@ -521,12 +527,19 @@ QString GlobalSettingsDialog::getActionName(const QString &actionId) const {
     if (actionId == "audio_volume_up") return tr("Augmenter le volume");
     if (actionId == "audio_volume_down") return tr("Diminuer le volume");
     if (actionId == "audio_volume_mute") return tr("Couper / Activer le son (Mute)");
+    if (actionId == "project_save") return tr("Enregistrer le projet");
+    if (actionId == "project_save_as") return tr("Enregistrer sous...");
     return actionId;
 }
 
 void GlobalSettingsDialog::onShortcutButtonClicked(const QString &actionId) {
+    // Escape is a bindable key, so a click is how a capture gets cancelled
+    const bool wasCapturingThis = (m_capturingActionId == actionId);
     if (!m_capturingActionId.isEmpty()) {
         stopCapture(false);
+    }
+    if (wasCapturingThis) {
+        return;
     }
     startCapture(actionId);
 }
@@ -544,7 +557,7 @@ void GlobalSettingsDialog::startCapture(const QString &actionId) {
     m_activeButton = m_shortcutButtons.value(actionId, nullptr);
     
     if (m_activeButton) {
-        m_activeButton->setText(tr("Appuyez sur une touche..."));
+        m_activeButton->setText(tr("Appuyez sur une touche (clic pour annuler)"));
         m_activeButton->setProperty("capturing", true);
         m_activeButton->style()->unpolish(m_activeButton);
         m_activeButton->style()->polish(m_activeButton);
@@ -607,12 +620,6 @@ void GlobalSettingsDialog::keyPressEvent(QKeyEvent *event) {
             return;
         }
 
-        if (key == Qt::Key_Escape && event->modifiers() == Qt::NoModifier) {
-            stopCapture(false);
-            event->accept();
-            return;
-        }
-
         int keyCombo = key;
         Qt::KeyboardModifiers modifiers = event->modifiers();
         
@@ -647,7 +654,7 @@ void GlobalSettingsDialog::mousePressEvent(QMouseEvent *event) {
 
 void GlobalSettingsDialog::onResetShortcutsToDefaults() {
     SettingsManager &sm = SettingsManager::instance();
-    QStringList allActions = m_videoActions + m_recordActions + m_audioActions;
+    QStringList allActions = m_videoActions + m_recordActions + m_audioActions + m_projectActions;
     
     QMessageBox::StandardButton reply = QMessageBox::question(
         this,

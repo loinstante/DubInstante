@@ -81,6 +81,7 @@ public:
   static constexpr int MAX_TRACKS = 4;
 
 protected:
+  bool event(QEvent *event) override;
   bool eventFilter(QObject *watched, QEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
@@ -91,6 +92,7 @@ private slots:
   // File operations
   void onOpenFile();
   void onSaveProject();
+  void onQuickSaveProject();
   void onLoadProject();
 
   // Playback UI updates
@@ -125,6 +127,8 @@ private slots:
   void handlePreviewStateChange(QMediaPlayer::PlaybackState state);
 
 private:
+  enum class PendingSave { None, Save, SaveAs };
+
   void setupUi();
   void createMenus();
   void setupConnections();
@@ -140,6 +144,8 @@ private:
   void checkRecordedTake(int trackIndex);
   void hidePostRecordBar();
   SaveData collectSaveData();
+  void saveProjectTo(const QString &fileName, bool saveWithVideo);
+  bool deferSaveDuringTake(PendingSave save);
   QString autosaveFilePath() const;
   void discardAutosave();
   void checkForAutosaveRecovery();
@@ -255,6 +261,7 @@ private:
   // Armed tracks whose recorder has not reached StoppedState yet, and takes found empty
   QList<int> m_pendingTakeChecks;
   QList<int> m_failedTakeTracks;
+  PendingSave m_pendingSave = PendingSave::None;
 
   // Preview playback
   QVector<QMediaPlayer *> m_previewPlayers;
@@ -274,6 +281,8 @@ private:
   // Shortcuts members
   QShortcut *m_shRecordStart;
   QShortcut *m_shRecordStop;
+  QShortcut *m_shProjectSave;
+  QShortcut *m_shProjectSaveAs;
   QKeySequence m_shortcutPlayPause;
   QKeySequence m_shortcutFrameBack;
   QKeySequence m_shortcutFrameForward;

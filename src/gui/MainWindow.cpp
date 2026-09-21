@@ -1101,6 +1101,9 @@ SaveData MainWindow::collectSaveData() {
 }
 
 void MainWindow::onSaveProject() {
+  if (deferSaveDuringTake(PendingSave::SaveAs))
+    return;
+
   QMessageBox::StandardButton reply;
   reply = QMessageBox::question(
       this, tr("Sauvegarder"),
@@ -1126,6 +1129,45 @@ void MainWindow::onSaveProject() {
     fileName += suffix;
   }
 
+  saveProjectTo(fileName, saveWithVideo);
+}
+
+void MainWindow::onQuickSaveProject() {
+  if (deferSaveDuringTake(PendingSave::Save))
+    return;
+
+  // Rebuilding a .zip re-copies the whole video behind a modal dialog, too
+  // heavy for a reflex Ctrl+S: those projects go through "Save as" instead.
+  if (m_currentProjectPath.isEmpty() ||
+      m_currentProjectPath.endsWith(".zip", Qt::CaseInsensitive)) {
+    onSaveProject();
+    return;
+  }
+  saveProjectTo(m_currentProjectPath, false);
+}
+
+bool MainWindow::deferSaveDuringTake(PendingSave save) {
+  if (m_countdownTimer->isActive()) {
+    // Nothing recorded yet: cancel the pre-roll rather than let it start the
+    // take underneath the save dialogs.
+    toggleRecording();
+  }
+
+  // Until checkRecordedTake() validates them, armed tracks are flagged without
+  // audio: saving now would persist them empty and open modal dialogs over the
+  // take. The save runs once every take is finalized.
+  // ponytail: relies on each recorder reaching StoppedState, like the
+  // post-record bar does; add a timeout if a recorder is ever seen hanging.
+  if (!m_isRecording && m_pendingTakeChecks.isEmpty())
+    return false;
+
+  m_pendingSave = save;
+  statusBar()->showMessage(
+      tr("Le projet sera enregistré à la fin de la prise."), 5000);
+  return true;
+}
+
+void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
   SaveData data = collectSaveData();
 
   // Setup audio sub-directory for this project
@@ -1604,6 +1646,14 @@ void MainWindow::checkRecordedTake(int trackIndex) {
   }
   showPostRecordBar(message);
   statusBar()->showMessage(message, 5000);
+
+  const PendingSave pendingSave = m_pendingSave;
+  m_pendingSave = PendingSave::None;
+  if (pendingSave == PendingSave::Save) {
+    onQuickSaveProject();
+  } else if (pendingSave == PendingSave::SaveAs) {
+    onSaveProject();
+  }
 }
 
 // =============================================================================
@@ -1684,6 +1734,18 @@ void MainWindow::setupShortcuts() {
     }
   });
 
+  m_shProjectSave = new QShortcut(this);
+  m_shProjectSave->setContext(Qt::ApplicationShortcut);
+  m_shProjectSave->setAutoRepeat(false);
+  connect(m_shProjectSave, &QShortcut::activated, this,
+          &MainWindow::onQuickSaveProject);
+
+  m_shProjectSaveAs = new QShortcut(this);
+  m_shProjectSaveAs->setContext(Qt::ApplicationShortcut);
+  m_shProjectSaveAs->setAutoRepeat(false);
+  connect(m_shProjectSaveAs, &QShortcut::activated, this,
+          &MainWindow::onSaveProject);
+
   applyShortcuts();
 }
 
@@ -1691,6 +1753,8 @@ void MainWindow::applyShortcuts() {
   SettingsManager &sm = SettingsManager::instance();
   m_shRecordStart->setKey(sm.shortcut("record_start"));
   m_shRecordStop->setKey(sm.shortcut("record_stop"));
+  m_shProjectSave->setKey(sm.shortcut("project_save"));
+  m_shProjectSaveAs->setKey(sm.shortcut("project_save_as"));
 
   m_shortcutPlayPause = sm.shortcut("video_play_pause");
   m_shortcutFrameBack = sm.shortcut("video_frame_back");
@@ -1825,6 +1889,21 @@ void MainWindow::onError(const QString &errorMessage) {
 // =============================================================================
 // Event Handling
 // =============================================================================
+
+bool MainWindow::event(QEvent *event) {
+  // With nothing to stop, the record_stop key (Escape by default) goes to the
+  // focused widget instead of the application-wide shortcut: RythmoWidget uses
+  // Escape to push the text.
+  if (event->type() == QEvent::ShortcutOverride && !m_isRecording &&
+      !m_countdownTimer->isActive()) {
+    const QKeyCombination combo = static_cast<QKeyEvent *>(event)->keyCombination();
+    if (QKeySequence(combo) == m_shRecordStop->key()) {
+      event->accept();
+      return true;
+    }
+  }
+  return QMainWindow::event(event);
+}
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
   if (event->type() == QEvent::Resize) {
@@ -2406,6 +2485,9 @@ void MainWindow::closeEvent(QCloseEvent *event) {
   // asynchrone, le temps du dialogue lui suffit. Un compte à rebours est annulé
   // aussi : les dialogues ci-dessous font tourner la boucle d'événements, il
   // lancerait l'enregistrement dessous.
+  // A save requested during the take would pop up over the dialog below once
+  // the WAV is finalized: maybeSaveChanges() normally asks the question itself.
+  m_pendingSave = PendingSave::None;
   if (m_isRecording || m_countdownTimer->isActive()) {
     toggleRecording();
   }

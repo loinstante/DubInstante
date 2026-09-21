@@ -190,8 +190,11 @@ jobs:
           }
         }
         # Lancé depuis dist\ : il doit trouver ses DLL libav* là, pas ailleurs.
-        & .\dist\ffmpeg.exe -version | Select-Object -First 1
+        # Sortie capturée en entier : Select-Object -First 1 dans le pipe coupe
+        # ffmpeg en cours d'écriture et rend $LASTEXITCODE non nul.
+        $version = & .\dist\ffmpeg.exe -version
         if ($LASTEXITCODE -ne 0) { exit 1 }
+        $version | Select-Object -First 1
 
     - name: Get Version
       id: get_version
@@ -289,7 +292,9 @@ jobs:
             otool -L "$APP_PATH/Contents/MacOS/$tool"
             exit 1
           fi
-          "$APP_PATH/Contents/MacOS/$tool" -version | head -n 1
+          # Pas de pipe vers head : sans pipefail, son code de sortie masquerait celui de l'outil.
+          version=$("$APP_PATH/Contents/MacOS/$tool" -version)
+          echo "${version%%$'\n'*}"
         done
         codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 

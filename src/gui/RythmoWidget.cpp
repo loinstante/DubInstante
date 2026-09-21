@@ -5,6 +5,7 @@
 
 #include "RythmoWidget.h"
 #include "../core/SettingsManager.h"
+#include "Palette.h"
 
 #include <QFontDatabase>
 #include <QFontMetrics>
@@ -232,7 +233,7 @@ bool RythmoWidget::isDarkTheme() {
   return m_isDark;
 }
 
-// applyTheme() swaps the stylesheet (StyleChange); system theme flips arrive as PaletteChange.
+// applyTheme() swaps the stylesheet (StyleChange) and the app palette (PaletteChange).
 void RythmoWidget::changeEvent(QEvent *event) {
   if (event->type() == QEvent::PaletteChange ||
       event->type() == QEvent::StyleChange) {
@@ -303,7 +304,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   }
 
   const bool isDark = isDarkTheme();
-  const QColor accent = isDark ? QColor(146, 107, 255) : QColor(124, 86, 245); // #926bff vs #7c56f5
+  const QColor accent = isDark ? QColor(Brand::AccentLight) : QColor(Brand::Accent);
 
   // 5. Draw band border
   QPen borderPen(accent, 2);
@@ -359,7 +360,9 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
                             .arg(ss, 2, 10, QChar('0'))
                             .arg(ms, 3, 10, QChar('0'));
 
-      QFont smallFont("Segoe UI", 8, QFont::Bold);
+      QFont smallFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+      smallFont.setPointSize(8);
+      smallFont.setBold(true);
       painter.setFont(smallFont);
       int tw = painter.fontMetrics().horizontalAdvance(timeStr);
       int th = painter.fontMetrics().height();

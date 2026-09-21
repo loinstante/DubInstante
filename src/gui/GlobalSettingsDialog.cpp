@@ -1,5 +1,6 @@
 #include "GlobalSettingsDialog.h"
 #include "../core/SettingsManager.h"
+#include "Palette.h"
 
 #include <QMediaDevices>
 #include <QAudioDevice>
@@ -507,7 +508,7 @@ void GlobalSettingsDialog::updateShortcutButtons() {
         if (btn) {
             if (seq.isEmpty()) {
                 btn->setText(tr("Aucun"));
-                btn->setStyleSheet("color: #8a8a9e; font-style: italic;");
+                btn->setStyleSheet(QStringLiteral("color: %1; font-style: italic;").arg(QLatin1String(Brand::TextMuted)));
             } else {
                 btn->setText(seq.toString(QKeySequence::NativeText));
                 btn->setStyleSheet(""); // reset to stylesheet default

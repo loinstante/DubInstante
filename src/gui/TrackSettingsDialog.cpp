@@ -2,6 +2,7 @@
 
 #include "../gui/RythmoWidget.h"
 #include "../core/SettingsManager.h"
+#include "Palette.h"
 #include <QButtonGroup>
 #include <QColorDialog>
 #include <QComboBox>
@@ -248,11 +249,11 @@ void TrackSettingsDialog::updateColorButton(QPushButton *btn,
     isDark = (palette().color(QPalette::Window).value() < 128);
   }
 
-  QString borderCol = isDark ? "#3b3b52" : "#cbd5e1";
+  QString borderCol = isDark ? Brand::SurfaceAlt : "#cbd5e1";
 
   if (color.alpha() == 0) {
     QString bgCol = isDark ? "#161622" : "#ffffff";
-    QString fgCol = isDark ? "#8a8a9e" : "#64748b";
+    QString fgCol = isDark ? Brand::TextMuted : "#64748b";
     btn->setStyleSheet(QString("background-color: %1;"
                                "border: 1px dashed %2;"
                                "border-radius: 8px;"

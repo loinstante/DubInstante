@@ -16,11 +16,14 @@
 // GUI includes
 #include "ClickableSlider.h"
 #include "RythmoOverlay.h"
+#include "Palette.h"
 #include "TrackWidget.h"
 #include "TrackSettingsDialog.h"
 #include "GlobalSettingsDialog.h"
 #include "../core/SettingsManager.h"
 #include "VideoWidget.h"
+#include <QApplication>
+#include <QPalette>
 #include <QStyleHints>
 #include <QGuiApplication>
 #include <QMediaDevices>
@@ -152,17 +155,86 @@ MainWindow::MainWindow(QWidget *parent)
 // UI Setup
 // =============================================================================
 
+namespace {
+
+// Every role Fusion draws with is set explicitly, including the Disabled group:
+// a role left unset falls back to the OS theme palette, which is the opposite
+// scheme half the time (light frames under the dark theme). The Disabled
+// overrides come last, setColor(role, c) having written all three groups.
+QPalette buildPalette(bool dark) {
+  QPalette p;
+  if (dark) {
+    p.setColor(QPalette::Window, QColor("#0d0d12"));
+    p.setColor(QPalette::WindowText, QColor("#f3f3f6"));
+    p.setColor(QPalette::Base, QColor("#161622"));
+    p.setColor(QPalette::AlternateBase, QColor("#212130"));
+    p.setColor(QPalette::ToolTipBase, QColor("#212130"));
+    p.setColor(QPalette::ToolTipText, QColor("#f3f3f6"));
+    p.setColor(QPalette::Text, QColor("#f3f3f6"));
+    p.setColor(QPalette::PlaceholderText, QColor(Brand::TextMuted));
+    p.setColor(QPalette::Button, QColor("#212130"));
+    p.setColor(QPalette::ButtonText, QColor("#f3f3f6"));
+    p.setColor(QPalette::BrightText, QColor("#ffffff"));
+    p.setColor(QPalette::Link, QColor(Brand::AccentLight));
+    p.setColor(QPalette::Highlight, QColor(Brand::AccentLight));
+    p.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+    p.setColor(QPalette::Light, QColor(Brand::SurfaceAlt));
+    p.setColor(QPalette::Midlight, QColor("#2a2a3c"));
+    p.setColor(QPalette::Mid, QColor("#23232f"));
+    p.setColor(QPalette::Dark, QColor("#12121a"));
+    p.setColor(QPalette::Shadow, QColor("#000000"));
+    const QColor disabled("#5c5c6f");
+    p.setColor(QPalette::Disabled, QPalette::WindowText, disabled);
+    p.setColor(QPalette::Disabled, QPalette::Text, disabled);
+    p.setColor(QPalette::Disabled, QPalette::ButtonText, disabled);
+  } else {
+    p.setColor(QPalette::Window, QColor("#f3f4f6"));
+    p.setColor(QPalette::WindowText, QColor("#1f2937"));
+    p.setColor(QPalette::Base, QColor("#ffffff"));
+    p.setColor(QPalette::AlternateBase, QColor("#f8fafc"));
+    p.setColor(QPalette::ToolTipBase, QColor("#ffffff"));
+    p.setColor(QPalette::ToolTipText, QColor("#111827"));
+    p.setColor(QPalette::Text, QColor("#111827"));
+    p.setColor(QPalette::PlaceholderText, QColor("#94a3b8"));
+    p.setColor(QPalette::Button, QColor("#f8fafc"));
+    p.setColor(QPalette::ButtonText, QColor("#334155"));
+    p.setColor(QPalette::BrightText, QColor("#ffffff"));
+    p.setColor(QPalette::Link, QColor("#3b82f6"));
+    p.setColor(QPalette::Highlight, QColor("#3b82f6"));
+    p.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+    p.setColor(QPalette::Light, QColor("#ffffff"));
+    p.setColor(QPalette::Midlight, QColor("#f3f4f6"));
+    p.setColor(QPalette::Mid, QColor("#cbd5e1"));
+    p.setColor(QPalette::Dark, QColor("#94a3b8"));
+    p.setColor(QPalette::Shadow, QColor("#64748b"));
+    const QColor disabled("#9aa3b2");
+    p.setColor(QPalette::Disabled, QPalette::WindowText, disabled);
+    p.setColor(QPalette::Disabled, QPalette::Text, disabled);
+    p.setColor(QPalette::Disabled, QPalette::ButtonText, disabled);
+  }
+  return p;
+}
+
+} // namespace
+
 void MainWindow::applyTheme() {
   SettingsManager &sm = SettingsManager::instance();
   QString themeMode = sm.theme();
-  
+
+  // Captured before the first setPalette(): afterwards QGuiApplication::palette()
+  // returns our own palette and no longer reflects the OS theme.
+  // ponytail: "system" is therefore frozen at startup, an OS theme flip needs a
+  // restart. Upgrade path: QStyleHints::colorSchemeChanged (Qt >= 6.5, we build on 6.4).
+  static const QPalette systemPalette = QGuiApplication::palette();
+
   bool isDark = false;
   if (themeMode == "dark") {
     isDark = true;
   } else if (themeMode == "system") {
-    QPalette pal = QGuiApplication::palette();
-    isDark = (pal.color(QPalette::Window).value() < 128);
+    isDark = (systemPalette.color(QPalette::Window).value() < 128);
   }
+
+  qApp->setPalette(buildPalette(isDark));
 
   QString stylesheetPath = isDark ? ":/resources/style_dark.qss" : ":/resources/style.qss";
   
@@ -837,7 +909,7 @@ void MainWindow::setTrackCount(int count) {
 
     // Create TrackWidget
     TrackWidget *panel = new TrackWidget(idx + 1, 
-        QString("Piste %1").arg(idx + 1), "#7c56f5", this);
+        QString("Piste %1").arg(idx + 1), Brand::Accent, this);
     m_trackPanels.append(panel);
     m_tracksLayout->addWidget(panel);
 
@@ -2592,20 +2664,6 @@ void MainWindow::startRecordingProcess() {
   m_recordButton->setText("STOP");
   m_exportProgressBar->setVisible(false);
   m_actionOpenMp4->setEnabled(false);
-}
-
-void MainWindow::changeEvent(QEvent *event) {
-  if (event->type() == QEvent::PaletteChange) {
-    if (SettingsManager::instance().theme() == "system") {
-      static bool isApplyingTheme = false;
-      if (!isApplyingTheme) {
-        isApplyingTheme = true;
-        applyTheme();
-        isApplyingTheme = false;
-      }
-    }
-  }
-  QMainWindow::changeEvent(event);
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

@@ -87,7 +87,6 @@ protected:
   bool eventFilter(QObject *watched, QEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
   void resizeEvent(QResizeEvent *event) override;
-  void changeEvent(QEvent *event) override;
   void closeEvent(QCloseEvent *event) override;
 
 private slots:

@@ -1310,7 +1310,7 @@ void MainWindow::onLoadProject() {
   }
 }
 
-bool MainWindow::loadProjectFrom(const QString &path) {
+bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
   SaveData data;
   if (!m_saveManager->load(path, data)) {
     QMessageBox::critical(
@@ -1341,14 +1341,34 @@ bool MainWindow::loadProjectFrom(const QString &path) {
       w->setText(data.tracks[i].text);
   }
 
+  // Paths come from a file that may have been written by someone else
+  QFileInfo fi(path);
+  QDir dir = fi.absoluteDir();
+  int refusedPaths = 0;
+
   // Restore video and volume
   if (!data.videoUrl.isEmpty()) {
-    QString localPath = data.videoUrl;
-    if (localPath.startsWith("file://")) {
-      localPath = QUrl(localPath).toLocalFile();
+    QString storedVideo = data.videoUrl;
+    if (storedVideo.startsWith("file://")) {
+      storedVideo = QUrl(storedVideo).toLocalFile();
     }
 
-    if (!QFile::exists(localPath)) {
+    // save() stores the video relative to the .dbi, often outside its folder
+    // ("../Videos/film.mp4"): a standalone .dbi keeps that behavior, only an
+    // archive is held to its own directory.
+    QString localPath = SaveManager::resolveProjectPath(
+        dir.absolutePath(), storedVideo, strictRelative, !strictRelative);
+
+    // Hors du dossier projet il n'y a plus de confinement : le type de fichier
+    // est la dernière barrière. Sans elle, un .dbi reçu d'un tiers désigne
+    // n'importe quel fichier lisible, qui repart ensuite dans l'archive
+    // produite par saveWithMedia(). Même filtre que openVideoDialog().
+    if (!localPath.endsWith(".mp4", Qt::CaseInsensitive))
+      localPath.clear();
+
+    if (localPath.isEmpty()) {
+      ++refusedPaths;
+    } else if (!QFile::exists(localPath)) {
       QMessageBox::warning(
           this, tr("Relink"),
           tr("La vidéo est introuvable. Veuillez la localiser."));
@@ -1362,9 +1382,6 @@ bool MainWindow::loadProjectFrom(const QString &path) {
   m_playbackEngine->setVolume(data.videoVolume);
 
   // Restore audio device selection and gain
-  QFileInfo fi(path);
-  QDir dir = fi.absoluteDir();
-
   m_lastLoadLostTracksCount = 0;
   for (int i = 0; i < qMin(data.audioTracks.size(), m_trackCount); ++i) {
     m_trackPanels[i]->setInputDevice(data.audioTracks[i].audioInput);
@@ -1377,8 +1394,13 @@ bool MainWindow::loadProjectFrom(const QString &path) {
 
     // Restore WAV file
     if (m_hasRecording[i] && !data.audioTracks[i].audioFilePath.isEmpty()) {
-        QString savedWavPath = dir.absoluteFilePath(data.audioTracks[i].audioFilePath);
-        if (QFile::exists(savedWavPath)) {
+        const QString savedWavPath = SaveManager::resolveProjectPath(
+            dir.absolutePath(), data.audioTracks[i].audioFilePath,
+            strictRelative);
+        if (savedWavPath.isEmpty()) {
+            m_hasRecording[i] = false;
+            ++refusedPaths;
+        } else if (QFile::exists(savedWavPath)) {
             QString tempPath = m_tempAudioPaths.value(i);
             if (savedWavPath != tempPath) {
                 if (QFile::exists(tempPath)) QFile::remove(tempPath);
@@ -1393,6 +1415,13 @@ bool MainWindow::loadProjectFrom(const QString &path) {
 
   // Load recordings into preview players
   refreshPreviewSources();
+
+  if (refusedPaths > 0) {
+    QMessageBox::warning(
+        this, tr("Projet"),
+        tr("Ce projet référence des fichiers situés hors de son dossier. "
+           "Ils ont été ignorés par sécurité."));
+  }
 
   statusBar()->showMessage(tr("Projet chargé"), 3000);
   return true;

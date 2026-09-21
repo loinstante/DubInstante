@@ -149,7 +149,8 @@ private:
   QString autosaveFilePath() const;
   void discardAutosave();
   void checkForAutosaveRecovery();
-  bool loadProjectFrom(const QString &path);
+  // strictRelative: project extracted from a .zip, see SaveManager::resolveProjectPath
+  bool loadProjectFrom(const QString &path, bool strictRelative = false);
   void openVideoDialog();
   void setDirty(bool dirty);
   void updateWindowTitle();

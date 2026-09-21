@@ -85,9 +85,30 @@ public:
   bool load(const QString &filePath, SaveData &data);
 
   /**
-   * @brief Normalizes paths and clamps values.
+   * @brief Clamps values to their valid ranges.
    */
   static SaveData sanitize(const SaveData &data);
+
+  /**
+   * @brief Resolves a path read from a project file, relative to the project
+   *        directory. Returns an empty string if the path is refused.
+   *
+   * A relative path is resolved (symlinks followed) and must end up strictly
+   * inside @p projectDir, compared component by component.
+   *
+   * @param strictRelative True for a project extracted from an archive: only
+   *        relative paths are accepted. False for a standalone .dbi, which is
+   *        a project the user created on their own machine: an absolute path
+   *        is accepted as-is. This is the one deliberate relaxation of the
+   *        check; it also covers autosave files, which store absolute temp paths.
+   * @param allowOutside Skips the containment check on relative paths. Only for
+   *        videoUrl of a standalone .dbi: save() stores it relative to the .dbi
+   *        (e.g. "../Videos/film.mp4"), so existing projects point outside.
+   */
+  static QString resolveProjectPath(const QString &projectDir,
+                                    const QString &storedPath,
+                                    bool strictRelative,
+                                    bool allowOutside = false);
 
 private:
   QByteArray applyXorMask(const QByteArray &data);

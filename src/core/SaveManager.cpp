@@ -393,15 +393,6 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     data.tracks.append(trackData);
   }
 
-  // Resolve relative path
-  if (!data.videoUrl.isEmpty()) {
-    QFileInfo videoInfo(data.videoUrl);
-    if (videoInfo.isRelative()) {
-      QDir saveDir = QFileInfo(filePath).dir();
-      data.videoUrl = saveDir.absoluteFilePath(data.videoUrl);
-    }
-  }
-
   file.close();
   data = sanitize(data);
   return true;
@@ -419,6 +410,51 @@ SaveData SaveManager::sanitize(const SaveData &data) {
   }
 
   return clean;
+}
+
+QString SaveManager::resolveProjectPath(const QString &projectDir,
+                                        const QString &storedPath,
+                                        bool strictRelative,
+                                        bool allowOutside) {
+  if (storedPath.isEmpty())
+    return QString();
+
+#ifdef Q_OS_WIN
+  constexpr Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+  if (storedPath.startsWith("\\\\") || storedPath.startsWith("//"))
+    return QString(); // UNC
+#else
+  constexpr Qt::CaseSensitivity cs = Qt::CaseSensitive;
+#endif
+
+  if (QFileInfo(storedPath).isAbsolute())
+    return strictRelative ? QString() : storedPath;
+
+  // Resolve against the canonical root so that an existing target (canonical)
+  // and a missing one (cleaned) are compared on the same footing.
+  const QString root = QFileInfo(projectDir).canonicalFilePath();
+  if (root.isEmpty())
+    return QString();
+
+  const QString abs = QDir(root).absoluteFilePath(storedPath);
+  if (allowOutside)
+    return QDir::cleanPath(abs);
+
+  const QString canonical = QFileInfo(abs).canonicalFilePath();
+  const QString resolved = canonical.isEmpty() ? QDir::cleanPath(abs) : canonical;
+
+  // Qt returns '/'-separated paths on every platform.
+  const QStringList rootParts = root.split('/', Qt::SkipEmptyParts);
+  if (rootParts.isEmpty())
+    return QString(); // projet à la racine du système : rien n'est « dedans »
+  const QStringList parts = resolved.split('/', Qt::SkipEmptyParts);
+  if (parts.size() <= rootParts.size())
+    return QString();
+  for (int i = 0; i < rootParts.size(); ++i) {
+    if (parts[i].compare(rootParts[i], cs) != 0)
+      return QString();
+  }
+  return resolved;
 }
 
 QByteArray SaveManager::applyXorMask(const QByteArray &data) {

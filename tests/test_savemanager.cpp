@@ -138,6 +138,51 @@ int main(int argc, char *argv[]) {
   assert(cleaned.trackCount >= 1 && cleaned.trackCount <= 4);
   assert(cleaned.scrollSpeed >= 10 && cleaned.scrollSpeed <= 500);
 
+  // --- 6b. resolveProjectPath: paths read from a project file ---
+  {
+    const QString projDir = dir.filePath("projet");
+    assert(QDir().mkpath(projDir + "/sous/dossier"));
+    assert(QDir().mkpath(dir.filePath("projet-evil")));
+    {
+      QFile f(dir.filePath("projet-evil/x.wav"));
+      assert(f.open(QIODevice::WriteOnly));
+    }
+    const auto resolve = [&](const QString &p, bool strict,
+                             bool allowOutside = false) {
+      return SaveManager::resolveProjectPath(projDir, p, strict, allowOutside);
+    };
+    const QString root = QFileInfo(projDir).canonicalFilePath();
+
+    assert(resolve("", true).isEmpty());
+    assert(resolve("", false).isEmpty());
+    assert(resolve("../../../etc/passwd", true).isEmpty());
+    assert(resolve("../../../etc/passwd", false).isEmpty());
+    assert(resolve("sous/dossier/track_1.wav", true) ==
+           root + "/sous/dossier/track_1.wav");
+    assert(resolve("./track_1.wav", true) == root + "/track_1.wav");
+    assert(resolve("sous/../track_1.wav", false) == root + "/track_1.wav");
+    assert(resolve("/etc/passwd", true).isEmpty());
+    assert(resolve("/home/u/video.mp4", false) == "/home/u/video.mp4");
+    assert(resolve(".", true).isEmpty()); // the directory itself is not inside it
+
+    // A project directory that canonicalises to "/" contains nothing
+    assert(SaveManager::resolveProjectPath("/", "track_1.wav", true).isEmpty());
+
+    // A sibling sharing the directory name as a prefix is outside it
+    assert(resolve("../projet-evil/x.wav", true).isEmpty());
+    assert(resolve("../projet-evil/x.wav", false).isEmpty());
+
+    // videoUrl of a standalone .dbi is relative to the .dbi, often outside it
+    assert(!resolve("../videos/film.mp4", false, true).isEmpty());
+    assert(resolve("../videos/film.mp4", true).isEmpty());
+
+#ifndef Q_OS_WIN
+    // A link inside the project that points outside is refused
+    assert(QFile::link(dir.filePath("projet-evil"), projDir + "/lien"));
+    assert(resolve("lien/x.wav", true).isEmpty());
+#endif
+  }
+
   // --- 7. saveWithMedia archive checks (zip path) ---
   QString zipErr;
   if (SaveManager::isZipAvailable(&zipErr)) {

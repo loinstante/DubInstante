@@ -134,7 +134,13 @@ private:
 
   const QByteArray m_header = "DubInstanteFile";
   const quint8 m_version = 1;
-  const quint8 m_xorKey = 0x5A; // Simple static key for obfuscation
+  /// Masque XOR appliqué au payload du .dbi.
+  /// Ce n'est PAS du chiffrement : la clé est dans le binaire et l'opération
+  /// est trivialement réversible. Son seul rôle est de décourager l'édition
+  /// manuelle du fichier. L'intégrité réelle est assurée par le SHA-256.
+  /// Ne pas changer cette valeur : elle casserait la lecture de tous les
+  /// fichiers existants.
+  const quint8 m_xorKey = 0x5A;
 };
 
 #endif // SAVEMANAGER_H

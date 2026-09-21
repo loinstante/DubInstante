@@ -3,13 +3,14 @@ set -e
 
 # --- Configuration ---
 APP_NAME="DubInstante"
+FLAVOR="${1:-debian}"
 BUILD_DIR="build_release"
 DIST_DIR="dist_appimage"
 DESKTOP_FILE="deploy/dubinstante.desktop"
 
 # Extract version from CHANGELOG.md (e.g., [0.3.4])
 export VERSION=$(grep -m 1 "## \[" CHANGELOG.md | sed -n 's/.*\[\([0-9.]*\)\].*/\1/p')
-echo "--- Building $APP_NAME version $VERSION ---"
+echo "--- Building $APP_NAME version $VERSION ($FLAVOR) ---"
 
 # --- Tools ---
 LINUXDEPLOY="linuxdeploy-x86_64.AppImage"
@@ -98,7 +99,7 @@ export EXTRA_QT_PLUGINS="multimedia"
     --output appimage
 
 # --- 4. Custom Rename ---
-FINAL_NAME="${APP_NAME}_linux_${VERSION}.AppImage"
+FINAL_NAME="${APP_NAME}_${FLAVOR}_${VERSION}.AppImage"
 echo "--- Finalizing: $FINAL_NAME ---"
 mv DubInstante*.AppImage "$FINAL_NAME"
 

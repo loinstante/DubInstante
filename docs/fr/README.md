@@ -65,7 +65,7 @@ DubInstante/
 │   ├── en/README.md              # Version anglaise
 │   └── fr/README.md              # Ce fichier
 └── .github/workflows/
-    └── main.yml                  # CI : build Windows + AppImage
+    └── main.yml                  # CI : build Windows + AppImages Linux (debian/arch)
 ```
 
 ---
@@ -432,12 +432,16 @@ L'application au format zip est disponible depuis l'onglet **Actions** (artefact
 
 ### Linux
 
-L'application au format AppImage est disponible depuis l'onglet **Actions** (artefact CI : `DubInstante-Linux`).
+Deux builds AppImage sont disponibles depuis l'onglet **Actions** :
+
+- `DubInstante_debian_<version>` — compilée sur Ubuntu 22.04, pour les distributions de la famille Debian/Ubuntu (Debian, Ubuntu, Mint...).
+- `DubInstante_arch_<version>` — compilée sur Arch Linux avec les bibliothèques système à jour, pour les distributions basées sur Arch et autres rolling releases (Arch, EndeavourOS, Manjaro...). Nécessite une glibc aussi récente.
 
 ### AppImage
 
 ```bash
-./deploy/build_appimage.sh
+./deploy/build_appimage.sh          # variante debian (par défaut)
+./deploy/build_appimage.sh arch     # variante arch
 ```
 
 ### Application Android

@@ -38,6 +38,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Shortcuts**: `Ctrl+S` saves the project (`Ctrl+Shift+S`: save as); stopping a recording moves to `Esc`.
 - **Rythmo Fonts**: The font selector only lists fixed-pitch fonts.
 - **Unified Version**: The application version now comes from CMake (`0.12.0`) — release candidate for human testing before v1.0.0.
+## [0.11.1] - 2026-07-13
+
+### Fixed
+- **Arch Linux Crash (#7)**: Fixed the segmentation fault with `GStreamer-CRITICAL` errors on Arch-based distros (Arch, EndeavourOS, Manjaro) by splitting the Linux release into two AppImages. The new `DubInstante_arch_<version>.AppImage` is built on Arch Linux against current system libraries and uses the Qt Multimedia FFmpeg backend (no GStreamer bundled).
+
+### Changed
+- **Linux Artifact Rename**: The Ubuntu-built AppImage is now named `DubInstante_debian_<version>.AppImage` (previously `DubInstante_linux_<version>.AppImage`). Update any scripts downloading by the old name.
 
 ## [0.11.0] - 2026-03-31
 

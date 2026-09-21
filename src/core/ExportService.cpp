@@ -5,6 +5,7 @@
 
 #include "ExportService.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
@@ -44,10 +45,23 @@ ExportService::~ExportService()
 // Public Methods
 // =============================================================================
 
+QString ExportService::toolPath(const QString &name)
+{
+    // findExecutable() and not exists(): it appends the .exe on Windows and
+    // checks the executable bit, which a plain path test would not.
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString bundled = QStandardPaths::findExecutable(
+        name, {appDir, appDir + "/../Resources"});
+    if (!bundled.isEmpty()) {
+        return bundled;
+    }
+    return QStandardPaths::findExecutable(name);
+}
+
 bool ExportService::isFFmpegAvailable(QString *errorMessage)
 {
-    const bool ffmpegFound = !QStandardPaths::findExecutable("ffmpeg").isEmpty();
-    const bool ffprobeFound = !QStandardPaths::findExecutable("ffprobe").isEmpty();
+    const bool ffmpegFound = !toolPath("ffmpeg").isEmpty();
+    const bool ffprobeFound = !toolPath("ffprobe").isEmpty();
 
     if (ffmpegFound && ffprobeFound) {
         return true;
@@ -100,9 +114,12 @@ void ExportService::startExport(const ExportConfig &config)
     
     QStringList args = buildFFmpegArgs(config);
     
-    qDebug() << "[ExportService] Starting FFmpeg with args:" << args;
+    // Empty when nothing was found: QProcess then fails to start, which is the
+    // same path as a missing ffmpeg and is already reported to the user.
+    const QString program = toolPath("ffmpeg");
+    qDebug() << "[ExportService] Starting FFmpeg:" << program << args;
     m_process->setStandardOutputFile(QProcess::nullDevice());
-    m_process->start("ffmpeg", args);
+    m_process->start(program, args);
 }
 
 void ExportService::cancelExport()

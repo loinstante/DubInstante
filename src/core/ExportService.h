@@ -119,11 +119,22 @@ public:
     void cancelExport();
     
     /**
-     * @brief Checks if FFmpeg and FFprobe are available on the system.
+     * @brief Checks if FFmpeg and FFprobe are available.
      * @param errorMessage Optional pointer to store installation instructions if missing.
-     * @return true if both FFmpeg and FFprobe are installed and accessible.
+     * @return true if both are resolvable through toolPath().
      */
     static bool isFFmpegAvailable(QString *errorMessage = nullptr);
+
+    /**
+     * @brief Resolves an FFmpeg tool ("ffmpeg" or "ffprobe") to a full path.
+     *
+     * The copy shipped with the application wins over the system one: it is the
+     * version the export arguments were written against. Looks next to the
+     * executable (which covers AppDir/usr/bin in the AppImage and
+     * Contents/MacOS in the macOS bundle), then in Contents/Resources, then in
+     * the PATH. Returns an empty string if the tool is nowhere to be found.
+     */
+    static QString toolPath(const QString &name);
     
     /**
      * @brief Returns whether an export is currently in progress.

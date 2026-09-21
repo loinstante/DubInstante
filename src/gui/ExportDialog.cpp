@@ -614,9 +614,10 @@ void ExportDialog::populateFields()
                 m_originalMuteBtn->setEnabled(false);
             }
         });
-        probe->start("ffprobe", QStringList() << "-v" << "error"
-                                              << "-show_entries" << "stream=codec_type,width,height"
-                                              << "-of" << "csv=p=0" << m_sourceVideoPath);
+        probe->start(ExportService::toolPath("ffprobe"),
+                     QStringList() << "-v" << "error"
+                                   << "-show_entries" << "stream=codec_type,width,height"
+                                   << "-of" << "csv=p=0" << m_sourceVideoPath);
     }
 
     // 2. Set default output path

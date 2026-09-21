@@ -1,0 +1,43 @@
+THIRD-PARTY COMPONENTS SHIPPED WITH DUBINSTANTE
+===============================================
+
+DubInstante itself is licensed under the EUPL-1.2 (see LICENSE). The published
+packages (AppImage, Windows archive, macOS .app) also contain the components
+listed below, each under its own licence.
+
+
+FFmpeg
+------
+Upstream:  https://ffmpeg.org
+Source:    https://ffmpeg.org/download.html  (the exact build used by each
+           platform is named in .github/workflows/main.yml)
+Licence:   GNU General Public License v3 or later.
+
+The `ffmpeg` and `ffprobe` executables shipped next to the application, and the
+libav* libraries the application links against, come from builds configured with
+--enable-gpl. GPL v3 is listed as a Compatible Licence in the Appendix of the
+EUPL-1.2, so combining it with DubInstante is permitted; the resulting package
+is distributed under the terms of the GPL v3, as Article 5 of the EUPL requires.
+
+Practical consequences for anyone redistributing these packages:
+  - the complete corresponding source of the FFmpeg build must remain available
+    (the upstream link above, or a copy, for as long as the package is offered);
+  - the source of DubInstante must remain available under the EUPL (or the GPL
+    v3, at the recipient's choice): https://github.com/loimathos/DubInstante
+
+
+Qt 6
+----
+Upstream:  https://www.qt.io
+Source:    https://download.qt.io/official_releases/qt/
+Licence:   GNU Lesser General Public License v3.
+
+The Qt libraries are shipped unmodified and dynamically linked, which is what
+the LGPL v3 requires. LGPL v3 is also a Compatible Licence under the Appendix of
+the EUPL-1.2. To relink DubInstante against a different build of Qt, rebuild it
+from the source above; nothing in the packaging prevents it.
+
+
+The full text of the GPL v3 and of the LGPL v3 is available at
+https://www.gnu.org/licenses/. A copy is included in the FFmpeg and Qt source
+distributions linked above.

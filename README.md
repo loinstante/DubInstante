@@ -83,7 +83,8 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 ### 🎚️ Moteur Audio & FFmpeg
 * **FR : Export Sans Perte** : Ajustez les gains de chaque micro en temps réel et exportez le mix final proprement avec FFmpeg. Le moteur intercepte proprement les erreurs système (comme le manque d'espace disque) sans bloquer l'application.
 * **EN : Lossless Audio & FFmpeg** : Dynamically adjust gain per track and export clean, high-quality audio merges via FFmpeg. System errors (like running out of disk space) are intercepted gracefully to keep the application responsive.
-* **FR/EN : Prérequis** : FFmpeg ≥ 4.4 requis pour l'export (mixage `amix` avec `normalize=0`). / FFmpeg ≥ 4.4 is required for exports (`amix` mixing with `normalize=0`).
+* **FR : FFmpeg embarqué** : les paquets publiés (AppImage, Windows, macOS) contiennent `ffmpeg` et `ffprobe` — rien à installer. Une compilation depuis les sources demande FFmpeg ≥ 4.4 (mixage `amix` avec `normalize=0`).
+* **EN : FFmpeg included** : the published packages (AppImage, Windows, macOS) ship `ffmpeg` and `ffprobe` — nothing to install. Building from source requires FFmpeg ≥ 4.4 (`amix` mixing with `normalize=0`).
 
 ### 📦 Multiplateforme Natif
 * **FR :** Windows (Installer), macOS (DMG), Linux (AppImage) et Android Native (Beta).

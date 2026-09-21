@@ -69,8 +69,8 @@ struct ExportConfig;
  * - Wire signals/slots between Core and GUI
  * - Handle top-level menu and keyboard shortcuts
  *
- * This class should be "thin" - it connects components but doesn't
- * contain business logic.
+ * Large orchestrator: it also carries project save/load, recording and export
+ * flow logic, not just signal wiring.
  */
 class MainWindow : public QMainWindow {
   Q_OBJECT

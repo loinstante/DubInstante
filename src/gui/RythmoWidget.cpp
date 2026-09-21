@@ -84,12 +84,6 @@ void RythmoWidget::updateDisplay(int cursorIndex, qint64 positionMs,
   update();
 }
 
-void RythmoWidget::updatePosition(int cursorIndex, qint64 positionMs) {
-  m_cursorIndex = cursorIndex;
-  m_currentPosition = positionMs;
-  update();
-}
-
 void RythmoWidget::setPlaying(bool playing) {
   if (m_isPlaying != playing) {
     m_isPlaying = playing;

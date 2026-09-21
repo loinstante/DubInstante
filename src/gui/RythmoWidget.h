@@ -1,16 +1,14 @@
 /**
  * @file RythmoWidget.h
- * @brief Passive rendering widget for the Rythmo band display.
+ * @brief Rendering and editing widget for one track of the Rythmo band.
  *
- * This widget displays a scrolling text band synchronized with video position.
- * It receives all data from RythmoManager and performs NO calculations itself.
+ * Draws a scrolling text band synchronized with the video position, and owns
+ * the editing of its text: typing, Backspace, Delete and the cursor-index
+ * computation are done in keyPressEvent. Each edit emits textChanged(); the
+ * owner (MainWindow) stores it in RythmoManager, which is a plain text/style
+ * store. Seeks and play requests are emitted as signals.
  *
- * Design Principles:
- * - Passive: All state comes via slots, no internal calculations
- * - Emits signals for user interactions (clicks, drags, key presses)
- * - RythmoManager handles all synchronization logic
- *
- * @note Part of the GUI layer - pure rendering, no business logic.
+ * @note Part of the GUI layer.
  */
 
 #ifndef RYTHMOWIDGET_H
@@ -27,8 +25,9 @@
  * @class RythmoWidget
  * @brief Displays a single Rythmo track with scrolling text.
  *
- * The widget is completely passive - it renders what it's told.
- * All interaction events are forwarded as signals.
+ * Position and speed are pushed in (sync / setSpeed); the widget derives the
+ * cursor index and character duration from them itself. Text edits are
+ * reported through textChanged(), seeks through seekRequested().
  */
 class RythmoWidget : public QWidget {
   Q_OBJECT
@@ -57,7 +56,7 @@ signals:
 
 public slots:
   // =========================================================================
-  // Data Input (from RythmoManager)
+  // Data Input
   // =========================================================================
 
   /**
@@ -69,13 +68,6 @@ public slots:
    */
   void updateDisplay(int cursorIndex, qint64 positionMs, const QString &text,
                      int speed);
-
-  /**
-   * @brief Updates only the position (for smooth sync).
-   * @param cursorIndex Character index for cursor position.
-   * @param positionMs Current time position in milliseconds.
-   */
-  void updatePosition(int cursorIndex, qint64 positionMs);
 
   /**
    * @brief Sets the playing state for visual feedback.
@@ -100,38 +92,10 @@ signals:
   // =========================================================================
 
   /**
-   * @brief Emitted when user clicks/drags to scrub.
-   * @param deltaPixels Pixel offset from target line (positive = right).
-   */
-  void scrubRequested(int deltaPixels);
-
-  /**
    * @brief Emitted when user requests a direct position.
    * @param positionMs Target position in milliseconds.
    */
   void seekRequested(qint64 positionMs);
-
-  /**
-   * @brief Emitted when user types a character.
-   * @param character The typed character(s).
-   */
-  void characterTyped(const QString &character);
-
-  /**
-   * @brief Emitted when user presses Backspace.
-   */
-  void backspacePressed();
-
-  /**
-   * @brief Emitted when user presses Delete.
-   */
-  void deletePressed();
-
-  /**
-   * @brief Emitted when user presses arrow keys.
-   * @param forward True for right arrow, false for left.
-   */
-  void navigationRequested(bool forward);
 
   /**
    * @brief Emitted when user presses Escape (insert space + play).

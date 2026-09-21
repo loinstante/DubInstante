@@ -703,9 +703,7 @@ void MainWindow::setupConnections() {
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged,
           this, &MainWindow::handlePreviewStateChange);
 
-  // PlaybackEngine -> RythmoManager -> RythmoOverlay
-  connect(m_playbackEngine, &PlaybackEngine::positionChanged, m_rythmoManager,
-          &RythmoManager::sync);
+  // PlaybackEngine -> RythmoOverlay
   connect(m_playbackEngine, &PlaybackEngine::positionChanged, m_rythmoOverlay,
           &RythmoOverlay::sync);
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged, this,
@@ -1051,36 +1049,6 @@ void MainWindow::connectTrack(int index) {
           &PlaybackEngine::seek);
   connect(widget, &RythmoWidget::playRequested, m_playbackEngine,
           &PlaybackEngine::play);
-
-  // Text editing: RythmoWidget -> RythmoManager
-  connect(widget, &RythmoWidget::characterTyped, this,
-          [this, index](const QString &character) {
-            m_rythmoManager->insertCharacter(index, character);
-            RythmoWidget *w = m_rythmoOverlay->track(index);
-            if (w)
-              w->setText(m_rythmoManager->text(index));
-          });
-
-  connect(widget, &RythmoWidget::backspacePressed, this, [this, index]() {
-    m_rythmoManager->deleteCharacter(index, true);
-    RythmoWidget *w = m_rythmoOverlay->track(index);
-    if (w)
-      w->setText(m_rythmoManager->text(index));
-  });
-
-  connect(widget, &RythmoWidget::deletePressed, this, [this, index]() {
-    m_rythmoManager->deleteCharacter(index, false);
-    RythmoWidget *w = m_rythmoOverlay->track(index);
-    if (w)
-      w->setText(m_rythmoManager->text(index));
-  });
-
-  // Navigation (frame stepping via RythmoWidget arrow keys)
-  connect(widget, &RythmoWidget::navigationRequested, this,
-          [this](bool forward) {
-            qint64 delta = forward ? frameStepMs() : -frameStepMs();
-            m_playbackEngine->seek(m_playbackEngine->position() + delta);
-          });
 
   // Text changed: RythmoWidget -> RythmoManager
   connect(widget, &RythmoWidget::textChanged, this,

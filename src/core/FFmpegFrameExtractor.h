@@ -42,13 +42,13 @@ private:
     // Sync
     QMutex m_mutex;
     QWaitCondition m_condition;
-    bool m_abort;
-    
+    std::atomic<bool> m_abort;
+
     // Request State
     QString m_requestedFilePath;
-    bool m_fileChanged;
+    bool m_fileChanged; // Always accessed under m_mutex
     std::atomic<qint64> m_requestedTimestampMs;
-    bool m_hasNewRequest;
+    std::atomic<bool> m_hasNewRequest;
 
     // FFmpeg state
     AVFormatContext *m_formatContext;
@@ -77,6 +77,7 @@ public:
 
 signals:
     void frameExtracted(const QImage &image);
+    void errorOccurred(const QString &errorMsg);
 
 private:
     QThread *m_workerThread;

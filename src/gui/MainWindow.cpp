@@ -7,6 +7,7 @@
 
 // Core includes
 #include "AudioRecorder.h"
+#include "Constants.h"
 #include "ExportService.h"
 #include "ExportDialog.h"
 #include "PlaybackEngine.h"
@@ -16,11 +17,14 @@
 // GUI includes
 #include "ClickableSlider.h"
 #include "RythmoOverlay.h"
+#include "Palette.h"
 #include "TrackWidget.h"
 #include "TrackSettingsDialog.h"
 #include "GlobalSettingsDialog.h"
 #include "../core/SettingsManager.h"
 #include "VideoWidget.h"
+#include <QApplication>
+#include <QPalette>
 #include <QStyleHints>
 #include <QGuiApplication>
 #include <QMediaDevices>
@@ -31,12 +35,17 @@
 #include "TimeFormatter.h"
 
 #include <QDir>
+#include <QEventLoop>
 #include <QGraphicsDropShadowEffect>
+#include <QCloseEvent>
+#include <QCoreApplication>
+#include <QDateTime>
 #include <QEvent>
 #include <QFile>
 #include <QFileDialog>
 #include <QFrame>
 #include <QHBoxLayout>
+#include <QLocale>
 #include <QMessageBox>
 #include <QResizeEvent>
 #include <QStandardPaths>
@@ -46,6 +55,8 @@
 #include <QFutureWatcher>
 #include <QProgressDialog>
 #include <QtConcurrent>
+#include <algorithm>
+#include <memory>
 #include <limits>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -55,17 +66,20 @@ MainWindow::MainWindow(QWidget *parent)
       m_playbackEngine(new PlaybackEngine(this)),
       m_rythmoManager(new RythmoManager(this)),
       m_exportService(new ExportService(this)),
-      m_saveManager(new SaveManager(this))
+      m_saveManager(new SaveManager(this)),
+      m_postRecordBar(nullptr),
+      m_postRecordLabel(nullptr)
       // Initialize state
       ,
       m_trackCount(0), m_previousVolume(100), m_isRecording(false),
       m_isFullscreenRecording(false), m_lastRecordedDurationMs(0),
-      m_recordingStartTimeMs(0),
+      m_lastRecordedStartMs(0), m_recordingStartTimeMs(0),
+      m_isDirty(false), m_lastLoadLostTracksCount(0),
       m_autoSaveTimer(new QTimer(this)),
-      m_countdownTimer(new QTimer(this)),
-      m_countdownRemaining(0),
+      m_outputDevicesGroup(new QActionGroup(this)),
       m_countdownLabel(nullptr),
-      m_outputDevicesGroup(new QActionGroup(this)) {
+      m_countdownTimer(new QTimer(this)),
+      m_countdownRemaining(0) {
   applyTheme();
   setupUi();
   createMenus();
@@ -84,8 +98,6 @@ MainWindow::MainWindow(QWidget *parent)
   // Setup countdown connection
   connect(m_countdownTimer, &QTimer::timeout, this, &MainWindow::onCountdownTick);
 
-  // Restore Expert Mode checkbox
-  m_actionExpertMode->setChecked(SettingsManager::instance().expertMode());
 
   // Create initial track (always start with 1)
   setTrackCount(1);
@@ -106,27 +118,136 @@ MainWindow::MainWindow(QWidget *parent)
   }
 
   // Window configuration
-  setWindowTitle("DubInstante - Studio");
+  updateWindowTitle();
   resize(900, 600);
   setMinimumSize(800, 500);
   setWindowState(Qt::WindowMaximized);
+
+  // Construire l'interface a émis des signaux de mutation (peuplement des combos,
+  // volumes par défaut) : un projet vierge n'est pas modifié pour autant.
+  setDirty(false);
+
+  // Une seule instance possède la sauvegarde automatique : sans ce verrou, une
+  // seconde instance proposerait de restaurer celle de la première, puis la
+  // supprimerait en se fermant. Le verrou d'une instance plantée est repris
+  // (processus disparu).
+  // ponytail: les instances suivantes ne sont pas protégées contre un crash ;
+  // passer à une sauvegarde par instance si l'usage multi-fenêtre se répand.
+  QDir().mkpath(QFileInfo(autosaveFilePath()).absolutePath());
+  m_autosaveLock.setStaleLockTime(0);
+  m_ownsAutosave = m_autosaveLock.tryLock(0);
+
+  // Différé : le constructeur s'exécute avant show(), un dialogue modal n'aurait
+  // pas de fenêtre derrière lui — et la restauration peut en ouvrir un second
+  // pour relier une vidéo introuvable. La purge passe après, sinon elle
+  // supprimerait les WAV d'une sauvegarde de plus de sept jours avant qu'on ait
+  // proposé de la restaurer. Réservée elle aussi au propriétaire du verrou : une
+  // instance secondaire ne purge pas les prises d'une autre encore ouverte.
+  QTimer::singleShot(0, this, [this]() {
+    if (!m_ownsAutosave) {
+      return;
+    }
+    checkForAutosaveRecovery();
+    purgeStaleTempFiles();
+  });
 }
 
 // =============================================================================
 // UI Setup
 // =============================================================================
 
+namespace {
+
+// Types vidéo acceptés. Le sélecteur de fichiers et la barrière de type du
+// chargement de projet lisent la même liste : sans ça, un projet enregistré
+// avec un .mkv ne se rouvre pas.
+const QStringList &videoSuffixes() {
+  static const QStringList suffixes{"mp4", "mkv", "mov", "avi", "m4v", "webm", "mxf"};
+  return suffixes;
+}
+
+bool hasVideoSuffix(const QString &path) {
+  return videoSuffixes().contains(QFileInfo(path).suffix().toLower());
+}
+
+// Every role Fusion draws with is set explicitly, including the Disabled group:
+// a role left unset falls back to the OS theme palette, which is the opposite
+// scheme half the time (light frames under the dark theme). The Disabled
+// overrides come last, setColor(role, c) having written all three groups.
+QPalette buildPalette(bool dark) {
+  QPalette p;
+  if (dark) {
+    p.setColor(QPalette::Window, QColor("#0d0d12"));
+    p.setColor(QPalette::WindowText, QColor("#f3f3f6"));
+    p.setColor(QPalette::Base, QColor("#161622"));
+    p.setColor(QPalette::AlternateBase, QColor("#212130"));
+    p.setColor(QPalette::ToolTipBase, QColor("#212130"));
+    p.setColor(QPalette::ToolTipText, QColor("#f3f3f6"));
+    p.setColor(QPalette::Text, QColor("#f3f3f6"));
+    p.setColor(QPalette::PlaceholderText, QColor(Brand::TextMuted));
+    p.setColor(QPalette::Button, QColor("#212130"));
+    p.setColor(QPalette::ButtonText, QColor("#f3f3f6"));
+    p.setColor(QPalette::BrightText, QColor("#ffffff"));
+    p.setColor(QPalette::Link, QColor(Brand::AccentLight));
+    p.setColor(QPalette::Highlight, QColor(Brand::AccentLight));
+    p.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+    p.setColor(QPalette::Light, QColor(Brand::SurfaceAlt));
+    p.setColor(QPalette::Midlight, QColor("#2a2a3c"));
+    p.setColor(QPalette::Mid, QColor("#23232f"));
+    p.setColor(QPalette::Dark, QColor("#12121a"));
+    p.setColor(QPalette::Shadow, QColor("#000000"));
+    const QColor disabled("#5c5c6f");
+    p.setColor(QPalette::Disabled, QPalette::WindowText, disabled);
+    p.setColor(QPalette::Disabled, QPalette::Text, disabled);
+    p.setColor(QPalette::Disabled, QPalette::ButtonText, disabled);
+  } else {
+    p.setColor(QPalette::Window, QColor("#f3f4f6"));
+    p.setColor(QPalette::WindowText, QColor("#1f2937"));
+    p.setColor(QPalette::Base, QColor("#ffffff"));
+    p.setColor(QPalette::AlternateBase, QColor("#f8fafc"));
+    p.setColor(QPalette::ToolTipBase, QColor("#ffffff"));
+    p.setColor(QPalette::ToolTipText, QColor("#111827"));
+    p.setColor(QPalette::Text, QColor("#111827"));
+    p.setColor(QPalette::PlaceholderText, QColor("#94a3b8"));
+    p.setColor(QPalette::Button, QColor("#f8fafc"));
+    p.setColor(QPalette::ButtonText, QColor("#334155"));
+    p.setColor(QPalette::BrightText, QColor("#ffffff"));
+    p.setColor(QPalette::Link, QColor("#3b82f6"));
+    p.setColor(QPalette::Highlight, QColor("#3b82f6"));
+    p.setColor(QPalette::HighlightedText, QColor("#ffffff"));
+    p.setColor(QPalette::Light, QColor("#ffffff"));
+    p.setColor(QPalette::Midlight, QColor("#f3f4f6"));
+    p.setColor(QPalette::Mid, QColor("#cbd5e1"));
+    p.setColor(QPalette::Dark, QColor("#94a3b8"));
+    p.setColor(QPalette::Shadow, QColor("#64748b"));
+    const QColor disabled("#9aa3b2");
+    p.setColor(QPalette::Disabled, QPalette::WindowText, disabled);
+    p.setColor(QPalette::Disabled, QPalette::Text, disabled);
+    p.setColor(QPalette::Disabled, QPalette::ButtonText, disabled);
+  }
+  return p;
+}
+
+} // namespace
+
 void MainWindow::applyTheme() {
   SettingsManager &sm = SettingsManager::instance();
   QString themeMode = sm.theme();
-  
+
+  // Captured before the first setPalette(): afterwards QGuiApplication::palette()
+  // returns our own palette and no longer reflects the OS theme.
+  // ponytail: "system" is therefore frozen at startup, an OS theme flip needs a
+  // restart. Upgrade path: QStyleHints::colorSchemeChanged (Qt >= 6.5, we build on 6.4).
+  static const QPalette systemPalette = QGuiApplication::palette();
+
   bool isDark = false;
   if (themeMode == "dark") {
     isDark = true;
   } else if (themeMode == "system") {
-    QPalette pal = QGuiApplication::palette();
-    isDark = (pal.color(QPalette::Window).value() < 128);
+    isDark = (systemPalette.color(QPalette::Window).value() < 128);
   }
+
+  qApp->setPalette(buildPalette(isDark));
 
   QString stylesheetPath = isDark ? ":/resources/style_dark.qss" : ":/resources/style.qss";
   
@@ -139,7 +260,7 @@ void MainWindow::applyTheme() {
 
 void MainWindow::updateVolumeIcon(int value) {
   if (value == 0) {
-    m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_off.svg"));
+    m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_mute.svg"));
   } else if (value < 50) {
     m_volumeMuteButton->setIcon(QIcon(":/resources/icons/volume_low.svg"));
   } else {
@@ -147,7 +268,10 @@ void MainWindow::updateVolumeIcon(int value) {
   }
 }
 
-void MainWindow::showPostRecordBar() {
+void MainWindow::showPostRecordBar(const QString &message) {
+    if (!message.isEmpty() && m_postRecordLabel) {
+        m_postRecordLabel->setText(message);
+    }
     m_postRecordBar->setVisible(true);
 }
 
@@ -319,10 +443,6 @@ void MainWindow::setupUi() {
   group2Layout->addWidget(m_speedUpButton);
 
 
-  m_textColorCheck = new QCheckBox("Texte Blanc", controlBar);
-  m_textColorCheck->setProperty("cssClass", "control-check");
-  m_textColorCheck->setVisible(false);
-
   m_recordButton = new QPushButton("● REC GLOBAL", controlBar);
   m_recordButton->setObjectName("recordButton");
   m_recordButton->setCheckable(true);
@@ -400,6 +520,10 @@ void MainWindow::setupUi() {
   m_exportProgressBar->setFixedWidth(132);
   group3Layout->addWidget(m_exportProgressBar);
 
+  m_exportCancelBtn = new QPushButton(tr("Annuler"), controlBar);
+  m_exportCancelBtn->setVisible(false);
+  group3Layout->addWidget(m_exportCancelBtn);
+
   controlBarLayout->addLayout(group3Layout);
 
   mainLayout->addWidget(controlBarHost);
@@ -415,9 +539,9 @@ void MainWindow::setupUi() {
   QHBoxLayout *prLayout = new QHBoxLayout(m_postRecordBar);
   prLayout->setContentsMargins(12, 6, 12, 6);
 
-  QLabel *prLabel = new QLabel(tr("✅ Enregistrement terminé !"), m_postRecordBar);
-  prLabel->setProperty("cssClass", "settingsLabel");
-  prLayout->addWidget(prLabel);
+  m_postRecordLabel = new QLabel(tr("✅ Enregistrement terminé !"), m_postRecordBar);
+  m_postRecordLabel->setProperty("cssClass", "settingsLabel");
+  prLayout->addWidget(m_postRecordLabel);
   prLayout->addStretch();
 
   QPushButton *listenBtn = new QPushButton(tr("▶ Écouter"), m_postRecordBar);
@@ -501,9 +625,6 @@ void MainWindow::createMenus() {
   // === Application Menu ===
   QMenu *appMenu = mb->addMenu(tr("Application"));
 
-  m_actionExpertMode = new QAction(tr("Expert mode"), this);
-  m_actionExpertMode->setCheckable(true);
-  appMenu->addAction(m_actionExpertMode);
   m_actionFullscreen = new QAction(tr("Fullscreen mode"), this);
   m_actionFullscreen->setCheckable(true);
   appMenu->addAction(m_actionFullscreen);
@@ -518,8 +639,6 @@ void MainWindow::createMenus() {
 
   // Track count selector using plain QActions (QWidgetAction with embedded
   // widgets doesn't work on macOS native menu bars).
-  m_trackCountLabel = new QLabel("1 bande rythmo");  // kept for programmatic updates
-
   QAction *actionRemoveTrack = new QAction(tr("Retirer une bande (−)"), this);
   connect(actionRemoveTrack, &QAction::triggered, this, [this]() {
     if (!m_isRecording) {
@@ -541,10 +660,6 @@ void MainWindow::createMenus() {
   m_actionPersonalizeRythmo = new QAction(tr("Personnaliser"), this);
   rythmoMenu->addAction(m_actionPersonalizeRythmo);
 
-  m_actionExportRythmo = new QAction(tr("Exporter la bande rythmo"), this);
-  m_actionExportRythmo->setCheckable(true);
-  rythmoMenu->addAction(m_actionExportRythmo);
-
   // === Audio Menu ===
   m_audioMenu = mb->addMenu(tr("Audio"));
   updateAudioMenu();
@@ -565,11 +680,11 @@ void MainWindow::setupConnections() {
   });
 
   connect(m_stepBackButton, &QPushButton::clicked, this, [this]() {
-    m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - 40));
+    m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStepMs()));
   });
 
   connect(m_stepForwardButton, &QPushButton::clicked, this, [this]() {
-    m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + 40));
+    m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStepMs()));
   });
 
   connect(m_stopButton, &QPushButton::clicked, this, [this]() {
@@ -600,9 +715,7 @@ void MainWindow::setupConnections() {
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged,
           this, &MainWindow::handlePreviewStateChange);
 
-  // PlaybackEngine -> RythmoManager -> RythmoOverlay
-  connect(m_playbackEngine, &PlaybackEngine::positionChanged, m_rythmoManager,
-          &RythmoManager::sync);
+  // PlaybackEngine -> RythmoOverlay
   connect(m_playbackEngine, &PlaybackEngine::positionChanged, m_rythmoOverlay,
           &RythmoOverlay::sync);
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged, this,
@@ -619,12 +732,9 @@ void MainWindow::setupConnections() {
 
   // Frame stepping configuration
   connect(m_playbackEngine, &PlaybackEngine::metaDataChanged, this, [this]() {
-    qreal fps = m_playbackEngine->videoFrameRate();
-    if (fps > 0) {
-      int frameDurationMs = static_cast<int>(1000.0 / fps);
-      m_positionSlider->setSingleStep(frameDurationMs);
-      m_positionSlider->setPageStep(frameDurationMs * 10);
-    }
+    const int step = static_cast<int>(frameStepMs());
+    m_positionSlider->setSingleStep(step);
+    m_positionSlider->setPageStep(10 * step);
   });
 
   // =========================================================================
@@ -703,6 +813,8 @@ void MainWindow::setupConnections() {
           m_rythmoOverlay, &RythmoOverlay::setSpeed);
   connect(m_speedSpinBox, QOverload<int>::of(&QSpinBox::valueChanged),
           m_rythmoManager, &RythmoManager::setSpeed);
+  connect(m_speedSpinBox, QOverload<int>::of(&QSpinBox::valueChanged), this,
+          [this]() { setDirty(true); });
 
     connect(m_speedDownButton, &QPushButton::clicked, this, [this]() {
       m_speedSpinBox->setValue(qMax(m_speedSpinBox->minimum(),
@@ -714,15 +826,6 @@ void MainWindow::setupConnections() {
             m_speedSpinBox->value() + 10));
     });
 
-
-  connect(m_textColorCheck, &QCheckBox::toggled, this, [this](bool checked) {
-    QColor color = checked ? QColor(Qt::white) : QColor(34, 34, 34);
-    for (int i = 0; i < m_trackCount; ++i) {
-      RythmoTrackStyle style = m_rythmoManager->trackStyle(i);
-      style.textColor = color;
-      m_rythmoManager->setTrackStyle(i, style);
-    }
-  });
 
   connect(m_actionPersonalizeRythmo, &QAction::triggered, this, [this]() {
     TrackSettingsDialog *dialog =
@@ -742,6 +845,7 @@ void MainWindow::setupConnections() {
             if (w) {
               w->setTrackStyle(style);
             }
+            setDirty(true);
           });
 
   // Recording
@@ -756,6 +860,8 @@ void MainWindow::setupConnections() {
           &MainWindow::onExportProgress);
   connect(m_exportService, &ExportService::exportFinished, this,
           &MainWindow::onExportFinished);
+  connect(m_exportCancelBtn, &QPushButton::clicked, m_exportService,
+          &ExportService::cancelExport);
 
   connect(m_actionGlobalSettings, &QAction::triggered, this,
           &MainWindow::onOpenGlobalSettings);
@@ -784,10 +890,22 @@ void MainWindow::setTrackCount(int count) {
     m_audioRecorders.append(recorder);
     connect(recorder, &AudioRecorder::errorOccurred, this,
             &MainWindow::onError);
+    // Validate the take and reload previews only once the WAV is finalized
+    // (stop() is asynchronous)
+    connect(recorder, &AudioRecorder::recorderStateChanged, this,
+            [this, idx](QMediaRecorder::RecorderState state) {
+              if (state != QMediaRecorder::StoppedState) {
+                return;
+              }
+              checkRecordedTake(idx);
+              if (!m_isRecording) {
+                refreshPreviewSources();
+              }
+            });
 
     // Create TrackWidget
-    TrackWidget *panel = new TrackWidget(idx + 1, 
-        QString("Piste %1").arg(idx + 1), "#7c56f5", this);
+    TrackWidget *panel = new TrackWidget(
+        idx + 1, QString("Piste %1").arg(idx + 1), this);
     m_trackPanels.append(panel);
     m_tracksLayout->addWidget(panel);
 
@@ -813,6 +931,7 @@ void MainWindow::setTrackCount(int count) {
         if (idx < m_previewOutputs.size()) {
             m_previewOutputs[idx]->setVolume(static_cast<float>(vol) / 100.0f);
         }
+        setDirty(true);
     });
 
     // Populate combo with real system audio devices
@@ -840,6 +959,7 @@ void MainWindow::setTrackCount(int count) {
     connect(panel, &TrackWidget::inputDeviceIndexChanged, this,
             [this, idx](int deviceIndex) {
                 if (idx >= m_audioRecorders.size()) return;
+                setDirty(true);
                 AudioRecorder *rec = m_audioRecorders[idx];
                 QList<QAudioDevice> devs = rec->availableDevices();
                 
@@ -867,9 +987,12 @@ void MainWindow::setTrackCount(int count) {
       dialog->show();
     });
 
-    // Setup temp audio path
+    // Setup temp audio path (unique par instance : deux applications lancées
+    // en parallèle ne doivent pas écrire dans le même WAV)
     m_tempAudioPaths.append(
-        tempDir + QString("/temp_dub_%1.wav").arg(idx + 1));
+        tempDir + QString("/dubinstante_%1_track_%2.wav")
+                      .arg(QCoreApplication::applicationPid())
+                      .arg(idx + 1));
 
     // Initialize RythmoManager text for this track
     m_rythmoManager->setText(idx, "");
@@ -879,8 +1002,6 @@ void MainWindow::setTrackCount(int count) {
 
   // Remove tracks if needed
   while (m_trackCount > count) {
-    int idx = m_trackCount - 1;
-
     // Remove TrackWidget
     TrackWidget *panel = m_trackPanels.takeLast();
     m_tracksLayout->removeWidget(panel);
@@ -921,13 +1042,7 @@ void MainWindow::setTrackCount(int count) {
     connectTrack(i);
   }
 
-  // Update label
-  if (m_trackCountLabel) {
-    m_trackCountLabel->setText(
-        QString("%1 bande%2 rythmo")
-            .arg(m_trackCount)
-            .arg(m_trackCount > 1 ? "s" : ""));
-  }
+  setDirty(true);
 }
 
 void MainWindow::connectTrack(int index) {
@@ -945,43 +1060,19 @@ void MainWindow::connectTrack(int index) {
   connect(widget, &RythmoWidget::playRequested, m_playbackEngine,
           &PlaybackEngine::play);
 
-  // Text editing: RythmoWidget -> RythmoManager
-  connect(widget, &RythmoWidget::characterTyped, this,
-          [this, index](const QString &character) {
-            m_rythmoManager->insertCharacter(index, character);
-            RythmoWidget *w = m_rythmoOverlay->track(index);
-            if (w)
-              w->setText(m_rythmoManager->text(index));
-          });
-
-  connect(widget, &RythmoWidget::backspacePressed, this, [this, index]() {
-    m_rythmoManager->deleteCharacter(index, true);
-    RythmoWidget *w = m_rythmoOverlay->track(index);
-    if (w)
-      w->setText(m_rythmoManager->text(index));
-  });
-
-  connect(widget, &RythmoWidget::deletePressed, this, [this, index]() {
-    m_rythmoManager->deleteCharacter(index, false);
-    RythmoWidget *w = m_rythmoOverlay->track(index);
-    if (w)
-      w->setText(m_rythmoManager->text(index));
-  });
-
-  // Navigation (frame stepping via RythmoWidget arrow keys)
-  qreal fps = m_playbackEngine->videoFrameRate();
-  int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
-  connect(widget, &RythmoWidget::navigationRequested, this,
-          [this, frameStep](bool forward) {
-            qint64 delta = forward ? frameStep : -frameStep;
-            m_playbackEngine->seek(m_playbackEngine->position() + delta);
-          });
-
   // Text changed: RythmoWidget -> RythmoManager
   connect(widget, &RythmoWidget::textChanged, this,
           [this, index](const QString &text) {
             m_rythmoManager->setText(index, text);
+            setDirty(true);
           });
+}
+
+qint64 MainWindow::frameStepMs() const {
+  const qreal fps = m_playbackEngine ? m_playbackEngine->videoFrameRate() : 0.0;
+  if (fps <= 0.0)
+    return 40; // aucune métadonnée : 25 fps par défaut
+  return qMax(1LL, static_cast<qint64>(qRound(1000.0 / fps)));
 }
 
 // =============================================================================
@@ -989,16 +1080,67 @@ void MainWindow::connectTrack(int index) {
 // =============================================================================
 
 void MainWindow::onOpenFile() {
-  QString fileName = QFileDialog::getOpenFileName(this, tr("Ouvrir"), "",
-                                                  tr("Vidéos MP4 (*.mp4)"));
+  if (!maybeSaveChanges())
+    return;
+  openVideoDialog();
+}
+
+// Sans garde de sauvegarde : appelée aussi par loadProjectFrom() pour relier une
+// vidéo introuvable, au milieu d'un chargement déjà engagé.
+void MainWindow::openVideoDialog() {
+  QStringList globs;
+  for (const QString &suffix : videoSuffixes())
+    globs << QLatin1String("*.") + suffix;
+
+  QString fileName = QFileDialog::getOpenFileName(
+      this, tr("Ouvrir"), "",
+      tr("Fichiers vidéo (%1);;Tous les fichiers (*)")
+          .arg(globs.join(QLatin1Char(' '))));
 
   if (!fileName.isEmpty()) {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
-    setProperty("currentVideoPath", fileName);
+    m_currentVideoPath = fileName;
+    // La dernière prise appartenait à la vidéo précédente : l'export ne doit
+    // plus proposer sa plage.
+    m_lastRecordedDurationMs = 0;
+    m_lastRecordedStartMs = 0;
+    setDirty(true);
   }
 }
 
+SaveData MainWindow::collectSaveData() {
+  SaveData saveData;
+  saveData.videoUrl = m_currentVideoPath;
+  saveData.videoVolume = m_playbackEngine->volume();
+  saveData.trackCount = m_trackCount;
+  saveData.scrollSpeed = m_speedSpinBox->value();
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    TrackAudioSaveData audioData;
+    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
+    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
+    audioData.hasRecording = m_hasRecording.value(i, false);
+    audioData.recordStartMs = m_trackRecordStartMs.value(i, 0);
+    audioData.recordDurationMs = m_trackRecordDurationMs.value(i, 0);
+    saveData.audioTracks.append(audioData);
+  }
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    TrackSaveData trackData;
+    trackData.text = m_rythmoManager->text(i);
+    trackData.style = m_rythmoManager->trackStyle(i);
+    if (const RythmoWidget *w = m_rythmoOverlay->track(i))
+      trackData.charMs = w->charMs();
+    saveData.tracks.append(trackData);
+  }
+
+  return saveData;
+}
+
 void MainWindow::onSaveProject() {
+  if (deferSaveDuringTake(PendingSave::SaveAs))
+    return;
+
   QMessageBox::StandardButton reply;
   reply = QMessageBox::question(
       this, tr("Sauvegarder"),
@@ -1024,17 +1166,50 @@ void MainWindow::onSaveProject() {
     fileName += suffix;
   }
 
-  SaveData data;
-  data.videoUrl = property("currentVideoPath").toString();
-  data.videoVolume = m_playbackEngine->volume();
-  data.trackCount = m_trackCount;
-  data.scrollSpeed = m_speedSpinBox->value();
-  data.isTextWhite = m_textColorCheck->isChecked();
+  saveProjectTo(fileName, saveWithVideo);
+}
+
+void MainWindow::onQuickSaveProject() {
+  if (deferSaveDuringTake(PendingSave::Save))
+    return;
+
+  if (m_currentProjectPath.isEmpty()) {
+    onSaveProject();
+    return;
+  }
+  // A project opened from a .zip is written back as a .zip, never as a bare .dbi
+  saveProjectTo(m_currentProjectPath,
+                m_currentProjectPath.endsWith(".zip", Qt::CaseInsensitive));
+}
+
+bool MainWindow::deferSaveDuringTake(PendingSave save) {
+  if (m_countdownTimer->isActive()) {
+    // Nothing recorded yet: cancel the pre-roll rather than let it start the
+    // take underneath the save dialogs.
+    toggleRecording();
+  }
+
+  // Until checkRecordedTake() validates them, armed tracks are flagged without
+  // audio: saving now would persist them empty and open modal dialogs over the
+  // take. The save runs once every take is finalized.
+  // ponytail: relies on each recorder reaching StoppedState, like the
+  // post-record bar does; add a timeout if a recorder is ever seen hanging.
+  if (!m_isRecording && m_pendingTakeChecks.isEmpty())
+    return false;
+
+  m_pendingSave = save;
+  statusBar()->showMessage(
+      tr("Le projet sera enregistré à la fin de la prise."), 5000);
+  return true;
+}
+
+void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
+  SaveData saveData = collectSaveData();
 
   // Setup audio sub-directory for this project
   QFileInfo fi(fileName);
   QDir dir = fi.absoluteDir();
-  QString baseName = fi.baseName();
+  QString baseName = fi.completeBaseName();
   QString audioDirName = baseName + "_audio";
   QString audioDirPath = dir.absoluteFilePath(audioDirName);
   QDir audioDir(audioDirPath);
@@ -1052,41 +1227,38 @@ void MainWindow::onSaveProject() {
       dir.mkdir(audioDirName);
   }
 
-  // Save audio tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackAudioSaveData audioData;
-    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
-    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
-    audioData.hasRecording = m_hasRecording.value(i, false);
-    audioData.recordStartMs = m_trackRecordStartMs.value(i, 0);
-    audioData.recordDurationMs = m_trackRecordDurationMs.value(i, 0);
+  // Attach project-relative audio paths and copy takes next to the .dbi
+  for (int i = 0; i < saveData.audioTracks.size(); ++i) {
+    TrackAudioSaveData &audioData = saveData.audioTracks[i];
+    if (!audioData.hasRecording)
+      continue;
 
-    if (audioData.hasRecording) {
-        QString tempPath = m_tempAudioPaths.value(i);
-        QString destFilename = QString("track_%1.wav").arg(i + 1);
-        
-        // Always populate the relative path for serialization
-        audioData.audioFilePath = audioDirName + "/" + destFilename;
-        
-        // Only physically copy files here if NOT saving as zip
-        if (!saveWithVideo) {
-            QString destPath = audioDir.absoluteFilePath(destFilename);
-            if (QFile::exists(tempPath)) {
-                if (QFile::exists(destPath)) QFile::remove(destPath);
-                QFile::copy(tempPath, destPath);
+    QString tempPath = m_tempAudioPaths.value(i);
+    QString destFilename = QString("track_%1.wav").arg(i + 1);
+
+    // Always populate the relative path for serialization
+    audioData.audioFilePath = audioDirName + "/" + destFilename;
+
+    // Only physically copy files here if NOT saving as zip
+    if (!saveWithVideo) {
+        QString destPath = audioDir.absoluteFilePath(destFilename);
+        if (QFile::exists(tempPath)) {
+            if (QFile::exists(destPath)) QFile::remove(destPath);
+            // Un échec doit faire échouer la sauvegarde : le projet resterait
+            // sinon marqué enregistré et closeEvent détruirait le WAV
+            // temporaire, seule copie de la prise.
+            if (!QFile::copy(tempPath, destPath)) {
+                QMessageBox::critical(
+                    this, tr("Erreur"),
+                    tr("Impossible de copier l'enregistrement de la piste %1 "
+                       "vers :\n%2\n\nVérifiez l'espace disque ou les "
+                       "permissions. Le projet n'a pas été sauvegardé.")
+                        .arg(i + 1)
+                        .arg(QDir::toNativeSeparators(destPath)));
+                return;
             }
         }
     }
-    
-    data.audioTracks.append(audioData);
-  }
-
-  // Save rythmo tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackSaveData trackData;
-    trackData.text = m_rythmoManager->text(i);
-    trackData.style = m_rythmoManager->trackStyle(i);
-    data.tracks.append(trackData);
   }
 
   if (saveWithVideo) {
@@ -1111,30 +1283,43 @@ void MainWindow::onSaveProject() {
 
     // Run in background thread
     QFutureWatcher<bool> *watcher = new QFutureWatcher<bool>(this);
+    auto errorMessage = std::make_shared<QString>();
     connect(watcher, &QFutureWatcher<bool>::finished, this,
-            [this, watcher, progressDialog, fileName]() {
+            [this, watcher, progressDialog, fileName, errorMessage]() {
               bool result = watcher->result();
               progressDialog->close();
               progressDialog->deleteLater();
               watcher->deleteLater();
 
               if (result) {
+                discardAutosave();
+                m_currentProjectPath = fileName;
+                setDirty(false);
+                updateWindowTitle();
                 statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
               } else {
                 QMessageBox::critical(
                     this, tr("Erreur"),
-                    tr("Impossible de créer l'archive ZIP.\nVérifiez l'espace "
-                       "disque ou les permissions."));
+                    errorMessage->isEmpty()
+                        ? tr("Impossible de créer l'archive ZIP.\nVérifiez "
+                             "l'espace disque ou les permissions.")
+                        : *errorMessage);
               }
             });
 
-    QFuture<bool> future = QtConcurrent::run([this, fileName, data]() {
-      return m_saveManager->saveWithMedia(fileName, data, m_tempAudioPaths);
+    // Copy: the worker thread must not read members owned by the GUI thread
+    const QStringList audioPaths = m_tempAudioPaths;
+    QFuture<bool> future = QtConcurrent::run([this, fileName, saveData, audioPaths, errorMessage]() {
+      return m_saveManager->saveWithMedia(fileName, saveData, audioPaths, errorMessage.get());
     });
     watcher->setFuture(future);
 
   } else {
-    if (m_saveManager->save(fileName, data)) {
+    if (m_saveManager->save(fileName, saveData)) {
+      discardAutosave();
+      m_currentProjectPath = fileName;
+      setDirty(false);
+      updateWindowTitle();
       statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
     } else {
       QMessageBox::critical(this, tr("Erreur"),
@@ -1144,79 +1329,220 @@ void MainWindow::onSaveProject() {
 }
 
 void MainWindow::onLoadProject() {
+  if (exportLocksTakes() || !maybeSaveChanges())
+    return;
+
   QString fileName = QFileDialog::getOpenFileName(
-      this, tr("Charger un projet"), "", tr("DubInstante Project (*.dbi)"));
+      this, tr("Charger un projet"), "",
+      tr("Projets DubInstante (*.dbi *.zip);;Projet (*.dbi);;Archive (*.zip)"));
 
   if (fileName.isEmpty())
     return;
 
-  SaveData data;
-  if (!m_saveManager->load(fileName, data)) {
+  const bool isArchive = fileName.endsWith(".zip", Qt::CaseInsensitive);
+  std::unique_ptr<QTemporaryDir> workDir;
+  QString projectFile = fileName;
+  if (isArchive) {
+    projectFile = extractProjectArchive(fileName, workDir);
+    if (projectFile.isEmpty())
+      return;
+  }
+
+  if (!loadProjectFrom(projectFile, isArchive))
+    return;
+
+  // The previous project stays intact until the new one is loaded; reset()
+  // then deletes its work dir (none left for a plain .dbi).
+  m_archiveWorkDir = std::move(workDir);
+  // A later save must rewrite the archive, not the extracted temp .dbi
+  m_currentProjectPath = fileName;
+  setDirty(false);
+  updateWindowTitle();
+}
+
+QString MainWindow::extractProjectArchive(
+    const QString &zipPath, std::unique_ptr<QTemporaryDir> &workDir) {
+  // Never next to the archive: it may be on a read-only stick or share. Nor in
+  // the system temp, a RAM-backed tmpfs on most Linux setups — saveWithMedia()
+  // avoids it for the same reason: a multi-GB video would be extracted in RAM.
+  const QString cacheDir =
+      QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+  QDir().mkpath(cacheDir); // QTemporaryDir does not create parent directories
+  workDir = std::make_unique<QTemporaryDir>(cacheDir +
+                                            "/dubinstante_prj_XXXXXX");
+  if (!workDir->isValid()) {
+    workDir.reset();
+    QMessageBox::critical(
+        this, tr("Erreur"),
+        tr("Impossible de créer le dossier temporaire d'extraction."));
+    return QString();
+  }
+
+  QString error;
+
+  // Off the GUI thread: a video can weigh several GB. The nested loop keeps
+  // this function sequential while the window stays responsive.
+  QProgressDialog progress(this);
+  progress.setLabelText(
+      tr("Extraction de l'archive en cours...\nCela peut prendre quelques "
+         "minutes selon la taille de la vidéo."));
+  progress.setRange(0, 0);
+  progress.setCancelButton(nullptr);
+  progress.setWindowModality(Qt::WindowModal);
+  progress.show();
+
+  QFutureWatcher<bool> watcher;
+  QEventLoop loop;
+  connect(&watcher, &QFutureWatcher<bool>::finished, &loop, &QEventLoop::quit);
+  const QString destDir = workDir->path();
+  watcher.setFuture(QtConcurrent::run([&]() {
+    return m_saveManager->extractArchive(zipPath, destDir, &error);
+  }));
+  loop.exec();
+  progress.close();
+
+  if (!watcher.result()) {
+    workDir.reset();
+    QMessageBox::critical(this, tr("Erreur"), error);
+    return QString();
+  }
+
+  const QFileInfoList projects =
+      QDir(destDir).entryInfoList({"*.dbi"}, QDir::Files);
+  if (projects.size() == 1)
+    return projects.first().absoluteFilePath();
+
+  // Archive renamed then saved again: it holds the old and the new .dbi
+  const QString expected = QFileInfo(zipPath).completeBaseName();
+  for (const QFileInfo &project : projects) {
+    if (project.completeBaseName() == expected)
+      return project.absoluteFilePath();
+  }
+
+  workDir.reset();
+  QMessageBox::critical(this, tr("Erreur"),
+                        tr("Cette archive contient plusieurs projets et aucun "
+                           "ne porte le nom de l'archive (%1).").arg(expected));
+  return QString();
+}
+
+bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
+  SaveData saveData;
+  if (!m_saveManager->load(path, saveData)) {
     QMessageBox::critical(
         this, tr("Erreur"),
         tr("Le fichier est corrompu ou d'une version incompatible."));
-    return;
+    return false;
   }
 
+  // La plage « Dernier enregistrement » n'est pas sérialisée : celle de la
+  // session précédente ne correspond pas au projet chargé.
+  m_lastRecordedDurationMs = 0;
+  m_lastRecordedStartMs = 0;
+
   // Apply loaded data
-  m_speedSpinBox->setValue(data.scrollSpeed);
-  m_textColorCheck->setChecked(data.isTextWhite);
+  m_speedSpinBox->setValue(saveData.scrollSpeed);
 
   // Set track count
-  int loadedTrackCount = qBound(1, data.trackCount, MAX_TRACKS);
+  int loadedTrackCount = qBound(1, saveData.trackCount, MAX_TRACKS);
   setTrackCount(loadedTrackCount);
 
   // Restore rythmo tracks
-  for (int i = 0; i < qMin(data.tracks.size(), m_trackCount); ++i) {
-    m_rythmoManager->setText(i, data.tracks[i].text);
-    m_rythmoManager->setTrackStyle(i, data.tracks[i].style);
+  for (int i = 0; i < qMin(saveData.tracks.size(), m_trackCount); ++i) {
+    m_rythmoManager->setText(i, saveData.tracks[i].text);
+    m_rythmoManager->setTrackStyle(i, saveData.tracks[i].style);
     RythmoWidget *w = m_rythmoOverlay->track(i);
-    if (w)
-      w->setText(data.tracks[i].text);
+    if (w) {
+      w->setText(saveData.tracks[i].text);
+      // After style and speed: a file without a stored grid derives it from them
+      w->setCharMs(saveData.tracks[i].charMs);
+    }
   }
 
-  // Restore video and volume
-  if (!data.videoUrl.isEmpty()) {
-    QString localPath = data.videoUrl;
-    if (localPath.startsWith("file://")) {
-      localPath = QUrl(localPath).toLocalFile();
+  // Paths come from a file that may have been written by someone else
+  QFileInfo fi(path);
+  QDir dir = fi.absoluteDir();
+  int refusedPaths = 0;
+
+  // Restore video and volume. Cleared first: the video of the previous project
+  // may live in a work dir this load is about to delete.
+  m_currentVideoPath.clear();
+  if (!saveData.videoUrl.isEmpty()) {
+    QString storedVideo = saveData.videoUrl;
+    if (storedVideo.startsWith("file://")) {
+      storedVideo = QUrl(storedVideo).toLocalFile();
     }
 
-    if (!QFile::exists(localPath)) {
+    // save() stores the video relative to the .dbi, often outside its folder
+    // ("../Videos/film.mp4"): a standalone .dbi keeps that behavior, only an
+    // archive is held to its own directory.
+    QString localPath = SaveManager::resolveProjectPath(
+        dir.absolutePath(), storedVideo, strictRelative, !strictRelative);
+
+    // Hors du dossier projet il n'y a plus de confinement : le type de fichier
+    // est la dernière barrière. Sans elle, un .dbi reçu d'un tiers désigne
+    // n'importe quel fichier lisible, qui repart ensuite dans l'archive
+    // produite par saveWithMedia(). Mêmes extensions que le sélecteur, sans son
+    // échappatoire « Tous les fichiers » : ici personne ne choisit.
+    if (!hasVideoSuffix(localPath))
+      localPath.clear();
+
+    if (localPath.isEmpty()) {
+      ++refusedPaths;
+    } else if (!QFile::exists(localPath)) {
       QMessageBox::warning(
           this, tr("Relink"),
           tr("La vidéo est introuvable. Veuillez la localiser."));
-      onOpenFile(); // Simple relink via open file dialog
+      openVideoDialog(); // Simple relink via open file dialog
     } else {
       m_playbackEngine->openFile(QUrl::fromLocalFile(localPath));
-      setProperty("currentVideoPath", localPath);
+      m_currentVideoPath = localPath;
     }
   }
 
-  m_playbackEngine->setVolume(data.videoVolume);
+  m_playbackEngine->setVolume(saveData.videoVolume);
+
+  // Only the autosave stores absolute take paths (the temp WAVs of a crashed
+  // session). A project file never does: accepting one would let a .dbi
+  // received from someone else pull any readable file into track_N.wav, which
+  // then leaves with the next archive.
+  const bool strictAudio = strictRelative || path != autosaveFilePath();
 
   // Restore audio device selection and gain
-  QFileInfo fi(fileName);
-  QDir dir = fi.absoluteDir();
-
-  for (int i = 0; i < qMin(data.audioTracks.size(), m_trackCount); ++i) {
-    m_trackPanels[i]->setInputDevice(data.audioTracks[i].audioInput);
-    m_trackPanels[i]->setVolume(static_cast<int>(data.audioTracks[i].audioGain * 100));
+  m_lastLoadLostTracksCount = 0;
+  for (int i = 0; i < qMin(saveData.audioTracks.size(), m_trackCount); ++i) {
+    m_trackPanels[i]->setInputDevice(saveData.audioTracks[i].audioInput);
+    m_trackPanels[i]->setVolume(static_cast<int>(saveData.audioTracks[i].audioGain * 100));
 
     // Restore recording metadata
-    m_hasRecording[i] = data.audioTracks[i].hasRecording;
-    m_trackRecordStartMs[i] = data.audioTracks[i].recordStartMs;
-    m_trackRecordDurationMs[i] = data.audioTracks[i].recordDurationMs;
+    m_hasRecording[i] = saveData.audioTracks[i].hasRecording;
+    m_trackRecordStartMs[i] = saveData.audioTracks[i].recordStartMs;
+    m_trackRecordDurationMs[i] = saveData.audioTracks[i].recordDurationMs;
 
     // Restore WAV file
-    if (m_hasRecording[i] && !data.audioTracks[i].audioFilePath.isEmpty()) {
-        QString savedWavPath = dir.absoluteFilePath(data.audioTracks[i].audioFilePath);
-        if (QFile::exists(savedWavPath)) {
+    if (m_hasRecording[i] && !saveData.audioTracks[i].audioFilePath.isEmpty()) {
+        const QString savedWavPath = SaveManager::resolveProjectPath(
+            dir.absolutePath(), saveData.audioTracks[i].audioFilePath,
+            strictAudio);
+        if (savedWavPath.isEmpty()) {
+            m_hasRecording[i] = false;
+            ++refusedPaths;
+        } else if (QFile::exists(savedWavPath)) {
             QString tempPath = m_tempAudioPaths.value(i);
-            if (QFile::exists(tempPath)) QFile::remove(tempPath);
-            QFile::copy(savedWavPath, tempPath);
+            if (savedWavPath != tempPath) {
+                // The preview player still holds the take of the previous
+                // project: same URL, so refreshPreviewSources() would not
+                // reload it, and Windows refuses to remove an open file.
+                releasePreviewSource(i);
+                if (QFile::exists(tempPath)) QFile::remove(tempPath);
+                if (!QFile::copy(savedWavPath, tempPath)) {
+                    m_hasRecording[i] = false;
+                    m_lastLoadLostTracksCount++;
+                }
+            }
         } else {
             m_hasRecording[i] = false; // file is missing
+            m_lastLoadLostTracksCount++;
         }
     }
   }
@@ -1224,7 +1550,15 @@ void MainWindow::onLoadProject() {
   // Load recordings into preview players
   refreshPreviewSources();
 
+  if (refusedPaths > 0) {
+    QMessageBox::warning(
+        this, tr("Projet"),
+        tr("Ce projet référence des fichiers situés hors de son dossier. "
+           "Ils ont été ignorés par sécurité."));
+  }
+
   statusBar()->showMessage(tr("Projet chargé"), 3000);
+  return true;
 }
 
 // =============================================================================
@@ -1349,10 +1683,14 @@ void MainWindow::toggleRecording() {
   }
 
   if (!m_isRecording) {
-    QString currentVideo = property("currentVideoPath").toString();
+    QString currentVideo = m_currentVideoPath;
     if (currentVideo.isEmpty()) {
       QMessageBox::warning(this, tr("Dubbing"),
                            tr("Chargez une vidéo avant d'enregistrer."));
+      m_recordButton->setChecked(false);
+      return;
+    }
+    if (exportLocksTakes()) {
       m_recordButton->setChecked(false);
       return;
     }
@@ -1390,12 +1728,20 @@ void MainWindow::toggleRecording() {
   } else {
     m_playbackEngine->pause();
 
+    // stop() is asynchronous: each take is validated by checkRecordedTake() once its
+    // recorder reports StoppedState. Register every armed track before stopping any,
+    // so a recorder stopping synchronously cannot report the result on a partial set.
+    for (int i = 0; i < m_trackCount; ++i) {
+      if (m_trackPanels[i]->isArmed()) {
+        m_trackRecordDurationMs[i] = m_recordingTimer.elapsed();
+        m_pendingTakeChecks.append(i);
+      }
+    }
+
     // Stop recording on ARMED tracks only
     for (int i = 0; i < m_trackCount; ++i) {
       if (m_trackPanels[i]->isArmed()) {
         m_audioRecorders[i]->stopRecording();
-        m_hasRecording[i] = true;
-        m_trackRecordDurationMs[i] = m_recordingTimer.elapsed();
       }
       // Stop unarmed preview playback
       if (i < m_previewPlayers.size()) {
@@ -1416,6 +1762,8 @@ void MainWindow::toggleRecording() {
     m_rythmoOverlay->setEditable(true);
 
     m_lastRecordedDurationMs = m_recordingTimer.elapsed();
+    m_lastRecordedStartMs = m_recordingStartTimeMs;
+    setDirty(true);
 
     m_isRecording = false;
     m_recordDurationTimer->stop();
@@ -1424,11 +1772,58 @@ void MainWindow::toggleRecording() {
     m_recordButton->setText("REC GLOBAL");
     m_actionOpenMp4->setEnabled(true);
 
-    // Reload preview sources for freshly recorded tracks
+    // A recorder that already stopped (failed to start, device lost mid-take)
+    // will not emit StoppedState again: validate its take now.
+    const QList<int> pending = m_pendingTakeChecks;
+    for (int i : pending) {
+      if (m_audioRecorders[i]->recorderState() == QMediaRecorder::StoppedState) {
+        checkRecordedTake(i);
+      }
+    }
+    // Other previews reload via recorderStateChanged once each WAV is finalized
     refreshPreviewSources();
+  }
+}
 
-    // Show post-recording notification bar (replaces showExportDialog)
-    showPostRecordBar();
+void MainWindow::checkRecordedTake(int trackIndex) {
+  if (!m_pendingTakeChecks.removeOne(trackIndex) || trackIndex >= m_hasRecording.size()) {
+    return;
+  }
+
+  // A WAV header alone is 44 bytes: a file this small holds no audio
+  const QFileInfo take(m_tempAudioPaths.value(trackIndex));
+  m_hasRecording[trackIndex] = take.exists() && take.size() > 1024;
+  if (!m_hasRecording[trackIndex]) {
+    m_failedTakeTracks.append(trackIndex);
+  }
+  if (!m_pendingTakeChecks.isEmpty()) {
+    return;
+  }
+
+  // Show post-recording notification bar (replaces showExportDialog)
+  QString message = tr("✅ Enregistrement terminé !");
+  if (!m_failedTakeTracks.isEmpty()) {
+    std::sort(m_failedTakeTracks.begin(), m_failedTakeTracks.end());
+    QStringList trackNumbers;
+    for (int track : m_failedTakeTracks) {
+      trackNumbers << QString::number(track + 1);
+    }
+    message = m_failedTakeTracks.size() == 1
+        ? tr("Enregistrement terminé, mais la piste %1 n'a produit aucun audio. "
+             "Vérifiez le microphone sélectionné.").arg(trackNumbers.first())
+        : tr("Enregistrement terminé, mais les pistes %1 n'ont produit aucun audio. "
+             "Vérifiez le microphone sélectionné.").arg(trackNumbers.join(", "));
+    m_failedTakeTracks.clear();
+  }
+  showPostRecordBar(message);
+  statusBar()->showMessage(message, 5000);
+
+  const PendingSave pendingSave = m_pendingSave;
+  m_pendingSave = PendingSave::None;
+  if (pendingSave == PendingSave::Save) {
+    onQuickSaveProject();
+  } else if (pendingSave == PendingSave::SaveAs) {
+    onSaveProject();
   }
 }
 
@@ -1510,6 +1905,18 @@ void MainWindow::setupShortcuts() {
     }
   });
 
+  m_shProjectSave = new QShortcut(this);
+  m_shProjectSave->setContext(Qt::ApplicationShortcut);
+  m_shProjectSave->setAutoRepeat(false);
+  connect(m_shProjectSave, &QShortcut::activated, this,
+          &MainWindow::onQuickSaveProject);
+
+  m_shProjectSaveAs = new QShortcut(this);
+  m_shProjectSaveAs->setContext(Qt::ApplicationShortcut);
+  m_shProjectSaveAs->setAutoRepeat(false);
+  connect(m_shProjectSaveAs, &QShortcut::activated, this,
+          &MainWindow::onSaveProject);
+
   applyShortcuts();
 }
 
@@ -1517,6 +1924,8 @@ void MainWindow::applyShortcuts() {
   SettingsManager &sm = SettingsManager::instance();
   m_shRecordStart->setKey(sm.shortcut("record_start"));
   m_shRecordStop->setKey(sm.shortcut("record_stop"));
+  m_shProjectSave->setKey(sm.shortcut("project_save"));
+  m_shProjectSaveAs->setKey(sm.shortcut("project_save_as"));
 
   m_shortcutPlayPause = sm.shortcut("video_play_pause");
   m_shortcutFrameBack = sm.shortcut("video_frame_back");
@@ -1540,6 +1949,7 @@ void MainWindow::onExportProgress(int percentage) {
 
 void MainWindow::onExportFinished(bool success, const QString &message) {
   m_exportProgressBar->setVisible(false);
+  m_exportCancelBtn->setVisible(false);
 
   if (success) {
     QMessageBox::information(this, tr("Export"), message);
@@ -1548,66 +1958,94 @@ void MainWindow::onExportFinished(bool success, const QString &message) {
   }
 }
 
+// ffmpeg reads the temp WAVs for the whole export: recording a new take or
+// loading a project would replace them underneath it.
+bool MainWindow::exportLocksTakes() {
+  if (!m_exportService->isExporting())
+    return false;
+  QMessageBox::warning(
+      this, tr("Export en cours"),
+      tr("L'export lit les prises actuelles. Attendez sa fin ou annulez-le "
+         "avant de continuer."));
+  return true;
+}
+
 void MainWindow::showExportDialog() {
-  QString currentVideo = property("currentVideoPath").toString();
+  QString currentVideo = m_currentVideoPath;
   if (currentVideo.isEmpty()) {
     QMessageBox::warning(this, tr("Export"), tr("Aucune vidéo chargée."));
     return;
   }
+
+  QString ffmpegError;
+  if (!ExportService::isFFmpegAvailable(&ffmpegError)) {
+    QMessageBox::warning(this, tr("Export"), ffmpegError);
+    return;
+  }
   
-  if (m_tempAudioPaths.isEmpty() || m_tempAudioPaths[0].isEmpty()) {
+  QVector<int> recordedTracks;
+  QStringList missingTracks;
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (!m_hasRecording.value(i, false)) {
+      continue;
+    }
+    if (i < m_tempAudioPaths.size() && !m_tempAudioPaths[i].isEmpty() &&
+        QFile::exists(m_tempAudioPaths[i])) {
+      recordedTracks.append(i);
+    } else {
+      // Take marked as recorded but its WAV is gone (failed recording, failed copy on load)
+      missingTracks.append(tr("Piste %1").arg(i + 1));
+    }
+  }
+  if (recordedTracks.isEmpty()) {
     QMessageBox::warning(this, tr("Export"), tr("Aucun enregistrement audio trouvé à exporter."));
     return;
   }
-
-  // Construct current volumes and mutes list
-  QVector<float> currentTrackVolumes;
-  QVector<bool> currentTrackMutes;
-
-  // Primary track (index 0)
-  if (m_trackPanels.size() > 0) {
-    float vol = m_trackPanels[0]->currentVolume() / 100.0f;
-    currentTrackVolumes.append(vol);
-    currentTrackMutes.append(vol < 0.01f);
-  } else {
-    currentTrackVolumes.append(1.0f);
-    currentTrackMutes.append(false);
+  if (!missingTracks.isEmpty()) {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, tr("Export"),
+        tr("Le fichier audio est introuvable pour : %1.\n"
+           "Exporter sans ces pistes ?").arg(missingTracks.join(", ")),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+      return;
+    }
   }
 
-  // Extra tracks (indices 1+)
-  for (int i = 1; i < m_trackCount; ++i) {
-    if (m_trackPanels.size() > i) {
-      float vol = m_trackPanels[i]->currentVolume() / 100.0f;
-      currentTrackVolumes.append(vol);
-      currentTrackMutes.append(vol < 0.01f);
-    } else {
-      currentTrackVolumes.append(1.0f);
-      currentTrackMutes.append(false);
+  // Export-local renumbering: the first track with a take becomes the primary audio,
+  // so an unarmed track 1 does not block the export. All lists follow recordedTracks order.
+  QStringList extraAudios;
+  QVector<qint64> trackOffsetsMs;
+  QVector<float> currentTrackVolumes;
+  QVector<bool> currentTrackMutes;
+  QVector<int> trackNumbers;
+  for (int k = 0; k < recordedTracks.size(); ++k) {
+    const int track = recordedTracks[k];
+    if (k > 0) {
+      extraAudios.append(m_tempAudioPaths[track]);
     }
+    trackOffsetsMs.append(m_trackRecordStartMs.value(track, 0));
+    const float vol = track < m_trackPanels.size()
+        ? m_trackPanels[track]->currentVolume() / 100.0f : 1.0f;
+    currentTrackVolumes.append(vol);
+    currentTrackMutes.append(vol < 0.01f);
+    trackNumbers.append(track + 1);
   }
 
   float originalVol = m_playbackEngine->volume();
   bool originalMuted = m_volumeMuteButton->isChecked();
 
-  // Create list of extra audio tracks
-  QStringList extraAudios;
-  for (int i = 1; i < m_trackCount; ++i) {
-    if (m_tempAudioPaths.size() > i) {
-      extraAudios.append(m_tempAudioPaths[i]);
-    } else {
-      extraAudios.append("");
-    }
-  }
-
   ExportDialog dialog(
       currentVideo,
-      m_tempAudioPaths[0],
+      m_tempAudioPaths[recordedTracks.first()],
       extraAudios,
       m_lastRecordedDurationMs,
-      m_trackRecordStartMs,
+      m_lastRecordedStartMs,
+      trackOffsetsMs,
       originalMuted ? 0.0f : originalVol,
       currentTrackVolumes,
       currentTrackMutes,
+      trackNumbers,
       this
   );
 
@@ -1617,6 +2055,7 @@ void MainWindow::showExportDialog() {
     // Set UI progress indicators
     m_exportProgressBar->setVisible(true);
     m_exportProgressBar->setValue(0);
+    m_exportCancelBtn->setVisible(true);
     
     m_exportService->startExport(config);
   }
@@ -1633,6 +2072,21 @@ void MainWindow::onError(const QString &errorMessage) {
 // =============================================================================
 // Event Handling
 // =============================================================================
+
+bool MainWindow::event(QEvent *event) {
+  // With nothing to stop, the record_stop key (Escape by default) goes to the
+  // focused widget instead of the application-wide shortcut: RythmoWidget uses
+  // Escape to push the text.
+  if (event->type() == QEvent::ShortcutOverride && !m_isRecording &&
+      !m_countdownTimer->isActive()) {
+    const QKeyCombination combo = static_cast<QKeyEvent *>(event)->keyCombination();
+    if (QKeySequence(combo) == m_shRecordStop->key()) {
+      event->accept();
+      return true;
+    }
+  }
+  return QMainWindow::event(event);
+}
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
   if (event->type() == QEvent::Resize) {
@@ -1675,10 +2129,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     }
   }
   return QMainWindow::eventFilter(watched, event);
-}
-
-void MainWindow::resizeEvent(QResizeEvent *event) {
-  QMainWindow::resizeEvent(event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
@@ -1736,17 +2186,13 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
     }
 
     if (!m_shortcutFrameBack.isEmpty() && pressedSeq == m_shortcutFrameBack) {
-      qreal fps = m_playbackEngine->videoFrameRate();
-      int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
-      m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStep));
+      m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStepMs()));
       event->accept();
       return;
     }
 
     if (!m_shortcutFrameForward.isEmpty() && pressedSeq == m_shortcutFrameForward) {
-      qreal fps = m_playbackEngine->videoFrameRate();
-      int frameStep = (fps > 0) ? static_cast<int>(1000.0 / fps) : 40;
-      m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStep));
+      m_playbackEngine->seek(qMin(m_playbackEngine->duration(), m_playbackEngine->position() + frameStepMs()));
       event->accept();
       return;
     }
@@ -1803,8 +2249,6 @@ void MainWindow::onOpenGlobalSettings() {
       m_autoSaveTimer->start(sm.autoSaveInterval() * 60 * 1000);
     }
     
-    // Update expert mode action state
-    m_actionExpertMode->setChecked(sm.expertMode());
     
     // Update dynamic audio menu
     updateAudioMenu();
@@ -1826,43 +2270,182 @@ void MainWindow::onOpenGlobalSettings() {
   }
 }
 
+QString MainWindow::autosaveFilePath() const {
+  return QDir(QStandardPaths::writableLocation(QStandardPaths::AppDataLocation))
+      .filePath("autosave_backup.dbi");
+}
+
+void MainWindow::discardAutosave() {
+  if (m_ownsAutosave) {
+    QFile::remove(autosaveFilePath());
+  }
+}
+
+void MainWindow::checkForAutosaveRecovery() {
+  QString autosaveFile = autosaveFilePath();
+  if (!QFile::exists(autosaveFile)) {
+    return;
+  }
+
+  QFileInfo fi(autosaveFile);
+  QDateTime dt = fi.lastModified();
+  QString dateStr = QLocale::system().toString(dt, QLocale::ShortFormat);
+
+  QMessageBox msgBox(QMessageBox::Question,
+                     tr("Récupération"),
+                     tr("Une sauvegarde automatique du %1 a été trouvée. "
+                        "DubInstante s'est probablement fermé de façon inattendue.\n"
+                        "Voulez-vous restaurer ce travail ?")
+                         .arg(dateStr),
+                     QMessageBox::NoButton,
+                     this);
+
+  QPushButton *restoreBtn =
+      msgBox.addButton(tr("Restaurer"), QMessageBox::AcceptRole);
+  QPushButton *ignoreBtn =
+      msgBox.addButton(tr("Ignorer"), QMessageBox::DestructiveRole);
+  msgBox.setDefaultButton(restoreBtn);
+
+  bool timerWasActive = m_autoSaveTimer->isActive();
+  if (timerWasActive) {
+    m_autoSaveTimer->stop();
+  }
+
+  msgBox.exec();
+
+  if (msgBox.clickedButton() == restoreBtn) {
+    if (loadProjectFrom(autosaveFile)) {
+      m_currentProjectPath.clear();
+      setDirty(true);
+      if (m_lastLoadLostTracksCount > 0) {
+        statusBar()->showMessage(
+            tr("Projet restauré. %1 enregistrement(s) introuvable(s).")
+                .arg(m_lastLoadLostTracksCount),
+            8000);
+      } else {
+        statusBar()->showMessage(tr("Projet restauré"), 3000);
+      }
+    } else {
+      // Illisible : écartée du chemin de démarrage pour ne pas reproposer le
+      // même dialogue à chaque lancement, mais conservée pour inspection.
+      QFile::remove(autosaveFile + ".corrupt");
+      QFile::rename(autosaveFile, autosaveFile + ".corrupt");
+    }
+  } else if (msgBox.clickedButton() == ignoreBtn) {
+    QFile::remove(autosaveFile);
+  }
+  // Sans bouton de rôle Reject, QMessageBox ignore Échap et la croix : le choix
+  // est imposé, et seul un clic sur Ignorer détruit la sauvegarde.
+
+  if (timerWasActive) {
+    m_autoSaveTimer->start();
+  }
+}
+
+void MainWindow::setDirty(bool dirty) {
+  if (m_isDirty == dirty) {
+    return;
+  }
+  m_isDirty = dirty;
+  updateWindowTitle();
+}
+
+void MainWindow::updateWindowTitle() {
+  QString title = m_currentProjectPath.isEmpty()
+                      ? QStringLiteral("DubInstante - Studio")
+                      : QStringLiteral("%1 — DubInstante")
+                            .arg(QFileInfo(m_currentProjectPath).completeBaseName());
+  if (m_isDirty) {
+    title.prepend(QStringLiteral("* "));
+  }
+  setWindowTitle(title);
+}
+
+bool MainWindow::maybeSaveChanges() {
+  if (!m_isDirty) {
+    return true;
+  }
+
+  QMessageBox::StandardButton reply = QMessageBox::warning(
+      this, tr("Modifications non enregistrées"),
+      tr("Le projet a été modifié. Voulez-vous enregistrer avant de continuer ?"),
+      QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+      QMessageBox::Save);
+
+  if (reply == QMessageBox::Cancel) {
+    return false;
+  }
+  if (reply == QMessageBox::Discard) {
+    return true;
+  }
+
+  onQuickSaveProject(); // demande l'emplacement si le projet n'en a pas encore
+  // ponytail: l'archive .zip est écrite en tâche de fond, m_isDirty ne retombe
+  // qu'à la fin du QFutureWatcher. La fermeture est donc annulée et l'utilisateur
+  // la relance une fois la barre de progression terminée. Passer à une fermeture
+  // différée si ce détour devient gênant.
+  return !m_isDirty;
+}
+
+void MainWindow::cleanupTempAudioFiles() {
+  for (const QString &path : m_tempAudioPaths) {
+    QFile::remove(path);
+  }
+}
+
+void MainWindow::purgeStaleTempFiles() {
+  QDir tempDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
+  const QDateTime cutoff = QDateTime::currentDateTime().addDays(-7);
+  const QFileInfoList orphans = tempDir.entryInfoList(
+      QStringList(QStringLiteral("dubinstante_*_track_*.wav")), QDir::Files);
+  for (const QFileInfo &fi : orphans) {
+    if (fi.lastModified() < cutoff) {
+      QFile::remove(fi.absoluteFilePath());
+    }
+  }
+
+  // Une extraction interrompue par un crash laisse la vidéo entière derrière.
+  // Même seuil que les prises : trop court supprimerait le dossier de travail
+  // d'une autre instance, qui ne le réécrit pas une fois le projet ouvert.
+  QDir cacheDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+  const QFileInfoList workDirs =
+      cacheDir.entryInfoList(QStringList(QStringLiteral("dubinstante_prj_*")),
+                             QDir::Dirs | QDir::NoDotAndDotDot);
+  for (const QFileInfo &fi : workDirs) {
+    if (fi.lastModified() < cutoff)
+      QDir(fi.absoluteFilePath()).removeRecursively();
+  }
+}
+
 void MainWindow::onAutoSaveTriggered() {
   if (m_isRecording) {
     return; // Don't auto-save during active recording to prevent performance issues
   }
 
-  QString appDataPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-  QDir dir(appDataPath);
+  // Rien à perdre : ni projet vierge ni projet déjà enregistré ne doivent laisser
+  // un fichier derrière eux, sinon le prochain démarrage annonce un arrêt anormal
+  // alors que le .dbi est à jour. Une instance secondaire écraserait la
+  // sauvegarde de celle qui possède le verrou.
+  if (!m_isDirty || !m_ownsAutosave) {
+    return;
+  }
+
+  QString autosaveFile = autosaveFilePath();
+  QDir dir = QFileInfo(autosaveFile).absoluteDir();
   if (!dir.exists()) {
     dir.mkpath(".");
   }
 
-  QString autosaveFile = dir.filePath("autosave_backup.dbi");
+  SaveData saveData = collectSaveData();
 
-  SaveData data;
-  data.videoUrl = property("currentVideoPath").toString();
-  data.videoVolume = m_playbackEngine->volume();
-  data.trackCount = m_trackCount;
-  data.scrollSpeed = m_speedSpinBox->value();
-  data.isTextWhite = m_textColorCheck->isChecked();
-
-  // Save audio tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackAudioSaveData audioData;
-    audioData.audioInput = m_trackPanels[i]->currentInputDevice();
-    audioData.audioGain = m_trackPanels[i]->currentVolume() / 100.0f;
-    data.audioTracks.append(audioData);
+  // Autosave keeps the temp WAV paths: takes are recoverable without a copy pass
+  for (int i = 0; i < saveData.audioTracks.size(); ++i) {
+    if (saveData.audioTracks[i].hasRecording) {
+      saveData.audioTracks[i].audioFilePath = m_tempAudioPaths.value(i);
+    }
   }
 
-  // Save rythmo tracks
-  for (int i = 0; i < m_trackCount; ++i) {
-    TrackSaveData trackData;
-    trackData.text = m_rythmoManager->text(i);
-    trackData.style = m_rythmoManager->trackStyle(i);
-    data.tracks.append(trackData);
-  }
-
-  if (m_saveManager->save(autosaveFile, data)) {
+  if (m_saveManager->save(autosaveFile, saveData)) {
     statusBar()->showMessage(tr("Sauvegarde automatique cache effectuée"), 2000);
   }
 }
@@ -1968,6 +2551,46 @@ void MainWindow::onCountdownTick() {
 }
 
 void MainWindow::startRecordingProcess() {
+  int armedCount = 0;
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (m_trackPanels[i]->isArmed()) {
+      armedCount++;
+    }
+  }
+
+  if (armedCount == 0) {
+    if (m_countdownLabel) {
+      m_countdownLabel->hide();
+    }
+    m_recordButton->setChecked(false);
+    m_recordButton->setText("● REC GLOBAL");
+    QMessageBox::warning(this, tr("Enregistrement"),
+                         tr("Aucune piste n'est armée. Armez au moins une piste avant "
+                            "de lancer l'enregistrement."));
+    return;
+  }
+
+  for (int i = 0; i < m_trackCount; ++i) {
+    if (m_trackPanels[i]->isArmed()) {
+      QString dev = m_trackPanels[i]->currentInputDevice();
+      if (dev.isEmpty() || dev == "Aucune entrée" || dev == tr("Aucune entrée")) {
+        if (m_countdownLabel) {
+          m_countdownLabel->hide();
+        }
+        m_recordButton->setChecked(false);
+        m_recordButton->setText("● REC GLOBAL");
+        QMessageBox::warning(this, tr("Enregistrement"),
+                             tr("La piste %1 est armée mais aucun microphone n'est sélectionné.")
+                                 .arg(i + 1));
+        return;
+      }
+    }
+  }
+
+  // Results of a previous take still finalizing no longer apply
+  m_pendingTakeChecks.clear();
+  m_failedTakeTracks.clear();
+
   // Record from the current playhead position (punch-in support)
   m_recordingStartTimeMs = m_playbackEngine->position();
 
@@ -1976,6 +2599,10 @@ void MainWindow::startRecordingProcess() {
       // --- ARMED: Record this track ---
       // Step 1: Release any existing preview file handle
       releasePreviewSource(i);
+      if (QFile::exists(m_tempAudioPaths[i])) {
+        QFile::remove(m_tempAudioPaths[i]);
+      }
+      m_hasRecording[i] = false;
 
       // Step 2: Start recording
       m_audioRecorders[i]->startRecording(
@@ -2030,16 +2657,39 @@ void MainWindow::startRecordingProcess() {
   m_actionOpenMp4->setEnabled(false);
 }
 
-void MainWindow::changeEvent(QEvent *event) {
-  if (event->type() == QEvent::PaletteChange) {
-    if (SettingsManager::instance().theme() == "system") {
-      static bool isApplyingTheme = false;
-      if (!isApplyingTheme) {
-        isApplyingTheme = true;
-        applyTheme();
-        isApplyingTheme = false;
-      }
-    }
+void MainWindow::closeEvent(QCloseEvent *event) {
+  // Avant toute chose : finaliser les WAV en cours. La finalisation est
+  // asynchrone, le temps du dialogue lui suffit. Un compte à rebours est annulé
+  // aussi : les dialogues ci-dessous font tourner la boucle d'événements, il
+  // lancerait l'enregistrement dessous.
+  // A save requested during the take would pop up over the dialog below once
+  // the WAV is finalized: maybeSaveChanges() normally asks the question itself.
+  m_pendingSave = PendingSave::None;
+  if (m_isRecording || m_countdownTimer->isActive()) {
+    toggleRecording();
   }
-  QMainWindow::changeEvent(event);
+
+  if (!maybeSaveChanges()) {
+    event->ignore();
+    return;
+  }
+
+  if (m_exportService->isExporting()) {
+    QMessageBox::StandardButton reply = QMessageBox::question(
+        this, tr("Export en cours"),
+        tr("Un export est en cours. Quitter maintenant l'interrompra et "
+           "supprimera le fichier incomplet.\nQuitter quand même ?"),
+        QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
+    if (reply != QMessageBox::Yes) {
+      event->ignore();
+      return;
+    }
+    // L'arrêt de ffmpeg et la suppression du fichier sont faits par le
+    // destructeur d'ExportService.
+  }
+
+  discardAutosave();
+  cleanupTempAudioFiles();
+  m_archiveWorkDir.reset();
+  QMainWindow::closeEvent(event);
 }

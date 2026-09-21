@@ -13,7 +13,7 @@ class TrackWidget : public QFrame {
     Q_OBJECT
     
 public:
-    explicit TrackWidget(int trackIndex, const QString& title, const QString& badgeColor, QWidget *parent = nullptr);
+    explicit TrackWidget(int trackIndex, const QString& title, QWidget *parent = nullptr);
     ~TrackWidget() override = default;
 
     int trackIndex() const { return m_trackIndex; }
@@ -30,16 +30,14 @@ public:
 
 signals:
     void optionsClicked();
-    void inputSelected(const QString& inputName);
     void inputDeviceIndexChanged(int deviceIndex);
     void volumeChanged(int volume);
-    void recordArmChanged(bool armed);
 
 private slots:
     void onVolumeSliderChanged(int value);
 
 private:
-    void setupUi(const QString& title, const QString& badgeColor);
+    void setupUi(const QString& title);
     void setupConnections();
 
     int m_trackIndex;

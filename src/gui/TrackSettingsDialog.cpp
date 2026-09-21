@@ -1,7 +1,9 @@
 #include "TrackSettingsDialog.h"
 
 #include "../gui/RythmoWidget.h"
+#include "../core/Constants.h"
 #include "../core/SettingsManager.h"
+#include "Palette.h"
 #include <QButtonGroup>
 #include <QColorDialog>
 #include <QComboBox>
@@ -20,8 +22,8 @@ TrackSettingsDialog::TrackSettingsDialog(RythmoManager *rythmoManager,
                                          int initialTrackIndex,
                                          QWidget *parent)
     : QDialog(parent), m_rythmoManager(rythmoManager),
-      m_currentTrackIndex(qBound(0, initialTrackIndex, qBound(1, trackCount, 4) - 1)),
-      m_trackCount(qBound(1, trackCount, 4)) {
+      m_currentTrackIndex(qBound(0, initialTrackIndex, qBound(1, trackCount, MAX_TRACKS) - 1)),
+      m_trackCount(qBound(1, trackCount, MAX_TRACKS)) {
 
   setupUi();
 
@@ -97,25 +99,23 @@ void TrackSettingsDialog::setupUi() {
     previewLayout->setSpacing(10);
 
     m_previewWidget = new RythmoWidget(previewGroup);
-  m_previewWidget->setVisualStyle(RythmoWidget::Standalone);
   m_previewWidget->setEditable(false);
   m_previewWidget->setSpeed(100);
   m_previewWidget->setPlaying(true);
     m_previewWidget->setMinimumHeight(92);
   m_previewWidget->updateDisplay(
-      0, 0, "Hello, voici un aperçu de la piste Rythmo...  ", 100);
+      0, "Hello, voici un aperçu de la piste Rythmo...  ", 100);
 
   // Animate preview using its internal loop by providing changing simulated
   // position
   QTimer *animTimer = new QTimer(this);
   connect(animTimer, &QTimer::timeout, this, [this]() {
-    static qint64 simulatedPosMs = 0;
-    simulatedPosMs += 20;
+    m_simulatedPosMs += 20;
     // Loop position roughly based on text length
-    if (simulatedPosMs > 5000) {
-      simulatedPosMs = 0;
+    if (m_simulatedPosMs > 5000) {
+      m_simulatedPosMs = 0;
     }
-    m_previewWidget->sync(simulatedPosMs);
+    m_previewWidget->sync(m_simulatedPosMs);
   });
   animTimer->start(20);
 
@@ -180,7 +180,9 @@ void TrackSettingsDialog::setupUi() {
 
     m_fontComboBox = new QFontComboBox(fineGroup);
     m_fontComboBox->setObjectName("settingsFontCombo");
-  m_fontComboBox->setFontFilters(QFontComboBox::ScalableFonts);
+  // Fixed pitch only: the band draws one character per cell of the time grid,
+  // a proportional font stays in sync but is unevenly spaced.
+  m_fontComboBox->setFontFilters(QFontComboBox::MonospacedFonts);
   m_fontComboBox->setEditable(false);
   m_fontComboBox->setMinimumWidth(250);
   m_fontComboBox->setMaxVisibleItems(15);
@@ -249,11 +251,11 @@ void TrackSettingsDialog::updateColorButton(QPushButton *btn,
     isDark = (palette().color(QPalette::Window).value() < 128);
   }
 
-  QString borderCol = isDark ? "#3b3b52" : "#cbd5e1";
+  QString borderCol = isDark ? Brand::SurfaceAlt : "#cbd5e1";
 
   if (color.alpha() == 0) {
     QString bgCol = isDark ? "#161622" : "#ffffff";
-    QString fgCol = isDark ? "#8a8a9e" : "#64748b";
+    QString fgCol = isDark ? Brand::TextMuted : "#64748b";
     btn->setStyleSheet(QString("background-color: %1;"
                                "border: 1px dashed %2;"
                                "border-radius: 8px;"
@@ -307,7 +309,7 @@ void TrackSettingsDialog::onTrackSelected(int index) {
 }
 
 void TrackSettingsDialog::onManagerStyleChanged(int trackIndex,
-                                                const RythmoTrackStyle &style) {
+                                                const RythmoTrackStyle & /*style*/) {
   if (trackIndex == m_currentTrackIndex) {
     loadCurrentTrackStyle();
   }

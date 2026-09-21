@@ -22,12 +22,14 @@ public:
                           const QString &primaryAudio,
                           const QStringList &extraAudios,
                           qint64 lastRecordedDurationMs,
+                          qint64 lastRecordedStartMs,
                           const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
                           const QVector<float> &currentTrackVolumes,
                           const QVector<bool> &currentTrackMutes,
+                          const QVector<int> &trackNumbers,
                           QWidget *parent = nullptr);
-    ~ExportDialog() override = default;
+    ~ExportDialog() override;
 
     ExportConfig exportConfig() const;
 
@@ -57,11 +59,14 @@ private:
     QString m_primaryAudioPath;
     QStringList m_extraAudioPaths;
     qint64 m_lastRecordedDurationMs;
+    qint64 m_lastRecordedStartMs;
     QVector<qint64> m_trackOffsetsMs;
     
     float m_defaultOriginalVolume;
     QVector<float> m_defaultTrackVolumes;
     QVector<bool> m_defaultTrackMutes;
+    // Real track numbers shown to the user, aligned with primary + extra audios
+    QVector<int> m_trackNumbers;
 
     // Track original size to calculate custom resolution aspect ratio
     int m_videoOriginalWidth;

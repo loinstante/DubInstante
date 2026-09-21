@@ -5,6 +5,39 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.12.0] - 2026-07-04
+
+### Fixed
+- **Export Time Range**: "Tout le projet" and "Dernier enregistrement" were inverted, truncating full exports to the last take's duration.
+- **Export Mix Volumes**: `amix` no longer attenuates each track by the number of inputs (`normalize=0`); user-set volumes are now respected.
+- **Export with Idle Tracks**: A track without any recorded take no longer blocks the export.
+- **Partial Export Cleanup**: Failed or cancelled exports now delete the incomplete output file, and a Cancel button is available during export.
+- **Project Save Integrity**: `.dbi` saves are now atomic — a disk-full or crash mid-write can no longer destroy the previous save. Corrupted or oversized files are rejected on load.
+- **Font Persistence**: Per-track font family and weight are now saved and restored (older files fall back to the Classic style).
+- **Preview After Recording**: Previews reload only once the recorded WAV is finalized, fixing intermittent silent previews right after stopping.
+- **Frame Extractor Stability**: The FFmpeg worker is now thread-safe, survives audio-only or corrupted files, and reports errors through a dialog instead of crashing.
+- **Audio Output Profiles**: Profiles whose device name contains parentheses (common on Windows) are no longer corrupted on save.
+- **Large Project Archives**: ZIP archiving now uses the destination volume for temporary files (instead of a RAM-backed tmpfs), pre-checks free space, and stores video without recompression.
+- **Autosave Completeness**: Autosave now serializes recording metadata (takes, durations, paths), matching manual saves.
+
+- **Export Punch-in**: Takes are placed at their recording position in the exported file (`adelay`/`atrim` in the filter graph); "Dernier enregistrement" exports the matching video excerpt instead of the first seconds of the film.
+- **Rythmo Sync Accuracy**: The band draws one character per cell of its time grid. The text used to slide away from the grid by up to ~120 ms, depending on window width.
+- **Rythmo Sync Portability**: Each track stores its time grid (`char_ms`) in the project. Changing the font size, or opening the project on a machine with other font metrics, no longer moves the sync; older projects load as before.
+- **Long Typing Sessions**: Cursor steps follow the time grid exactly instead of adding a rounded duration per key, which ended up swapping characters after ~160 keystrokes at some speeds.
+- **Preview After Loading a Project**: Loading a project over another one reloads the take previews (the previous project's take kept playing).
+- **Project Paths**: Paths read from a project file are confined to the project folder; absolute take paths are only accepted from the autosave.
+- **Recording Guards**: Recording is refused without an armed track or a microphone, and empty takes are reported. Recording or loading a project is refused while an export is reading the takes.
+
+### Added
+- **Reopenable Archives**: `.zip` project archives can be loaded back (video and takes included).
+- **Unsaved Changes**: Modified projects are marked in the title bar and prompt before closing, loading or opening a video; "Save" writes to the current project file.
+- **Autosave Recovery**: An autosave left by a crash is offered for restoration at startup.
+- **Bundled FFmpeg**: `ffmpeg` and `ffprobe` ship in every package; a missing tool is reported before the export dialog opens.
+
+### Changed
+- **Shortcuts**: `Ctrl+S` saves the project (`Ctrl+Shift+S`: save as); stopping a recording moves to `Esc`.
+- **Rythmo Fonts**: The font selector only lists fixed-pitch fonts.
+- **Unified Version**: The application version now comes from CMake (`0.12.0`) — release candidate for human testing before v1.0.0.
 ## [0.11.1] - 2026-07-13
 
 ### Fixed

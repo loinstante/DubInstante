@@ -39,9 +39,11 @@ PlaybackEngine::PlaybackEngine(QObject *parent)
             emit errorOccurred(errorString);
           });
 
-  // Forward extractor signal
+  // Forward extractor signals
   connect(m_frameExtractor, &FFmpegFrameExtractor::frameExtracted, this,
           &PlaybackEngine::frameExtracted);
+  connect(m_frameExtractor, &FFmpegFrameExtractor::errorOccurred, this,
+          &PlaybackEngine::errorOccurred);
 }
 
 void PlaybackEngine::setVideoSink(QVideoSink *sink) {

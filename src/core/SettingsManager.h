@@ -60,9 +60,12 @@ public:
 private:
     explicit SettingsManager(QObject *parent = nullptr);
     ~SettingsManager() override = default;
-    
+
     SettingsManager(const SettingsManager&) = delete;
     SettingsManager& operator=(const SettingsManager&) = delete;
+
+    // One-time migration of shortcuts whose default value changed between versions
+    void migrateLegacyShortcuts();
 };
 
 #endif // SETTINGSMANAGER_H

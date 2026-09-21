@@ -13,6 +13,7 @@
 #ifndef EXPORTSERVICE_H
 #define EXPORTSERVICE_H
 
+#include <QDateTime>
 #include <QObject>
 #include <QProcess>
 #include <QString>
@@ -31,6 +32,7 @@ struct ExportConfig {
     QStringList extraAudioPaths;    ///< Optional: paths to additional audio tracks
     QString outputPath;             ///< Absolute path for output file
     qint64 durationMs;              ///< Recording duration in milliseconds (-1 for full)
+    qint64 rangeStartMs;            ///< Start of the exported range, in source video time (0 = from the beginning)
     QVector<qint64> trackOffsetsMs; ///< Start time offsets for each audio track
     float originalVolume;           ///< Volume of original video audio (0.0 to 1.0)
     QVector<float> trackVolumes;    ///< Volumes for primary and extra tracks (0.0 to 2.0)
@@ -50,6 +52,7 @@ struct ExportConfig {
     
     ExportConfig()
         : durationMs(-1)
+        , rangeStartMs(0)
         , originalVolume(1.0f)
         , speedPreset("medium")
         , crf(21)
@@ -96,7 +99,7 @@ class ExportService : public QObject {
 
 public:
     explicit ExportService(QObject *parent = nullptr);
-    ~ExportService() override = default;
+    ~ExportService() override;
 
     // =========================================================================
     // Export Operations
@@ -116,10 +119,22 @@ public:
     void cancelExport();
     
     /**
-     * @brief Checks if FFmpeg is available on the system.
-     * @return true if FFmpeg is installed and accessible.
+     * @brief Checks if FFmpeg and FFprobe are available.
+     * @param errorMessage Optional pointer to store installation instructions if missing.
+     * @return true if both are resolvable through toolPath().
      */
-    bool isFFmpegAvailable() const;
+    static bool isFFmpegAvailable(QString *errorMessage = nullptr);
+
+    /**
+     * @brief Resolves an FFmpeg tool ("ffmpeg" or "ffprobe") to a full path.
+     *
+     * The copy shipped with the application wins over the system one: it is the
+     * version the export arguments were written against. Looks next to the
+     * executable (which covers AppDir/usr/bin in the AppImage and
+     * Contents/MacOS in the macOS bundle), then in Contents/Resources, then in
+     * the PATH. Returns an empty string if the tool is nowhere to be found.
+     */
+    static QString toolPath(const QString &name);
     
     /**
      * @brief Returns whether an export is currently in progress.
@@ -161,8 +176,23 @@ private:
      */
     bool validateConfig(const ExportConfig &config, QString &errorMessage) const;
 
+    /**
+     * @brief Deletes the partial output file after a failed or cancelled export.
+     */
+    void removePartialOutput();
+
+    /**
+     * @brief Forgets the output tracked for the current run, making removePartialOutput() a no-op.
+     */
+    void resetOutputTracking();
+
     QProcess *m_process;
     qint64 m_totalDurationMs;
+    QString m_errorAccumulator;
+    QString m_currentOutputPath;
+    bool m_exportFinishedEmitted;
+    bool m_outputExistedBefore;
+    QDateTime m_outputMTimeBefore;
 };
 
 #endif // EXPORTSERVICE_H

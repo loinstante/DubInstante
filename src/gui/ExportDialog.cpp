@@ -15,20 +15,24 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
                           const QString &primaryAudio,
                           const QStringList &extraAudios,
                           qint64 lastRecordedDurationMs,
+                          qint64 lastRecordedStartMs,
                           const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
                           const QVector<float> &currentTrackVolumes,
                           const QVector<bool> &currentTrackMutes,
+                          const QVector<int> &trackNumbers,
                           QWidget *parent)
     : QDialog(parent)
     , m_sourceVideoPath(sourceVideo)
     , m_primaryAudioPath(primaryAudio)
     , m_extraAudioPaths(extraAudios)
     , m_lastRecordedDurationMs(lastRecordedDurationMs)
+    , m_lastRecordedStartMs(lastRecordedStartMs)
     , m_trackOffsetsMs(trackOffsetsMs)
     , m_defaultOriginalVolume(currentOriginalVolume)
     , m_defaultTrackVolumes(currentTrackVolumes)
     , m_defaultTrackMutes(currentTrackMutes)
+    , m_trackNumbers(trackNumbers)
     , m_videoOriginalWidth(0)
     , m_videoOriginalHeight(0)
     , m_videoAspectRatio(1.777f)
@@ -37,6 +41,15 @@ ExportDialog::ExportDialog(const QString &sourceVideo,
     setupUi();
     populateFields();
     validateSettings();
+}
+
+ExportDialog::~ExportDialog()
+{
+    // A still-pending ffprobe is a child destroyed after the widgets: ~QProcess can then
+    // deliver finished(), whose handler would write to the already-deleted widgets.
+    for (QProcess *probe : findChildren<QProcess *>(QString(), Qt::FindDirectChildrenOnly)) {
+        probe->disconnect(this);
+    }
 }
 
 void ExportDialog::setupUi()
@@ -424,15 +437,12 @@ void ExportDialog::setupUi()
     m_audioTracksLayout->addWidget(origRow);
 
     // Mic tracks
-    int micIndex = 1;
     if (!m_primaryAudioPath.isEmpty()) {
-        addTrackRow(scrollWidget, tr("Micro 1 (Princ.)"), 0);
-        micIndex++;
+        addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(0, 1)), 0);
     }
     for (int i = 0; i < m_extraAudioPaths.size(); ++i) {
         if (!m_extraAudioPaths[i].isEmpty()) {
-            addTrackRow(scrollWidget, tr("Micro %1").arg(micIndex), i + 1);
-            micIndex++;
+            addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(i + 1, i + 2)), i + 1);
         }
     }
 
@@ -471,6 +481,7 @@ void ExportDialog::setupUi()
     connect(m_formatCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::onFormatChanged);
     connect(m_browseButton, &QPushButton::clicked, this, &ExportDialog::onBrowseClicked);
     connect(m_advancedCheck, &QCheckBox::toggled, this, &ExportDialog::onAdvancedToggled);
+    connect(m_rangeCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::validateSettings);
     
     // Expert connections
     connect(m_expFormatCombo, &QComboBox::currentIndexChanged, this, &ExportDialog::onFormatChanged);
@@ -553,39 +564,67 @@ void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
 
 void ExportDialog::populateFields()
 {
-    // 1. Fetch original video resolution via ffprobe
-    if (!m_sourceVideoPath.isEmpty() && QFile::exists(m_sourceVideoPath)) {
-        QProcess probe;
-        probe.start("ffprobe", QStringList() << "-v" << "error" << "-select_streams" << "v:0" 
-                                             << "-show_entries" << "stream=width,height" 
-                                             << "-of" << "csv=s=x:p=0" << m_sourceVideoPath);
-        if (probe.waitForFinished(1500)) {
-            QString output = QString::fromUtf8(probe.readAllStandardOutput()).trimmed();
-            QStringList parts = output.split('x');
-            if (parts.size() == 2) {
-                m_videoOriginalWidth = parts[0].toInt();
-                m_videoOriginalHeight = parts[1].toInt();
-                if (m_videoOriginalWidth > 0 && m_videoOriginalHeight > 0) {
-                    m_videoAspectRatio = static_cast<float>(m_videoOriginalWidth) / m_videoOriginalHeight;
-                }
-            }
-        }
-    }
-
-    if (m_videoOriginalWidth <= 0 || m_videoOriginalHeight <= 0) {
-        m_videoOriginalWidth = 1920;
-        m_videoOriginalHeight = 1080;
-        m_videoAspectRatio = 1.777f;
-    }
-
+    // 1. Defaults right away; the async ffprobe below refines them on arrival
+    // (a blocking probe froze the dialog up to 1.5 s on slow/network storage)
+    m_videoOriginalWidth = 1920;
+    m_videoOriginalHeight = 1080;
+    m_videoAspectRatio = 1.777f;
     m_customWidthSpin->setValue(m_videoOriginalWidth);
     m_customHeightSpin->setValue(m_videoOriginalHeight);
+
+    if (!m_sourceVideoPath.isEmpty() && QFile::exists(m_sourceVideoPath)) {
+        auto *probe = new QProcess(this);
+        connect(probe, &QProcess::errorOccurred, probe, &QObject::deleteLater);
+        connect(probe, &QProcess::finished, this,
+                [this, probe](int exitCode, QProcess::ExitStatus exitStatus) {
+            const QString output = QString::fromUtf8(probe->readAllStandardOutput());
+            probe->deleteLater();
+            if (exitStatus != QProcess::NormalExit || exitCode != 0) {
+                return; // keep defaults, assume the source has audio
+            }
+
+            bool hasAudioStream = false;
+            int width = 0;
+            int height = 0;
+            const QStringList lines = output.split('\n', Qt::SkipEmptyParts);
+            for (const QString &line : lines) {
+                QStringList parts = line.trimmed().split(',');
+                if (parts.value(0) == "video" && parts.size() >= 3 && width <= 0) {
+                    width = parts[1].toInt();
+                    height = parts[2].toInt();
+                } else if (parts.value(0) == "audio") {
+                    hasAudioStream = true;
+                }
+            }
+
+            if (width > 0 && height > 0) {
+                m_videoOriginalWidth = width;
+                m_videoOriginalHeight = height;
+                m_videoAspectRatio = static_cast<float>(width) / height;
+                m_customWidthSpin->setValue(width);
+                m_customHeightSpin->setValue(height);
+            }
+
+            // Video without audio: mixing [0:a] would make FFmpeg fail
+            if (!hasAudioStream) {
+                m_defaultOriginalVolume = 0.0f;
+                m_originalVolumeSlider->setValue(0);
+                m_originalVolumeSlider->setEnabled(false);
+                m_originalMuteBtn->setChecked(true);
+                m_originalMuteBtn->setEnabled(false);
+            }
+        });
+        probe->start(ExportService::toolPath("ffprobe"),
+                     QStringList() << "-v" << "error"
+                                   << "-show_entries" << "stream=codec_type,width,height"
+                                   << "-of" << "csv=p=0" << m_sourceVideoPath);
+    }
 
     // 2. Set default output path
     if (!m_sourceVideoPath.isEmpty()) {
         QFileInfo videoInfo(m_sourceVideoPath);
         QString defaultDir = videoInfo.absolutePath();
-        QString baseName = videoInfo.baseName();
+        QString baseName = videoInfo.completeBaseName();
         QString formatExt = m_formatCombo->currentData().toString();
         m_outputPathEdit->setText(QDir(defaultDir).filePath(baseName + "_double." + formatExt));
     } else {
@@ -612,7 +651,7 @@ void ExportDialog::onFormatChanged(int index)
     if (!currentPath.isEmpty()) {
         QFileInfo fileInfo(currentPath);
         QString absoluteDir = fileInfo.absolutePath();
-        QString baseName = fileInfo.baseName();
+        QString baseName = fileInfo.completeBaseName();
         m_outputPathEdit->setText(QDir(absoluteDir).filePath(baseName + "." + formatExt));
     }
 
@@ -648,26 +687,26 @@ void ExportDialog::onAdvancedToggled(bool checked)
 void ExportDialog::onResolutionSelectionChanged(int index)
 {
     Q_UNUSED(index);
-    QString data = m_expResolutionCombo->currentData().toString();
-    m_expCustomResContainer->setVisible(data == "custom");
+    QString resolution = m_expResolutionCombo->currentData().toString();
+    m_expCustomResContainer->setVisible(resolution == "custom");
     validateSettings();
 }
 
 void ExportDialog::onRateControlSelectionChanged(int index)
 {
     Q_UNUSED(index);
-    QString data = m_expRateControlCombo->currentData().toString();
+    QString rateControl = m_expRateControlCombo->currentData().toString();
     
-    m_expCrfContainer->setVisible(data == "crf");
-    m_expBitrateContainer->setVisible(data == "bitrate");
+    m_expCrfContainer->setVisible(rateControl == "crf");
+    m_expBitrateContainer->setVisible(rateControl == "bitrate");
 
     // Retrieve layout label widgets in parent tab QFormLayout
     QFormLayout *layout = qobject_cast<QFormLayout *>(m_expCrfContainer->parentWidget()->layout());
     if (layout) {
         QWidget *crfLabel = layout->labelForField(m_expCrfContainer);
         QWidget *bitrateLabel = layout->labelForField(m_expBitrateContainer);
-        if (crfLabel) crfLabel->setVisible(data == "crf");
-        if (bitrateLabel) bitrateLabel->setVisible(data == "bitrate");
+        if (crfLabel) crfLabel->setVisible(rateControl == "crf");
+        if (bitrateLabel) bitrateLabel->setVisible(rateControl == "bitrate");
     }
     
     validateSettings();
@@ -727,6 +766,14 @@ void ExportDialog::validateSettings()
             if (vCodec == "libx265" || vCodec == "libvpx-vp9") {
                 warning += tr("⚠️ HEVC ou VP9 ne sont pas recommandés dans AVI. Utilisez MP4 ou MKV.\n");
             }
+        }
+
+        if (vCodec == "copy" && m_rangeCombo->currentData().toString() == "last") {
+            warning += tr("⚠️ Copie du flux vidéo : la découpe sera calée sur l'image-clé la plus proche, le début peut décaler de quelques images.\n");
+        }
+
+        if (vCodec == "copy" && !m_expResolutionCombo->currentData().toString().isEmpty()) {
+            warning += tr("⚠️ Le redimensionnement est ignoré en copie de flux vidéo (copy) : la résolution d'origine est conservée.\n");
         }
 
         if (m_expResolutionCombo->currentData().toString() == "custom" && vCodec != "copy") {
@@ -832,10 +879,12 @@ ExportConfig ExportDialog::exportConfig() const
     config.trackOffsetsMs = m_trackOffsetsMs;
 
     // Time Range
-    if (m_rangeCombo->currentIndex() == 0) { // Section enregistrée
-        config.durationMs = m_lastRecordedDurationMs;
+    if (m_rangeCombo->currentData().toString() == "last") {
+        config.durationMs   = m_lastRecordedDurationMs;
+        config.rangeStartMs = m_lastRecordedStartMs;
     } else {
-        config.durationMs = -1;
+        config.durationMs   = -1;
+        config.rangeStartMs = 0;
     }
     
     config.expertMode = m_advancedCheck->isChecked();

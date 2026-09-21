@@ -19,6 +19,9 @@
 struct TrackSaveData {
   QString text;
   RythmoTrackStyle style;
+  // Duration of one character in ms. 0 = not stored (older file):
+  // the band then derives it from the font and the speed, as it always did.
+  double charMs = 0.0;
 };
 
 /**
@@ -43,7 +46,7 @@ struct SaveData {
   float videoVolume = 1.0f;
   int trackCount = 1;
   int scrollSpeed = 100;
-  bool isTextWhite = false;
+  bool isTextWhite = false; // conservé pour compatibilité ascendante, plus exposé dans l'interface
 
   QList<TrackSaveData> tracks;
   QList<TrackAudioSaveData> audioTracks;
@@ -77,6 +80,24 @@ public:
   static bool isZipAvailable(QString *errorMessage = nullptr);
 
   /**
+   * @brief Checks if an archive extraction tool is available: 'unzip', or
+   *        'tar' on Windows (native since Windows 10). The first one found wins.
+   * @param errorMessage Optional pointer to store install instructions.
+   */
+  static bool isUnzipAvailable(QString *errorMessage = nullptr);
+
+  /**
+   * @brief Extracts an archive written by saveWithMedia() into @p destDir.
+   *
+   * Requires free space of the archive size + 20 % on the destination volume,
+   * and at least one .dbi at the root of @p destDir afterwards. The caller
+   * validates the paths stored in that .dbi (resolveProjectPath, strict).
+   * Blocking: run it off the GUI thread for large archives.
+   */
+  bool extractArchive(const QString &zipPath, const QString &destDir,
+                      QString *errorMessage = nullptr);
+
+  /**
    * @brief Loads session data from a .dbi file.
    * @param filePath Source file path.
    * @param data Reference to store loaded data.
@@ -85,9 +106,30 @@ public:
   bool load(const QString &filePath, SaveData &data);
 
   /**
-   * @brief Normalizes paths and clamps values.
+   * @brief Clamps values to their valid ranges.
    */
   static SaveData sanitize(const SaveData &data);
+
+  /**
+   * @brief Resolves a path read from a project file, relative to the project
+   *        directory. Returns an empty string if the path is refused.
+   *
+   * A relative path is resolved (symlinks followed) and must end up strictly
+   * inside @p projectDir, compared component by component.
+   *
+   * @param strictRelative True for a project extracted from an archive: only
+   *        relative paths are accepted. False for a standalone .dbi, which is
+   *        a project the user created on their own machine: an absolute path
+   *        is accepted as-is. This is the one deliberate relaxation of the
+   *        check; it also covers autosave files, which store absolute temp paths.
+   * @param allowOutside Skips the containment check on relative paths. Only for
+   *        videoUrl of a standalone .dbi: save() stores it relative to the .dbi
+   *        (e.g. "../Videos/film.mp4"), so existing projects point outside.
+   */
+  static QString resolveProjectPath(const QString &projectDir,
+                                    const QString &storedPath,
+                                    bool strictRelative,
+                                    bool allowOutside = false);
 
 private:
   QByteArray applyXorMask(const QByteArray &data);
@@ -95,7 +137,13 @@ private:
 
   const QByteArray m_header = "DubInstanteFile";
   const quint8 m_version = 1;
-  const quint8 m_xorKey = 0x5A; // Simple static key for obfuscation
+  /// Masque XOR appliqué au payload du .dbi.
+  /// Ce n'est PAS du chiffrement : la clé est dans le binaire et l'opération
+  /// est trivialement réversible. Son seul rôle est de décourager l'édition
+  /// manuelle du fichier. L'intégrité réelle est assurée par le SHA-256.
+  /// Ne pas changer cette valeur : elle casserait la lecture de tous les
+  /// fichiers existants.
+  const quint8 m_xorKey = 0x5A;
 };
 
 #endif // SAVEMANAGER_H

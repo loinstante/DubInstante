@@ -144,7 +144,8 @@ void AudioRecorder::processAudioBuffer()
     if (format.sampleFormat() == QAudioFormat::Float) {
         sampleSize = 4;
     } else if (format.sampleFormat() != QAudioFormat::Int16) {
-        return; // Unsupported format
+        m_audioBuffer.clear(); // Unsupported format: drop data to avoid unbounded growth
+        return;
     }
     
     // Only process complete samples

@@ -14,7 +14,7 @@
 
 #include <QAudioDevice>
 #include <QAudioOutput>
-#include <QCheckBox>
+#include <QCloseEvent>
 #include <QElapsedTimer>
 #include <QTimer>
 #include <QActionGroup>
@@ -26,12 +26,15 @@
 #include <QMenu>
 #include <QProgressBar>
 #include <QPushButton>
+#include <memory>
 #include <QShortcut>
 #include <QSpinBox>
+#include <QTemporaryDir>
 #include <QVector>
 
 #include <QAction>
 #include <QLineEdit>
+#include <QLockFile>
 #include <QMenuBar>
 #include <QToolButton>
 #include <QWidgetAction>
@@ -42,6 +45,7 @@ class RythmoManager;
 class AudioRecorder;
 class ExportService;
 class SaveManager;
+struct SaveData;
 
 // GUI includes
 class VideoWidget;
@@ -65,8 +69,8 @@ struct ExportConfig;
  * - Wire signals/slots between Core and GUI
  * - Handle top-level menu and keyboard shortcuts
  *
- * This class should be "thin" - it connects components but doesn't
- * contain business logic.
+ * Large orchestrator: it also carries project save/load, recording and export
+ * flow logic, not just signal wiring.
  */
 class MainWindow : public QMainWindow {
   Q_OBJECT
@@ -75,18 +79,17 @@ public:
   explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow() override = default;
 
-  static constexpr int MAX_TRACKS = 4;
-
 protected:
+  bool event(QEvent *event) override;
   bool eventFilter(QObject *watched, QEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
-  void resizeEvent(QResizeEvent *event) override;
-  void changeEvent(QEvent *event) override;
+  void closeEvent(QCloseEvent *event) override;
 
 private slots:
   // File operations
   void onOpenFile();
   void onSaveProject();
+  void onQuickSaveProject();
   void onLoadProject();
 
   // Playback UI updates
@@ -101,6 +104,7 @@ private slots:
   void onExportProgress(int percentage);
   void onExportFinished(bool success, const QString &message);
   void showExportDialog();
+  bool exportLocksTakes();
 
   // Error handling
   void onError(const QString &errorMessage);
@@ -121,6 +125,8 @@ private slots:
   void handlePreviewStateChange(QMediaPlayer::PlaybackState state);
 
 private:
+  enum class PendingSave { None, Save, SaveAs };
+
   void setupUi();
   void createMenus();
   void setupConnections();
@@ -132,12 +138,34 @@ private:
   void updateVolumeIcon(int value);
   void releasePreviewSource(int trackIndex);
   void refreshPreviewSources();
-  void showPostRecordBar();
+  void showPostRecordBar(const QString &message = QString());
+  void checkRecordedTake(int trackIndex);
   void hidePostRecordBar();
+  SaveData collectSaveData();
+  void saveProjectTo(const QString &fileName, bool saveWithVideo);
+  bool deferSaveDuringTake(PendingSave save);
+  QString autosaveFilePath() const;
+  void discardAutosave();
+  void checkForAutosaveRecovery();
+  // strictRelative: project extracted from a .zip, see SaveManager::resolveProjectPath
+  bool loadProjectFrom(const QString &path, bool strictRelative = false);
+  // Extracts a .zip into a fresh work dir (handed back through workDir) and
+  // returns the path of its .dbi, or an empty string after showing the error.
+  QString extractProjectArchive(const QString &zipPath,
+                                std::unique_ptr<QTemporaryDir> &workDir);
+  void openVideoDialog();
+  void setDirty(bool dirty);
+  void updateWindowTitle();
+  bool maybeSaveChanges();
+  void cleanupTempAudioFiles();
+  void purgeStaleTempFiles();
 
   // Dynamic track management
   void setTrackCount(int count);
   void connectTrack(int index);
+
+  // Playback helpers
+  qint64 frameStepMs() const;
 
   // =========================================================================
   // Core Services (Business Logic)
@@ -180,16 +208,12 @@ private:
   QPushButton *m_speedUpButton;
   QPushButton *m_speedResetButton;
   QSpinBox *m_speedSpinBox;
-  QCheckBox *m_textColorCheck;
   QProgressBar *m_exportProgressBar;
-
-  // Track count controls
-  QLabel *m_trackCountLabel;
+  QPushButton *m_exportCancelBtn;
 
   // Fullscreen recording
   QFrame *m_videoFrame;
   QWidget *m_fullscreenContainer;
-  QMenu *m_shortcutsMenu;
 
   // Menus and Actions
   QAction *m_actionOpenMp4;
@@ -197,15 +221,14 @@ private:
   QAction *m_actionSaveProject;
   QAction *m_actionManualExport;
 
-  QAction *m_actionExpertMode;
   QAction *m_actionFullscreen;
   QAction *m_actionGlobalSettings;
 
   QAction *m_actionPersonalizeRythmo;
-  QAction *m_actionExportRythmo;
 
   // Post-record notification bar
   QWidget *m_postRecordBar;
+  QLabel *m_postRecordLabel;
 
   // =========================================================================
   // State
@@ -219,12 +242,28 @@ private:
   QElapsedTimer m_recordingTimer;
   QTimer *m_recordDurationTimer;
   qint64 m_lastRecordedDurationMs;
+  qint64 m_lastRecordedStartMs;
   qint64 m_recordingStartTimeMs;
+
+  // Project state & Autosave recovery
+  bool m_isDirty;
+  QString m_currentVideoPath;
+  QString m_currentProjectPath;
+  // Extracted .zip project: PlaybackEngine plays its video in place, so it
+  // lives as long as the project stays open.
+  std::unique_ptr<QTemporaryDir> m_archiveWorkDir;
+  int m_lastLoadLostTracksCount;
+  QLockFile m_autosaveLock{autosaveFilePath() + QStringLiteral(".lock")};
+  bool m_ownsAutosave = false;
 
   // Per-track recording state
   QVector<bool> m_hasRecording;
   QVector<qint64> m_trackRecordStartMs;
   QVector<qint64> m_trackRecordDurationMs;
+  // Armed tracks whose recorder has not reached StoppedState yet, and takes found empty
+  QList<int> m_pendingTakeChecks;
+  QList<int> m_failedTakeTracks;
+  PendingSave m_pendingSave = PendingSave::None;
 
   // Preview playback
   QVector<QMediaPlayer *> m_previewPlayers;
@@ -244,6 +283,8 @@ private:
   // Shortcuts members
   QShortcut *m_shRecordStart;
   QShortcut *m_shRecordStop;
+  QShortcut *m_shProjectSave;
+  QShortcut *m_shProjectSaveAs;
   QKeySequence m_shortcutPlayPause;
   QKeySequence m_shortcutFrameBack;
   QKeySequence m_shortcutFrameForward;

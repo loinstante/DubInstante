@@ -1,16 +1,14 @@
 /**
  * @file RythmoWidget.h
- * @brief Passive rendering widget for the Rythmo band display.
+ * @brief Rendering and editing widget for one track of the Rythmo band.
  *
- * This widget displays a scrolling text band synchronized with video position.
- * It receives all data from RythmoManager and performs NO calculations itself.
+ * Draws a scrolling text band synchronized with the video position, and owns
+ * the editing of its text: typing, Backspace, Delete and the cursor-index
+ * computation are done in keyPressEvent. Each edit emits textChanged(); the
+ * owner (MainWindow) stores it in RythmoManager, which is a plain text/style
+ * store. Seeks and play requests are emitted as signals.
  *
- * Design Principles:
- * - Passive: All state comes via slots, no internal calculations
- * - Emits signals for user interactions (clicks, drags, key presses)
- * - RythmoManager handles all synchronization logic
- *
- * @note Part of the GUI layer - pure rendering, no business logic.
+ * @note Part of the GUI layer.
  */
 
 #ifndef RYTHMOWIDGET_H
@@ -18,6 +16,7 @@
 
 #include "../core/RythmoManager.h"
 #include <QColor>
+#include <QElapsedTimer>
 #include <QFont>
 #include <QTimer>
 #include <QWidget>
@@ -26,25 +25,17 @@
  * @class RythmoWidget
  * @brief Displays a single Rythmo track with scrolling text.
  *
- * The widget is completely passive - it renders what it's told.
- * All interaction events are forwarded as signals.
+ * Position and speed are pushed in (sync / setSpeed). Character i sits at
+ * i * charMs() on the timeline: that grid is set from the font and the speed
+ * while the band is empty, then kept and saved with the project, so a font,
+ * size or machine change rescales the band on screen without moving the sync.
+ * Text edits are reported through textChanged(), seeks through seekRequested().
  */
 class RythmoWidget : public QWidget {
   Q_OBJECT
   Q_PROPERTY(int speed READ speed WRITE setSpeed NOTIFY speedChanged)
 
 public:
-  /**
-   * @enum VisualStyle
-   * @brief Defines the visual appearance for unified multi-track display.
-   */
-  enum VisualStyle {
-    Standalone,   ///< Full borders and header
-    UnifiedTop,   ///< Top track in unified display
-    UnifiedBottom ///< Bottom track in unified display
-  };
-  Q_ENUM(VisualStyle)
-
   explicit RythmoWidget(QWidget *parent = nullptr);
   ~RythmoWidget() override = default;
 
@@ -52,14 +43,17 @@ public:
   // Display Configuration
   // =========================================================================
 
-  void setVisualStyle(VisualStyle style);
-  VisualStyle visualStyle() const;
-
   void setTrackStyle(const RythmoTrackStyle &style);
   RythmoTrackStyle trackStyle() const;
 
+  /** @brief Nominal speed in pixels/second; a change rescales the time grid. */
   void setSpeed(int speed);
   int speed() const;
+
+  /** @brief Duration of one character in ms (the time grid of this band). */
+  double charMs() const;
+  /** @brief Restores a saved time grid; <= 0 derives it from font and speed. */
+  void setCharMs(double ms);
 
   /** @brief Enable/disable text editing on this band. */
   void setEditable(bool editable);
@@ -70,25 +64,16 @@ signals:
 
 public slots:
   // =========================================================================
-  // Data Input (from RythmoManager)
+  // Data Input
   // =========================================================================
 
   /**
    * @brief Updates the display with new track data.
-   * @param cursorIndex Character index for cursor position.
    * @param positionMs Current time position in milliseconds.
    * @param text Text content to display.
    * @param speed Scrolling speed in pixels/second.
    */
-  void updateDisplay(int cursorIndex, qint64 positionMs, const QString &text,
-                     int speed);
-
-  /**
-   * @brief Updates only the position (for smooth sync).
-   * @param cursorIndex Character index for cursor position.
-   * @param positionMs Current time position in milliseconds.
-   */
-  void updatePosition(int cursorIndex, qint64 positionMs);
+  void updateDisplay(qint64 positionMs, const QString &text, int speed);
 
   /**
    * @brief Sets the playing state for visual feedback.
@@ -113,38 +98,10 @@ signals:
   // =========================================================================
 
   /**
-   * @brief Emitted when user clicks/drags to scrub.
-   * @param deltaPixels Pixel offset from target line (positive = right).
-   */
-  void scrubRequested(int deltaPixels);
-
-  /**
    * @brief Emitted when user requests a direct position.
    * @param positionMs Target position in milliseconds.
    */
   void seekRequested(qint64 positionMs);
-
-  /**
-   * @brief Emitted when user types a character.
-   * @param character The typed character(s).
-   */
-  void characterTyped(const QString &character);
-
-  /**
-   * @brief Emitted when user presses Backspace.
-   */
-  void backspacePressed();
-
-  /**
-   * @brief Emitted when user presses Delete.
-   */
-  void deletePressed();
-
-  /**
-   * @brief Emitted when user presses arrow keys.
-   * @param forward True for right arrow, false for left.
-   */
-  void navigationRequested(bool forward);
 
   /**
    * @brief Emitted when user presses Escape (insert space + play).
@@ -163,12 +120,16 @@ protected:
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private:
   // Helpers
-  int charWidth() const;
+  bool isDarkTheme();
+  double charWidth() const;
+  double nominalCharMs() const;
+  double pixelsPerMs() const;
   int cursorIndex() const;
-  qint64 charDurationMs() const;
+  qint64 timeAtIndex(int index) const;
   void requestDebouncedSeek(qint64 positionMs);
   void triggerSeek();
 
@@ -177,23 +138,23 @@ private:
   // =========================================================================
 
   QString m_text;
-  int m_cursorIndex;
   qint64 m_currentPosition;
   int m_speed;
+  double m_charMs;
   bool m_isPlaying;
   bool m_editable;
 
   // Visual configuration
-  VisualStyle m_visualStyle;
   RythmoTrackStyle m_style;
   QColor m_barColor;
   QColor m_playingBarColor;
+  int m_isDark = -1; // Cached theme lookup; -1 = recompute (theme/palette change)
 
   // Interaction state
   int m_lastMouseX;
 
   // Font cache
-  mutable int m_cachedCharWidth;
+  mutable double m_cachedCharWidth;
 
   // Seek debouncing
   QTimer *m_seekTimer;
@@ -202,7 +163,8 @@ private:
   // Animation & Smoothness
   QTimer *m_animationTimer;
   qint64 m_lastSyncPosition = 0;
-  qint64 m_lastSyncTime = 0; // System time (ms) at last sync
+  qint64 m_lastSyncTime = 0;  // Monotonic time (ms) at last sync
+  QElapsedTimer m_syncClock; // Monotonic clock, immune to system time changes
 
 private slots:
   void animate();

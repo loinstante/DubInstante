@@ -5,6 +5,7 @@
 
 #include "RythmoWidget.h"
 #include "../core/SettingsManager.h"
+#include "Palette.h"
 
 #include <QFontDatabase>
 #include <QFontMetrics>
@@ -12,16 +13,17 @@
 #include <QMouseEvent>
 #include <QPainter>
 
-#include <QDateTime>
 #include <algorithm>
 
 RythmoWidget::RythmoWidget(QWidget *parent)
-    : QWidget(parent), m_cursorIndex(0), m_currentPosition(0), m_speed(100),
-      m_isPlaying(false), m_editable(true), m_visualStyle(Standalone),
+    : QWidget(parent), m_currentPosition(0), m_speed(100), m_charMs(0.0),
+      m_isPlaying(false), m_editable(true),
       m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
-      m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
+      m_lastMouseX(0), m_cachedCharWidth(-1.0), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
       m_lastSyncPosition(0), m_lastSyncTime(0) {
+  m_charMs = nominalCharMs();
+  m_syncClock.start();
   m_seekTimer->setSingleShot(true);
   connect(m_seekTimer, &QTimer::timeout, this, &RythmoWidget::triggerSeek);
 
@@ -38,21 +40,14 @@ RythmoWidget::RythmoWidget(QWidget *parent)
 // Configuration
 // =============================================================================
 
-void RythmoWidget::setVisualStyle(VisualStyle style) {
-  if (m_visualStyle != style) {
-    m_visualStyle = style;
-    updateGeometry();
-    update();
-  }
-}
-
-RythmoWidget::VisualStyle RythmoWidget::visualStyle() const {
-  return m_visualStyle;
-}
-
 void RythmoWidget::setTrackStyle(const RythmoTrackStyle &style) {
   m_style = style;
-  m_cachedCharWidth = -1;
+  m_cachedCharWidth = -1.0;
+  // An empty band has no sync to preserve: it follows the nominal speed.
+  // Otherwise the time grid stays put and the band is only rescaled on screen.
+  if (m_text.trimmed().isEmpty()) {
+    m_charMs = nominalCharMs();
+  }
   update();
 }
 
@@ -60,6 +55,9 @@ RythmoTrackStyle RythmoWidget::trackStyle() const { return m_style; }
 
 void RythmoWidget::setSpeed(int speed) {
   if (m_speed != speed && speed > 0) {
+    // Relative, not recomputed from the font: the grid may come from a project
+    // file or predate a font change.
+    m_charMs *= static_cast<double>(m_speed) / speed;
     m_speed = speed;
     emit speedChanged(m_speed);
     update();
@@ -67,6 +65,13 @@ void RythmoWidget::setSpeed(int speed) {
 }
 
 int RythmoWidget::speed() const { return m_speed; }
+
+double RythmoWidget::charMs() const { return m_charMs; }
+
+void RythmoWidget::setCharMs(double ms) {
+  m_charMs = ms > 0.0 ? ms : nominalCharMs();
+  update();
+}
 
 void RythmoWidget::setEditable(bool editable) { m_editable = editable; }
 
@@ -86,18 +91,11 @@ QString RythmoWidget::text() const { return m_text; }
 // Data Input Slots
 // =============================================================================
 
-void RythmoWidget::updateDisplay(int cursorIndex, qint64 positionMs,
-                                 const QString &text, int speed) {
-  m_cursorIndex = cursorIndex;
+void RythmoWidget::updateDisplay(qint64 positionMs, const QString &text,
+                                 int speed) {
   m_currentPosition = positionMs;
   m_text = text;
-  m_speed = speed;
-  update();
-}
-
-void RythmoWidget::updatePosition(int cursorIndex, qint64 positionMs) {
-  m_cursorIndex = cursorIndex;
-  m_currentPosition = positionMs;
+  setSpeed(speed);
   update();
 }
 
@@ -108,7 +106,7 @@ void RythmoWidget::setPlaying(bool playing) {
     if (m_isPlaying) {
       // Start animation loop
       m_lastSyncPosition = m_currentPosition;
-      m_lastSyncTime = QDateTime::currentMSecsSinceEpoch();
+      m_lastSyncTime = m_syncClock.elapsed();
       m_animationTimer->start();
     } else {
       // Stop animation loop
@@ -122,19 +120,12 @@ void RythmoWidget::setPlaying(bool playing) {
 void RythmoWidget::sync(qint64 positionMs) {
   // Always update anchor points for interpolation
   m_lastSyncPosition = positionMs;
-  m_lastSyncTime = QDateTime::currentMSecsSinceEpoch();
+  m_lastSyncTime = m_syncClock.elapsed();
 
   // If not animating (paused), update strictly to valid position
   if (!m_isPlaying) {
     if (m_currentPosition != positionMs) {
       m_currentPosition = positionMs;
-      // Recalculate cursor index locally (for backward compatibility)
-      int cw = charWidth();
-      if (cw > 0) {
-        double distPixels =
-            (static_cast<double>(positionMs) / 1000.0) * m_speed;
-        m_cursorIndex = static_cast<int>(distPixels / cw);
-      }
       update();
     }
   }
@@ -144,16 +135,11 @@ void RythmoWidget::animate() {
   if (!m_isPlaying)
     return;
 
-  qint64 now = QDateTime::currentMSecsSinceEpoch();
+  qint64 now = m_syncClock.elapsed();
   qint64 elapsed = now - m_lastSyncTime;
 
   // Extrapolate position based on time elapsed since last sync
   m_currentPosition = m_lastSyncPosition + elapsed;
-
-  // Note: m_cursorIndex will be calculated on-the-fly in paintEvent
-  // via cursorIndex() method, or we could update it here if needed.
-  // Given paintEvent uses cursorIndex(), just updating m_currentPosition is
-  // enough.
 
   update();
 }
@@ -162,38 +148,37 @@ void RythmoWidget::animate() {
 // Helpers
 // =============================================================================
 
-int RythmoWidget::charWidth() const {
-  if (m_cachedCharWidth == -1) {
-    QFontMetrics fm(m_style.font);
+// The real, fractional advance: rounding it to a whole pixel would stretch the
+// band by the difference (3.2% on the default font, 13 px against 12.59) and
+// space the glyphs off their natural positions.
+double RythmoWidget::charWidth() const {
+  if (m_cachedCharWidth < 0.0) {
+    QFontMetricsF fm(m_style.font);
     m_cachedCharWidth = fm.horizontalAdvance('A');
   }
   return m_cachedCharWidth;
 }
 
-int RythmoWidget::cursorIndex() const {
-  int cw = charWidth();
-  if (cw <= 0)
-    return 0;
-  double distPixels = (double(m_currentPosition) / 1000.0) * m_speed;
-  return qRound(distPixels / cw); // Round to nearest char for intuitive snap
+double RythmoWidget::nominalCharMs() const {
+  const double cw = charWidth();
+  return cw > 0.0 ? cw * 1000.0 / m_speed : 40.0; // Fallback ~1 frame
 }
 
-qint64 RythmoWidget::charDurationMs() const {
-  int cw = charWidth();
-  if (cw <= 0 || m_speed <= 0)
-    return 40; // Fallback ~1 frame
-  return static_cast<qint64>((double(cw) / m_speed) * 1000.0);
+double RythmoWidget::pixelsPerMs() const { return charWidth() / m_charMs; }
+
+int RythmoWidget::cursorIndex() const {
+  return qRound(m_currentPosition / m_charMs); // Nearest char for intuitive snap
+}
+
+// Steps go through the index: adding a rounded duration N times drifts off the
+// grid, and the typed characters end up one cell away from the cursor.
+qint64 RythmoWidget::timeAtIndex(int index) const {
+  return qRound64(std::max(0, index) * m_charMs);
 }
 
 void RythmoWidget::requestDebouncedSeek(qint64 positionMs) {
   m_pendingSeekPosition = positionMs;
   m_currentPosition = positionMs;
-  // Recalculate cursor for immediate visual feedback
-  int cw = charWidth();
-  if (cw > 0) {
-    double distPixels = (static_cast<double>(positionMs) / 1000.0) * m_speed;
-    m_cursorIndex = static_cast<int>(distPixels / cw);
-  }
   update();
   m_seekTimer->start(200); // 200ms debounce
 }
@@ -205,18 +190,37 @@ void RythmoWidget::triggerSeek() { emit seekRequested(m_pendingSeekPosition); }
 // =============================================================================
 
 QSize RythmoWidget::sizeHint() const {
-  int h = 35; // Base band height
-
-  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
-    h += 25; // Header space for handle/timestamp
-  }
-
-  return QSize(QWidget::sizeHint().width(), h);
+  // 35 base band height + 25 header space for handle/timestamp
+  return QSize(QWidget::sizeHint().width(), 60);
 }
 
 // =============================================================================
 // Paint Event
 // =============================================================================
+
+bool RythmoWidget::isDarkTheme() {
+  if (m_isDark < 0) {
+    const QString themeMode = SettingsManager::instance().theme();
+    if (themeMode == "dark") {
+      m_isDark = 1;
+    } else if (themeMode == "system") {
+      m_isDark = palette().color(QPalette::Window).value() < 128;
+    } else {
+      m_isDark = 0;
+    }
+  }
+  return m_isDark;
+}
+
+// applyTheme() swaps the stylesheet (StyleChange) and the app palette (PaletteChange).
+void RythmoWidget::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::PaletteChange ||
+      event->type() == QEvent::StyleChange) {
+    m_isDark = -1;
+    update();
+  }
+  QWidget::changeEvent(event);
+}
 
 void RythmoWidget::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
@@ -225,23 +229,20 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.setRenderHint(QPainter::Antialiasing);
 
   // 1. Calculate layout dimensions
-  int headerHeight = 0;
-  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
-    headerHeight = 25;
-  }
+  const int headerHeight = 25;
 
   int bandHeight = height() - headerHeight;
   int bandY = headerHeight;
   QRect bandRect(0, bandY, width(), bandHeight);
 
   // 2. Calculate drawing parameters
-  int cw = charWidth();
+  const double cw = charWidth();
   int targetX = width() / 5; // Target line position
 
   double pixelOffset;
-  if (m_isPlaying && cw > 0) {
+  if (m_isPlaying && cw > 0.0) {
     // Smooth scrolling using continuous position
-    pixelOffset = (static_cast<double>(m_currentPosition) / 1000.0) * m_speed;
+    pixelOffset = m_currentPosition * pixelsPerMs();
   } else {
     // Snap to character grid for precise editing alignment when paused
     pixelOffset = static_cast<double>(cursorIndex() * cw);
@@ -258,7 +259,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.fillRect(bandRect, bgColor);
 
   // 4. Draw scrolling text (virtualized for performance)
-  if (cw > 0 && !m_text.isEmpty()) {
+  if (cw > 0.0 && !m_text.isEmpty()) {
     painter.setFont(m_style.font);
     painter.setPen(m_style.textColor);
 
@@ -270,93 +271,79 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
         std::min(static_cast<int>(m_text.length()),
                  static_cast<int>((width() - textStartX) / cw) + 1);
 
-    if (firstVisibleIdx < lastVisibleIdx) {
-      QString visibleText =
-          m_text.mid(firstVisibleIdx, lastVisibleIdx - firstVisibleIdx);
-      painter.drawText(QPointF(textStartX + (firstVisibleIdx * cw), textY),
-                       visibleText);
+    // One cell per character, at the cell width: the band cannot drift off its
+    // time grid through a ligature or a substituted glyph whose advance differs.
+    for (int i = firstVisibleIdx; i < lastVisibleIdx; ++i) {
+      const bool isPair = m_text[i].isHighSurrogate() &&
+                          i + 1 < m_text.length() &&
+                          m_text[i + 1].isLowSurrogate();
+      painter.drawText(QPointF(textStartX + i * cw, textY),
+                       m_text.mid(i, isPair ? 2 : 1));
+      if (isPair)
+        ++i;
     }
   }
 
-  // Determine active theme accent color
-  bool isDark = false;
-  QString themeMode = SettingsManager::instance().theme();
-  if (themeMode == "dark") {
-    isDark = true;
-  } else if (themeMode == "system") {
-    isDark = (palette().color(QPalette::Window).value() < 128);
-  }
-  QColor accentColor = isDark ? QColor(146, 107, 255) : QColor(124, 86, 245); // #926bff vs #7c56f5
+  const bool isDark = isDarkTheme();
+  const QColor accent = isDark ? QColor(Brand::AccentLight) : QColor(Brand::Accent);
 
   // 5. Draw band border
-  QPen borderPen(accentColor, 2);
+  QPen borderPen(accent, 2);
   painter.setPen(borderPen);
   painter.drawRect(bandRect);
 
   // 6. Draw target line (guide)
-  QPen targetPen(accentColor, 2);
+  QPen targetPen(accent, 2);
   targetPen.setStyle(Qt::DashLine);
   painter.setPen(targetPen);
   painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
 
   // 7. Draw edit cursor (always at targetX to align with playback line)
-  if (cw > 0) {
+  if (cw > 0.0) {
     // Force cursor to targetX for perfect alignment with target line
     double cursorScreenX = targetX;
-
-    bool drawHandle =
-        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
-    bool drawLabel =
-        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
 
     int lineTop = bandY;
     int lineBottom = bandY + bandHeight;
 
-    if (m_visualStyle == UnifiedTop)
-      lineBottom += 2;
-    if (m_visualStyle == UnifiedBottom)
-      lineTop -= 2;
-
     // Vertical cursor line
-    QPen cursorPen(accentColor, 3);
+    QPen cursorPen(accent, 3);
     painter.setPen(cursorPen);
     painter.drawLine(cursorScreenX, lineTop, cursorScreenX, lineBottom);
 
     // Triangle handle
-    if (drawHandle) {
-      QPolygon tri;
-      tri << QPoint(cursorScreenX, bandY)
-          << QPoint(cursorScreenX - 5, bandY - 10)
-          << QPoint(cursorScreenX + 5, bandY - 10);
-      painter.setBrush(accentColor);
-      painter.drawPolygon(tri);
-    }
+    QPolygon tri;
+    tri << QPoint(cursorScreenX, bandY)
+        << QPoint(cursorScreenX - 5, bandY - 10)
+        << QPoint(cursorScreenX + 5, bandY - 10);
+    painter.setBrush(accent);
+    painter.drawPolygon(tri);
 
     // Timestamp label
-    if (drawLabel) {
-      int mm = (m_currentPosition / 60000) % 60;
-      int ss = (m_currentPosition / 1000) % 60;
-      int ms = m_currentPosition % 1000;
-      QString timeStr = QString("%1:%2.%3")
-                            .arg(mm, 2, 10, QChar('0'))
-                            .arg(ss, 2, 10, QChar('0'))
-                            .arg(ms, 3, 10, QChar('0'));
+    int mm = (m_currentPosition / 60000) % 60;
+    int ss = (m_currentPosition / 1000) % 60;
+    int ms = m_currentPosition % 1000;
+    QString timeStr = QString("%1:%2.%3")
+                          .arg(mm, 2, 10, QChar('0'))
+                          .arg(ss, 2, 10, QChar('0'))
+                          .arg(ms, 3, 10, QChar('0'));
 
-      QFont smallFont("Segoe UI", 8, QFont::Bold);
-      painter.setFont(smallFont);
-      int tw = painter.fontMetrics().horizontalAdvance(timeStr);
-      int th = painter.fontMetrics().height();
+    QFont smallFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    smallFont.setPointSize(8);
+    smallFont.setBold(true);
+    painter.setFont(smallFont);
+    int tw = painter.fontMetrics().horizontalAdvance(timeStr);
+    int th = painter.fontMetrics().height();
 
-      // Draw a subtle translucent background pill for the timestamp (always readable over video)
-      QRectF pillRect(cursorScreenX - tw / 2.0 - 6, bandY - 12 - th + 2, tw + 12, th + 4);
-      painter.setBrush(QColor(13, 13, 18, 160)); // 62% opacity dark background
-      painter.setPen(Qt::NoPen);
-      painter.drawRoundedRect(pillRect, 4, 4);
+    // Draw a subtle translucent background pill for the timestamp (always readable over video)
+    QRectF pillRect(cursorScreenX - tw / 2.0 - 6, bandY - 12 - th + 2, tw + 12, th + 4);
+    painter.setBrush(QColor(13, 13, 18, 160)); // 62% opacity dark background
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(pillRect, 4, 4);
 
-      // Draw text
-      painter.setPen(isDark ? QColor(243, 243, 246) : QColor(255, 255, 255));
-      painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
-    }
+    // Draw text
+    painter.setPen(isDark ? QColor(243, 243, 246) : QColor(255, 255, 255));
+    painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
   }
 }
 
@@ -371,12 +358,16 @@ void RythmoWidget::mousePressEvent(QMouseEvent *event) {
 
   m_lastMouseX = event->pos().x();
 
+  if (charWidth() <= 0.0) {
+    return;
+  }
+
   int targetX = width() / 5;
   int clickX = event->pos().x();
   int deltaPixels = clickX - targetX;
 
   // Calculate new position
-  double timeDeltaMs = (static_cast<double>(deltaPixels) * 1000.0) / m_speed;
+  double timeDeltaMs = deltaPixels / pixelsPerMs();
   qint64 newTime =
       std::max(qint64(0), m_currentPosition + static_cast<qint64>(timeDeltaMs));
 
@@ -389,12 +380,16 @@ void RythmoWidget::mouseMoveEvent(QMouseEvent *event) {
     return;
   }
 
+  if (charWidth() <= 0.0) {
+    return;
+  }
+
   int currentX = event->pos().x();
   int deltaX = currentX - m_lastMouseX;
   m_lastMouseX = currentX;
 
   // Dragging: reverse direction for intuitive feel
-  double timeDeltaMs = (static_cast<double>(deltaX) * 1000.0) / m_speed;
+  double timeDeltaMs = deltaX / pixelsPerMs();
   qint64 newTime =
       std::max(qint64(0), m_currentPosition - static_cast<qint64>(timeDeltaMs));
 
@@ -410,17 +405,15 @@ void RythmoWidget::mouseDoubleClickEvent(QMouseEvent *event) {
 // =============================================================================
 
 void RythmoWidget::keyPressEvent(QKeyEvent *event) {
-  qint64 step = charDurationMs();
+  const int idx = cursorIndex();
 
   // Navigation
   if (event->key() == Qt::Key_Left) {
-    qint64 newTime = std::max(qint64(0), m_currentPosition - step);
-    requestDebouncedSeek(newTime);
+    requestDebouncedSeek(timeAtIndex(idx - 1));
     return;
   }
   if (event->key() == Qt::Key_Right) {
-    qint64 newTime = m_currentPosition + step;
-    requestDebouncedSeek(newTime);
+    requestDebouncedSeek(timeAtIndex(idx + 1));
     return;
   }
 
@@ -428,34 +421,28 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
   if (event->key() == Qt::Key_Escape) {
     if (!m_editable)
       return;
-    int idx = cursorIndex();
     while (m_text.length() < idx) {
       m_text.append(' ');
     }
     m_text.insert(idx, ' ');
-    qint64 newTime = m_currentPosition + step;
-    requestDebouncedSeek(newTime);
+    requestDebouncedSeek(timeAtIndex(idx + 1));
     emit textChanged(m_text);
     emit playRequested();
     return;
   }
 
   // Text Editing
-  int idx = cursorIndex();
-
   if (event->key() == Qt::Key_Backspace) {
     if (!m_editable)
       return;
     // If we are BEYOND the text, just move back
     if (idx > m_text.length()) {
-      qint64 newTime = std::max(qint64(0), m_currentPosition - step);
-      requestDebouncedSeek(newTime);
+      requestDebouncedSeek(timeAtIndex(idx - 1));
     }
     // If we are AT or WITHIN text, delete character and move back
     else if (idx > 0 && idx <= m_text.length()) {
       m_text.remove(idx - 1, 1);
-      qint64 newTime = std::max(qint64(0), m_currentPosition - step);
-      requestDebouncedSeek(newTime);
+      requestDebouncedSeek(timeAtIndex(idx - 1));
       emit textChanged(m_text);
     }
     return;
@@ -481,8 +468,7 @@ void RythmoWidget::keyPressEvent(QKeyEvent *event) {
       m_text.append(' ');
     }
     m_text.insert(idx, event->text());
-    qint64 newTime = m_currentPosition + step;
-    requestDebouncedSeek(newTime);
+    requestDebouncedSeek(timeAtIndex(idx + event->text().length()));
     emit textChanged(m_text);
   }
 }

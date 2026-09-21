@@ -5,14 +5,20 @@
 
 #include "ExportService.h"
 
+#include <QCoreApplication>
 #include <QDebug>
 #include <QFile>
+#include <QFileInfo>
 #include <QRegularExpression>
+#include <QStandardPaths>
+#include <QStorageInfo>
 
 ExportService::ExportService(QObject *parent)
     : QObject(parent)
     , m_process(new QProcess(this))
     , m_totalDurationMs(0)
+    , m_exportFinishedEmitted(false)
+    , m_outputExistedBefore(false)
 {
     connect(m_process, &QProcess::finished,
             this, &ExportService::handleProcessFinished);
@@ -22,16 +28,57 @@ ExportService::ExportService(QObject *parent)
             this, &ExportService::parseProgressOutput);
 }
 
+ExportService::~ExportService()
+{
+    if (!isExporting()) {
+        return;
+    }
+    // Destroyed mid-export (application closed): the receivers of our signals may already
+    // be half-destroyed, so stop listening before killing, then drop the truncated file.
+    m_process->disconnect(this);
+    m_process->kill();
+    m_process->waitForFinished(3000);
+    removePartialOutput();
+}
+
 // =============================================================================
 // Public Methods
 // =============================================================================
 
-bool ExportService::isFFmpegAvailable() const
+QString ExportService::toolPath(const QString &name)
 {
-    QProcess check;
-    check.start("ffmpeg", QStringList() << "-version");
-    check.waitForFinished(3000);
-    return (check.exitCode() == 0);
+    // findExecutable() and not exists(): it appends the .exe on Windows and
+    // checks the executable bit, which a plain path test would not.
+    const QString appDir = QCoreApplication::applicationDirPath();
+    const QString bundled = QStandardPaths::findExecutable(
+        name, {appDir, appDir + "/../Resources"});
+    if (!bundled.isEmpty()) {
+        return bundled;
+    }
+    return QStandardPaths::findExecutable(name);
+}
+
+bool ExportService::isFFmpegAvailable(QString *errorMessage)
+{
+    const bool ffmpegFound = !toolPath("ffmpeg").isEmpty();
+    const bool ffprobeFound = !toolPath("ffprobe").isEmpty();
+
+    if (ffmpegFound && ffprobeFound) {
+        return true;
+    }
+
+    if (errorMessage) {
+        const QString toolName = !ffmpegFound ? "FFmpeg" : "FFprobe";
+        *errorMessage = QObject::tr(
+            "%1 est introuvable sur ce système. Il est nécessaire pour exporter.\n\n"
+            "Debian / Ubuntu : sudo apt install ffmpeg\n"
+            "Fedora : sudo dnf install ffmpeg\n"
+            "Arch : sudo pacman -S ffmpeg\n"
+            "macOS (Homebrew) : brew install ffmpeg\n"
+            "Windows : https://ffmpeg.org/download.html").arg(toolName);
+    }
+
+    return false;
 }
 
 bool ExportService::isExporting() const
@@ -41,9 +88,9 @@ bool ExportService::isExporting() const
 
 void ExportService::startExport(const ExportConfig &config)
 {
-    // Check if already running
+    // Check if already running (no signal: it would wipe the running export's progress UI)
     if (isExporting()) {
-        emit exportFinished(false, "Un export est déjà en cours.");
+        qWarning() << "[ExportService] startExport ignored: an export is already running";
         return;
     }
     
@@ -55,17 +102,30 @@ void ExportService::startExport(const ExportConfig &config)
     }
     
     m_totalDurationMs = config.durationMs;
+    m_currentOutputPath = config.outputPath;
+    m_exportFinishedEmitted = false;
+    m_errorAccumulator.clear();
+
+    QFileInfo outputInfo(m_currentOutputPath);
+    m_outputExistedBefore = outputInfo.exists();
+    m_outputMTimeBefore = m_outputExistedBefore ? outputInfo.lastModified() : QDateTime();
+
     emit progressChanged(0);
     
     QStringList args = buildFFmpegArgs(config);
     
-    qDebug() << "[ExportService] Starting FFmpeg with args:" << args;
-    m_process->start("ffmpeg", args);
+    // Empty when nothing was found: QProcess then fails to start, which is the
+    // same path as a missing ffmpeg and is already reported to the user.
+    const QString program = toolPath("ffmpeg");
+    qDebug() << "[ExportService] Starting FFmpeg:" << program << args;
+    m_process->setStandardOutputFile(QProcess::nullDevice());
+    m_process->start(program, args);
 }
 
 void ExportService::cancelExport()
 {
     if (isExporting()) {
+        m_exportFinishedEmitted = true;
         m_process->kill();
         emit exportFinished(false, "Export annulé par l'utilisateur.");
     }
@@ -77,17 +137,56 @@ void ExportService::cancelExport()
 
 void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exitStatus)
 {
+    if (m_exportFinishedEmitted) {
+        // Cancelled or already reported: the process is done now, drop the partial file
+        removePartialOutput();
+        return;
+    }
+    m_exportFinishedEmitted = true;
+
     if (exitStatus == QProcess::NormalExit && exitCode == 0) {
+        resetOutputTracking();
         emit progressChanged(100);
         emit exportFinished(true, "Export réussi !");
     } else {
-        QString error = m_process->readAllStandardError();
-        emit exportFinished(false, "Échec de l'export: " + error);
+        QString remaining = m_process->readAllStandardError();
+        m_errorAccumulator.append(remaining);
+
+        QString detailedError;
+        if (m_errorAccumulator.contains("No space left on device", Qt::CaseInsensitive) ||
+            m_errorAccumulator.contains("disk full", Qt::CaseInsensitive) ||
+            m_errorAccumulator.contains("no space", Qt::CaseInsensitive)) {
+            detailedError = "Espace disque insuffisant sur le périphérique de destination.";
+        } else {
+            QStringList lines = m_errorAccumulator.split('\n', Qt::SkipEmptyParts);
+            QStringList lastLines;
+            int count = 0;
+            for (int i = lines.size() - 1; i >= 0 && count < 3; --i) {
+                QString line = lines[i].trimmed();
+                if (!line.isEmpty() && !line.startsWith("frame=") && !line.startsWith("size=")) {
+                    lastLines.prepend(line);
+                    count++;
+                }
+            }
+            if (!lastLines.isEmpty()) {
+                detailedError = lastLines.join("\n");
+            } else {
+                detailedError = "Erreur inconnue de FFmpeg.";
+            }
+        }
+        removePartialOutput();
+        emit exportFinished(false, "Échec de l'export: " + detailedError);
     }
 }
 
 void ExportService::handleProcessError(QProcess::ProcessError error)
 {
+    if (m_exportFinishedEmitted) {
+        return;
+    }
+    m_exportFinishedEmitted = true;
+
+    removePartialOutput();
     if (error == QProcess::FailedToStart) {
         emit exportFinished(false, "FFmpeg n'a pas pu démarrer. Est-il installé ?");
     } else {
@@ -95,14 +194,47 @@ void ExportService::handleProcessError(QProcess::ProcessError error)
     }
 }
 
+void ExportService::removePartialOutput()
+{
+    // Only remove what this run actually wrote: a file that pre-existed at the output
+    // path (e.g. a previous successful export) and that ffmpeg never touched must survive.
+    const QFileInfo fi(m_currentOutputPath);
+    const bool wasWrittenByThisRun = !m_currentOutputPath.isEmpty() && fi.exists()
+        && (!m_outputExistedBefore || fi.lastModified() != m_outputMTimeBefore);
+    if (wasWrittenByThisRun) {
+        QFile::remove(m_currentOutputPath);
+    }
+
+    // A crash emits both errorOccurred and finished, so this runs twice per export:
+    // the second call must be a no-op, not treat the kept file as written by this run.
+    resetOutputTracking();
+}
+
+void ExportService::resetOutputTracking()
+{
+    m_currentOutputPath.clear();
+    m_outputExistedBefore = false;
+    m_outputMTimeBefore = QDateTime();
+}
+
 void ExportService::parseProgressOutput()
 {
+    QString output = m_process->readAllStandardError();
+    if (output.isEmpty()) {
+        return;
+    }
+
+    m_errorAccumulator.append(output);
+    // Limit memory usage (keep last 20KB)
+    if (m_errorAccumulator.size() > 50000) {
+        m_errorAccumulator = m_errorAccumulator.right(20000);
+    }
+
+    qDebug() << "[FFmpeg]" << output;
+
     if (m_totalDurationMs <= 0) {
         return;
     }
-    
-    QString output = m_process->readAllStandardError();
-    qDebug() << "[FFmpeg]" << output;
     
     // Parse time from FFmpeg output
     // Formats: time=00:00:00.00 or time=123.45
@@ -144,14 +276,20 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
         return false;
     }
     
+    // Audio lists are renumbered for export (first recorded track = primary): name the file,
+    // a track number here would not match what the user sees.
+    const auto missingAudioMessage = [](const QString &path) {
+        return QString("Erreur: L'enregistrement audio est introuvable : %1").arg(path);
+    };
+
     if (!QFile::exists(config.audioPath)) {
-        errorMessage = "Erreur: L'enregistrement de la Piste 1 est introuvable.";
+        errorMessage = missingAudioMessage(config.audioPath);
         return false;
     }
-    
-    for (int i = 0; i < config.extraAudioPaths.size(); ++i) {
-        if (!config.extraAudioPaths[i].isEmpty() && !QFile::exists(config.extraAudioPaths[i])) {
-            errorMessage = QString("Erreur: L'enregistrement de la Piste %1 est introuvable.").arg(i + 2);
+
+    for (const QString &extraPath : config.extraAudioPaths) {
+        if (!extraPath.isEmpty() && !QFile::exists(extraPath)) {
+            errorMessage = missingAudioMessage(extraPath);
             return false;
         }
     }
@@ -159,6 +297,16 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
     if (config.outputPath.isEmpty()) {
         errorMessage = "Erreur: Chemin de sortie non spécifié.";
         return false;
+    }
+
+    // Pre-check disk space
+    QStorageInfo storage(QFileInfo(config.outputPath).absolutePath());
+    if (storage.isValid() && storage.isReady()) {
+        qint64 freeBytes = storage.bytesAvailable();
+        if (freeBytes < 100LL * 1024 * 1024) { // Less than 100 MB
+            errorMessage = "Erreur: Espace disque critique (moins de 100 Mo disponibles) sur le périphérique de destination.";
+            return false;
+        }
     }
     
     return true;
@@ -172,35 +320,27 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
     args << "-y";
     args << "-threads" << "0";
     
-    // Input seeking (fast seek)
-    // NOTE: -ss is no longer used for start time because it trims the video.
-    // Instead, we use -itsoffset for audio sync below.
-    
-    // Video Input
-    args << "-i" << config.videoPath;   // [0]
-    
-    // Primary Audio Input
-    if (config.trackOffsetsMs.size() > 0 && config.trackOffsetsMs[0] > 0) {
-        args << "-itsoffset" << QString::number(config.trackOffsetsMs[0] / 1000.0, 'f', 3);
+    // Input-side seek: frame-accurate when re-encoding and resets output timestamps to zero
+    if (config.rangeStartMs > 0) {
+        args << "-ss" << QString::number(config.rangeStartMs / 1000.0, 'f', 3);
     }
+    args << "-i" << config.videoPath;   // [0]
+
+    // Timeline offsets are applied with adelay/atrim in the filter graph:
+    // amix discards input timestamps, so an input-side offset would be lost there.
+    // trackOffsetsMs[0] is the primary track, trackOffsetsMs[j] the j-th audio input.
+    QVector<qint64> audioOffsetsMs;
     args << "-i" << config.audioPath;   // [1]
-    
+    audioOffsetsMs.append(config.trackOffsetsMs.value(0, 0));
+
     // Add extra audio tracks: [2], [3], ...
     for (int i = 0; i < config.extraAudioPaths.size(); ++i) {
-        const QString &extraPath = config.extraAudioPaths[i];
-        if (!extraPath.isEmpty()) {
-            if (config.trackOffsetsMs.size() > i + 1 && config.trackOffsetsMs[i + 1] > 0) {
-                args << "-itsoffset" << QString::number(config.trackOffsetsMs[i + 1] / 1000.0, 'f', 3);
-            }
-            args << "-i" << extraPath;
+        if (!config.extraAudioPaths[i].isEmpty()) {
+            args << "-i" << config.extraAudioPaths[i];
+            audioOffsetsMs.append(config.trackOffsetsMs.value(i + 1, 0));
         }
     }
-    
-    // Count total extra tracks actually added
-    int extraCount = 0;
-    for (const QString &extraPath : config.extraAudioPaths) {
-        if (!extraPath.isEmpty()) extraCount++;
-    }
+    int extraCount = audioOffsetsMs.size() - 1;
     
     if (config.expertMode) {
         // Video Codec
@@ -228,8 +368,9 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
         args << "-pix_fmt" << "yuv420p";
     }
     
-    // Scale resolution if specified
-    if (!config.scaleResolution.isEmpty()) {
+    // Scale resolution if specified (-vf is incompatible with stream copy)
+    bool videoCopy = config.expertMode && config.videoCodec == "copy";
+    if (!config.scaleResolution.isEmpty() && !videoCopy) {
         args << "-vf" << QString("scale=%1").arg(config.scaleResolution);
     }
     
@@ -241,14 +382,18 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
         filterComplex += QString("[0:a]volume=%1[a0];").arg(config.originalVolume);
     }
     
-    // Primary track
-    float primaryVol = (config.trackVolumes.size() > 0) ? config.trackVolumes[0] : 1.0f;
-    filterComplex += QString("[1:a]volume=%1[a1];").arg(primaryVol);
-    
-    // Extra tracks: input indices start at 2
-    for (int i = 0; i < extraCount; ++i) {
-        float extraVol = (config.trackVolumes.size() > i + 1) ? config.trackVolumes[i + 1] : 1.0f;
-        filterComplex += QString("[%1:a]volume=%2[a%3];").arg(i + 2).arg(extraVol).arg(i + 2);
+    // Recorded tracks: input indices start at 1. [0:a] needs no shift, the input -ss already aligned it.
+    for (int j = 1; j <= audioOffsetsMs.size(); ++j) {
+        float vol = config.trackVolumes.value(j - 1, 1.0f);
+        qint64 shiftMs = audioOffsetsMs[j - 1] - config.rangeStartMs;
+        QString timing;
+        if (shiftMs > 0) {
+            timing = QString("adelay=%1:all=1,").arg(shiftMs);
+        } else if (shiftMs < 0) {
+            // Take started before the exported range: drop the part that precedes it
+            timing = QString("atrim=start=%1,asetpts=PTS-STARTPTS,").arg(QString::number(-shiftMs / 1000.0, 'f', 3));
+        }
+        filterComplex += QString("[%1:a]%2volume=%3[a%1];").arg(j).arg(timing).arg(vol);
     }
     
     // AMIX: combine all audio streams
@@ -260,7 +405,10 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
     }
     
     int amixInputs = (includeOriginal ? 1 : 0) + 1 + extraCount;
-    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest[aout]").arg(amixInputs);
+    // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N.
+    // apad: the mix ends with the last take when the original audio is muted, and -shortest
+    // would cut the video there; padding lets the video stream set the end.
+    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest:normalize=0,apad[aout]").arg(amixInputs);
     
     args << "-filter_complex" << filterComplex;
     args << "-map" << "0:v:0";

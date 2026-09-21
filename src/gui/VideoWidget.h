@@ -1,10 +1,10 @@
 /**
  * @file VideoWidget.h
- * @brief OpenGL-accelerated video rendering widget.
+ * @brief Video rendering widget (QPainter on a QOpenGLWidget).
  * 
- * This widget receives video frames via QVideoSink and renders them
- * using QOpenGLWidget for GPU acceleration. It maintains aspect ratio
- * and handles frame scaling automatically.
+ * This widget receives video frames via QVideoSink. The QVideoFrame -> QImage
+ * conversion and the scaling run on the GUI thread: costly in HD, to be
+ * replaced by a texture upload (post-beta). It maintains aspect ratio.
  * 
  * @note Part of the GUI layer - pure rendering, no business logic.
  */
@@ -19,7 +19,7 @@
 
 /**
  * @class VideoWidget
- * @brief GPU-accelerated video display widget.
+ * @brief Video display widget (software QPainter path).
  * 
  * Usage:
  * 1. Create the widget

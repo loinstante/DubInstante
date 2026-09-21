@@ -2,6 +2,7 @@ package com.dubinstante.app
 
 import android.content.Context
 import android.net.Uri
+import android.os.StatFs
 import android.util.Log
 import io.microshow.rxffmpeg.RxFFmpegInvoke
 import io.microshow.rxffmpeg.RxFFmpegSubscriber
@@ -26,14 +27,49 @@ class AndroidExportService(private val context: Context) {
         val outputFile =
                 File(context.cacheDir, "dubinstante_export_temp_${System.currentTimeMillis()}.mp4")
 
+        // 0. Pre-check cache space: source copy + encoded output ~= 2x source size
+        val sourceSize =
+                withContext(Dispatchers.IO) {
+                    try {
+                        context.contentResolver.openAssetFileDescriptor(sourceVideoUri, "r")?.use {
+                            it.length
+                        }
+                                ?: -1L
+                    } catch (e: Exception) {
+                        -1L
+                    }
+                }
+        if (sourceSize > 0 && StatFs(context.cacheDir.path).availableBytes < 2 * sourceSize) {
+            onComplete(false, "Espace de stockage insuffisant pour préparer l'export", null)
+            return
+        }
+
         // 1. Copy Content URI to a temp file
         val tempSourceFile = File(context.cacheDir, "temp_source_video.mp4")
-        withContext(Dispatchers.IO) {
-            val inputStream: InputStream? = context.contentResolver.openInputStream(sourceVideoUri)
-            val outputStream = FileOutputStream(tempSourceFile)
-            inputStream?.copyTo(outputStream)
-            inputStream?.close()
-            outputStream.close()
+        val sourceCopied =
+                withContext(Dispatchers.IO) {
+                    try {
+                        val inputStream: InputStream? =
+                                context.contentResolver.openInputStream(sourceVideoUri)
+                        if (inputStream == null) {
+                            false
+                        } else {
+                            inputStream.use { input ->
+                                FileOutputStream(tempSourceFile).use { output ->
+                                    input.copyTo(output)
+                                }
+                            }
+                            true
+                        }
+                    } catch (e: Exception) {
+                        Log.e("AndroidExportService", "Failed to copy source video", e)
+                        false
+                    }
+                }
+        if (!sourceCopied) {
+            tempSourceFile.delete()
+            onComplete(false, "Impossible de lire la vidéo source", null)
+            return
         }
 
         val sourceVideoPath = tempSourceFile.absolutePath
@@ -82,6 +118,7 @@ class AndroidExportService(private val context: Context) {
                         argsArray,
                         object : RxFFmpegSubscriber() {
                             override fun onFinish() {
+                                tempSourceFile.delete()
                                 try {
                                     val outputStream =
                                             context.contentResolver.openOutputStream(targetUri)
@@ -118,11 +155,15 @@ class AndroidExportService(private val context: Context) {
 
                             override fun onCancel() {
                                 Log.w("AndroidExportService", "Export cancelled")
+                                tempSourceFile.delete()
+                                outputFile.delete()
                                 onComplete(false, "Export cancelled", null)
                             }
 
                             override fun onError(message: String?) {
                                 Log.e("AndroidExportService", "Export failed. Message: $message")
+                                tempSourceFile.delete()
+                                outputFile.delete()
                                 onComplete(false, "Export failed ($message)", null)
                             }
                         }

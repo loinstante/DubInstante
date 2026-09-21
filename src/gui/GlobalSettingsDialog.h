@@ -84,6 +84,7 @@ private:
     QStringList m_videoActions;
     QStringList m_recordActions;
     QStringList m_audioActions;
+    QStringList m_projectActions;
     QMap<QString, QPushButton*> m_shortcutButtons;
     QMap<QString, QPushButton*> m_clearButtons;
     QMap<QString, QKeySequence> m_tempShortcuts;

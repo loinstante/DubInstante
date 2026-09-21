@@ -1,14 +1,63 @@
+# Licence des binaires FFmpeg embarqués — décidé une fois, appliqué aux trois jobs.
+#
+# DubInstante est sous EUPL-1.2, dont l'appendice liste la GPL v3 parmi les
+# « Compatible Licences » (article 5). Une build FFmpeg --enable-gpl peut donc
+# être distribuée avec : le paquet produit est alors couvert par la GPL v3, ce
+# que l'article 5 de l'EUPL prévoit explicitement. C'est la build retenue sur
+# les trois plateformes — elle apporte libx264, donc l'export H.264 sans
+# dépendance système. La contrepartie est documentée dans THIRD_PARTY_LICENSES,
+# copié à la racine de chaque paquet : source disponible des deux côtés.
+#
+# Pas de build LGPL : elle imposerait à l'utilisateur d'installer un ffmpeg
+# système pour exporter en H.264, ce qui est exactement le problème que
+# l'embarquement résout.
+
 name: Build and Release
 
 on:
   push:
     branches: [ main, master ]
+    tags: [ 'v*' ]
   pull_request:
     branches: [ main, master ]
 
+permissions:
+  contents: read
+
 jobs:
+  test:
+    name: Tests (Linux, Debug)
+    runs-on: ubuntu-22.04
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt update
+        sudo apt install -y build-essential cmake pkg-config zip unzip libgl1-mesa-dev libavcodec-dev libavformat-dev libavutil-dev libswscale-dev libasound2-dev libpulse-dev libxcb-cursor0
+
+    - name: Install Qt
+      uses: jurplel/install-qt-action@v4
+      with:
+        version: '6.5.3'
+        host: 'linux'
+        target: 'desktop'
+        arch: 'gcc_64'
+        modules: 'qtmultimedia'
+
+    - name: Configure
+      run: cmake -S . -B build-test -DCMAKE_BUILD_TYPE=Debug
+
+    - name: Build
+      run: cmake --build build-test -j"$(nproc)"
+
+    - name: Run tests
+      run: ctest --test-dir build-test --output-on-failure
+
   build-linux:
     name: Linux Build
+    needs: test
     runs-on: ubuntu-22.04
     steps:
     - name: Checkout code
@@ -86,6 +135,7 @@ jobs:
 
   build-windows:
     name: Windows Build
+    needs: test
     runs-on: windows-2022
     steps:
     - name: Checkout code
@@ -125,7 +175,26 @@ jobs:
         mkdir dist
         copy build\Release\DubInstante.exe dist\
         copy C:\ffmpeg\ffmpeg-bin\bin\*.dll dist\
+        copy C:\ffmpeg\ffmpeg-bin\bin\ffmpeg.exe dist\
+        copy C:\ffmpeg\ffmpeg-bin\bin\ffprobe.exe dist\
+        copy LICENSE dist\
+        copy THIRD_PARTY_LICENSES dist\
         windeployqt.exe --release --no-translations --compiler-runtime --multimedia dist\DubInstante.exe
+
+    - name: Verify bundled FFmpeg
+      run: |
+        foreach ($tool in "ffmpeg.exe", "ffprobe.exe") {
+          if (-not (Test-Path "dist\$tool")) {
+            Write-Host "ERROR: $tool is missing from the package"
+            exit 1
+          }
+        }
+        # Lancé depuis dist\ : il doit trouver ses DLL libav* là, pas ailleurs.
+        # Sortie capturée en entier : Select-Object -First 1 dans le pipe coupe
+        # ffmpeg en cours d'écriture et rend $LASTEXITCODE non nul.
+        $version = & .\dist\ffmpeg.exe -version
+        if ($LASTEXITCODE -ne 0) { exit 1 }
+        $version | Select-Object -First 1
 
     - name: Get Version
       id: get_version
@@ -142,6 +211,7 @@ jobs:
 
   build-macos:
     name: macOS Build
+    needs: test
     runs-on: macos-15
     steps:
     - name: Checkout code
@@ -180,11 +250,53 @@ jobs:
         fi
         macdeployqt "$APP_PATH" -verbose=1
 
+    - name: Bundle FFmpeg
+      run: |
+        brew install dylibbundler
+        APP_PATH=$(find build -name "DubInstante.app" -type d | head -n 1)
+        cp "$(command -v ffmpeg)" "$(command -v ffprobe)" "$APP_PATH/Contents/MacOS/"
+        cp LICENSE THIRD_PARTY_LICENSES "$APP_PATH/Contents/Resources/"
+        # Les binaires Homebrew pointent vers /opt/homebrew, qui n'existe pas chez
+        # l'utilisateur : dylibbundler copie leur fermeture de dylibs dans le
+        # bundle et réécrit les install names en @executable_path.
+        for tool in ffmpeg ffprobe; do
+          dylibbundler -cd -of -b \
+            -x "$APP_PATH/Contents/MacOS/$tool" \
+            -d "$APP_PATH/Contents/libs" \
+            -p "@executable_path/../libs"
+        done
+
     - name: Ad-hoc code sign
       run: |
         APP_PATH=$(find build -name "DubInstante.app" -type d | head -n 1)
+        # Les dylibs recopiées et les deux binaires d'abord : --deep ne suffit pas
+        # à rendre valide pour --strict du code ajouté après macdeployqt.
+        for lib in "$APP_PATH"/Contents/libs/*.dylib; do
+          codesign --force --sign - "$lib"
+        done
+        codesign --force --sign - "$APP_PATH/Contents/MacOS/ffmpeg" "$APP_PATH/Contents/MacOS/ffprobe"
         codesign --force --deep --sign - "$APP_PATH"
         echo "Ad-hoc signing complete"
+
+    - name: Verify bundle
+      run: |
+        APP_PATH=$(find build -name "DubInstante.app" -type d | head -n 1)
+        for tool in ffmpeg ffprobe; do
+          if [ ! -x "$APP_PATH/Contents/MacOS/$tool" ]; then
+            echo "ERROR: $tool is missing from the bundle"
+            exit 1
+          fi
+          # Un seul /opt/homebrew restant et le binaire est mort sur une machine vierge.
+          if otool -L "$APP_PATH/Contents/MacOS/$tool" | grep -q "/opt/homebrew"; then
+            echo "ERROR: $tool still links against Homebrew:"
+            otool -L "$APP_PATH/Contents/MacOS/$tool"
+            exit 1
+          fi
+          # Pas de pipe vers head : sans pipefail, son code de sortie masquerait celui de l'outil.
+          version=$("$APP_PATH/Contents/MacOS/$tool" -version)
+          echo "${version%%$'\n'*}"
+        done
+        codesign --verify --deep --strict --verbose=2 "$APP_PATH"
 
     - name: Create DMG
       run: |
@@ -203,3 +315,31 @@ jobs:
       with:
         name: DubInstante_macos_${{ steps.get_version.outputs.version }}
         path: build/DubInstante.dmg
+
+  release:
+    name: GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ build-linux, build-windows, build-macos ]
+    runs-on: ubuntu-22.04
+    permissions:
+      contents: write
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Collect release files
+      run: |
+        mkdir release
+        cp artifacts/DubInstante_linux_*/*.AppImage release/
+        cp artifacts/DubInstante_macos_*/DubInstante.dmg "release/$(basename artifacts/DubInstante_macos_*).dmg"
+        win=$(basename artifacts/DubInstante_windows_*)
+        (cd "artifacts/$win" && zip -qr "$GITHUB_WORKSPACE/release/$win.zip" .)
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: release/*
+        generate_release_notes: true
+        prerelease: ${{ contains(github.ref_name, '-') }}

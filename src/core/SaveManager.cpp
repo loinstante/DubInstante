@@ -1,4 +1,5 @@
 #include "SaveManager.h"
+#include "Constants.h"
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDebug>
@@ -6,6 +7,8 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QProcess>
+#include <QSaveFile>
+#include <QStorageInfo>
 #include <QTemporaryDir>
 #include <QtEndian>
 #include <QtGlobal>
@@ -47,10 +50,15 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   for (const auto &trackData : cleanData.tracks) {
     QJsonObject trackObj;
     trackObj["text"] = trackData.text;
+    // The time grid is stored, not recomputed on load: font metrics differ
+    // from one machine to the next (72 vs 96 dpi, substituted family).
+    trackObj["char_ms"] = trackData.charMs;
 
     // Save style parameters
     QJsonObject styleObj;
     styleObj["font_size"] = trackData.style.globalSize;
+    styleObj["font_family"] = trackData.style.font.family();
+    styleObj["font_bold"] = trackData.style.font.bold();
     styleObj["text_color"] = trackData.style.textColor.name(QColor::HexArgb);
     styleObj["bg_color"] =
         trackData.style.backgroundColor.name(QColor::HexArgb);
@@ -65,30 +73,30 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   QByteArray maskedPayload = applyXorMask(jsonPayload);
   QByteArray checksum = calculateChecksum(jsonPayload);
 
-  QFile file(filePath);
+  // Atomic write: the previous save survives a disk-full or crash mid-write
+  QSaveFile file(filePath);
   if (!file.open(QIODevice::WriteOnly)) {
     qWarning() << "Failed to open file for writing:" << filePath;
     return false;
   }
 
-  // Header
-  file.write(m_header);
-
-  // Version & Flags
-  file.putChar(static_cast<char>(m_version));
-  file.putChar(0); // Flags
-
-  // Payload Size & Data (little-endian for cross-platform portability)
   quint32 payloadSize =
       qToLittleEndian(static_cast<quint32>(maskedPayload.size()));
-  file.write(reinterpret_cast<const char *>(&payloadSize), sizeof(payloadSize));
-  file.write(maskedPayload);
 
-  // Checksum
-  file.write(checksum);
+  bool ok = file.write(m_header) == m_header.size();
+  ok = ok && file.putChar(static_cast<char>(m_version));
+  ok = ok && file.putChar(0); // Flags
+  ok = ok && file.write(reinterpret_cast<const char *>(&payloadSize),
+                        sizeof(payloadSize)) == sizeof(payloadSize);
+  ok = ok && file.write(maskedPayload) == maskedPayload.size();
+  ok = ok && file.write(checksum) == checksum.size();
 
-  file.close();
-  return true;
+  if (!ok) {
+    qWarning() << "Failed to write save data:" << filePath;
+    file.cancelWriting();
+    return false;
+  }
+  return file.commit();
 }
 
 bool SaveManager::isZipAvailable(QString *errorMessage) {
@@ -122,11 +130,153 @@ bool SaveManager::isZipAvailable(QString *errorMessage) {
 #endif
 }
 
+namespace {
+
+// "tar" first on Windows (native since Windows 10, reads zip), "unzip" elsewhere.
+// Empty when none can be started.
+QString findExtractTool() {
+#ifdef Q_OS_WIN
+  const QStringList candidates{"tar", "unzip"};
+#else
+  const QStringList candidates{"unzip"};
+#endif
+  for (const QString &tool : candidates) {
+    QProcess probe;
+    probe.start(tool, tool == "tar" ? QStringList{"--version"}
+                                    : QStringList{"-v"});
+    if (probe.waitForStarted()) {
+      probe.waitForFinished(5000);
+      return tool;
+    }
+  }
+  return QString();
+}
+
+} // namespace
+
+bool SaveManager::isUnzipAvailable(QString *errorMessage) {
+  if (!findExtractTool().isEmpty())
+    return true;
+
+  if (errorMessage) {
+#if defined(Q_OS_WIN)
+    *errorMessage = QObject::tr(
+        "Aucun utilitaire d'extraction n'est disponible.\n\n"
+        "'tar' est fourni avec Windows 10 (version 1803) et suivants.\n"
+        "Mettez Windows à jour ou installez 'unzip'.");
+#elif defined(Q_OS_MAC)
+    *errorMessage = QObject::tr(
+        "L'utilitaire 'unzip' est introuvable.\n\n"
+        "Veuillez l'installer pour utiliser cette fonctionnalité.\n"
+        "Lien : https://formulae.brew.sh/formula/unzip");
+#else
+    *errorMessage =
+        QObject::tr("L'utilitaire 'unzip' est introuvable.\n\n"
+                    "Veuillez l'installer via votre terminal :\n"
+                    "Debian/Ubuntu : sudo apt install unzip\n"
+                    "Fedora : sudo dnf install unzip\n"
+                    "Arch : sudo pacman -S unzip\n\n"
+                    "Ou consultez : https://command-not-found.com/unzip");
+#endif
+  }
+  return false;
+}
+
+bool SaveManager::extractArchive(const QString &zipPath, const QString &destDir,
+                                 QString *errorMessage) {
+  const auto fail = [errorMessage](const QString &message) {
+    qWarning() << "extractArchive:" << message;
+    if (errorMessage)
+      *errorMessage = message;
+    return false;
+  };
+
+  const QFileInfo zipInfo(zipPath);
+  if (!zipInfo.isFile() || !zipInfo.isReadable())
+    return fail(QObject::tr("Impossible de lire l'archive :\n%1")
+                    .arg(QDir::toNativeSeparators(zipPath)));
+
+  if (!QDir().mkpath(destDir))
+    return fail(QObject::tr("Impossible de créer le dossier d'extraction."));
+
+  // Written with zip -0: the extracted size is close to the archive size
+  const qint64 needed = zipInfo.size() + zipInfo.size() / 5;
+  const QStorageInfo storage(destDir);
+  if (storage.isValid() && storage.isReady() &&
+      storage.bytesAvailable() < needed)
+    return fail(QObject::tr("Espace disque insuffisant pour extraire "
+                            "l'archive.\nIl faut environ %1 Mo libres.")
+                    .arg(needed / (1024 * 1024) + 1));
+
+  const QString tool = findExtractTool();
+  if (tool.isEmpty()) {
+    QString help; // message d'installation par plateforme
+    isUnzipAvailable(&help);
+    return fail(help);
+  }
+
+  // Absolute paths: an archive named "-x.zip" must not be parsed as an option
+  const QString zipAbs = zipInfo.absoluteFilePath();
+  const QString destAbs = QDir(destDir).absolutePath();
+  const QStringList args =
+      tool == "tar" ? QStringList{"-xf", zipAbs, "-C", destAbs}
+                    : QStringList{"-o", zipAbs, "-d", destAbs};
+
+  QProcess process;
+  process.setProcessChannelMode(QProcess::MergedChannels);
+  process.start(tool, args);
+  if (!process.waitForStarted())
+    return fail(QObject::tr("Impossible de lancer '%1'.").arg(tool));
+
+  // Videos can weigh several GB, and the archive may sit on a network share
+  constexpr int kExtractTimeoutMs = 2 * 60 * 60 * 1000;
+  if (!process.waitForFinished(kExtractTimeoutMs)) {
+    process.kill();
+    process.waitForFinished();
+    return fail(QObject::tr(
+        "L'extraction a échoué (délai dépassé ou erreur interne)."));
+  }
+
+  if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+    const QString output =
+        QString::fromLocal8Bit(process.readAll()).trimmed().left(400);
+    return fail(QObject::tr("L'extraction a échoué (code %1).\n"
+                            "L'archive est peut-être corrompue ou incomplète.\n\n%2")
+                    .arg(process.exitCode())
+                    .arg(output));
+  }
+
+  if (QDir(destAbs).entryList({"*.dbi"}, QDir::Files).isEmpty())
+    return fail(QObject::tr("Cette archive ne contient pas de projet DubInstante."));
+
+  return true;
+}
+
 bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
                                 const QStringList &tempAudioPaths, QString *errorMessage) {
 
-  // 1. Create temporary directory
-  QTemporaryDir tempDir;
+  QString videoSource = data.videoUrl;
+  if (videoSource.startsWith("file://")) {
+    videoSource = QUrl(videoSource).toLocalFile();
+  }
+
+  // 0. Pre-check space on the destination volume: temp copy + stored zip ~= 2x video
+  const qint64 videoSize = QFileInfo(videoSource).size();
+  QStorageInfo storage(QFileInfo(zipPath).absolutePath());
+  if (storage.isValid() && storage.isReady() &&
+      storage.bytesAvailable() < 2 * videoSize + 64LL * 1024 * 1024) {
+    qWarning() << "Not enough space on destination volume for zip archive";
+    if (errorMessage)
+      *errorMessage = QObject::tr(
+          "Espace disque insuffisant sur le volume de destination.\n"
+          "L'archive nécessite environ %1 Mo libres.")
+          .arg((2 * videoSize + 64LL * 1024 * 1024) / (1024 * 1024));
+    return false;
+  }
+
+  // 1. Create temporary directory on the destination volume:
+  // the system temp is often a RAM-backed tmpfs too small for large videos
+  QTemporaryDir tempDir(QFileInfo(zipPath).absolutePath() + "/.dbi_tmp_XXXXXX");
   if (!tempDir.isValid()) {
     qWarning() << "Failed to create temporary directory";
     if (errorMessage)
@@ -144,29 +294,33 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QString videoFileName = videoInfo.fileName();
   zipData.videoUrl = videoFileName; // Point to local file inside ZIP
 
+  // Same for the takes: the caller's paths are temp files of this machine
+  const QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
+  for (int i = 0; i < zipData.audioTracks.size(); ++i) {
+    if (zipData.audioTracks[i].hasRecording && i < tempAudioPaths.size())
+      zipData.audioTracks[i].audioFilePath =
+          QString("%1/track_%2.wav").arg(audioDirName).arg(i + 1);
+  }
+
   if (!save(dbiPath, zipData)) {
     if (errorMessage)
       *errorMessage = QObject::tr("Échec de la sauvegarde du fichier .dbi");
     return false;
   }
 
-  // 3. Copy video file
-  QString videoSource = data.videoUrl;
-  if (videoSource.startsWith("file://")) {
-    videoSource = QUrl(videoSource).toLocalFile();
-  }
-
-  QString videoDest = tempDir.filePath(videoFileName);
-  if (!QFile::copy(videoSource, videoDest)) {
-    qWarning() << "Failed to copy video file to temp dir:" << videoSource;
-    if (errorMessage)
-      *errorMessage =
-          QObject::tr("Impossible de copier la vidéo dans l'archive.");
-    return false;
+  // 3. Copy video file (projects without video legitimately have no source)
+  if (!videoSource.isEmpty()) {
+    QString videoDest = tempDir.filePath(videoFileName);
+    if (!QFile::copy(videoSource, videoDest)) {
+      qWarning() << "Failed to copy video file to temp dir:" << videoSource;
+      if (errorMessage)
+        *errorMessage =
+            QObject::tr("Impossible de copier la vidéo dans l'archive.");
+      return false;
+    }
   }
 
   // 3.5 Copy audio tracks
-  QString audioDirName = QFileInfo(zipPath).baseName() + "_audio";
   QDir tempQDir(tempDir.path());
   bool hasAnyAudio = false;
   
@@ -184,9 +338,13 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
       for (int i = 0; i < data.audioTracks.size(); ++i) {
           if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
               QString sourcePath = tempAudioPaths[i];
-              if (QFile::exists(sourcePath)) {
-                  QString destFilename = QString("track_%1.wav").arg(i + 1);
-                  QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename));
+              QString destFilename = QString("track_%1.wav").arg(i + 1);
+              if (!QFile::exists(sourcePath) ||
+                  !QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
+                  qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
+                  if (errorMessage)
+                      *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
+                  return false;
               }
           }
       }
@@ -196,6 +354,11 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QProcess zipProcess;
   zipProcess.setWorkingDirectory(tempDir.path());
   QStringList args;
+  QString zipTarget = zipPath;
+  const auto discardPartial = [&]() {
+    if (zipTarget != zipPath)
+      QFile::remove(zipTarget);
+  };
 
 #ifdef Q_OS_WIN
   // On Windows, use PowerShell's Compress-Archive
@@ -218,9 +381,13 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
        << QString("Compress-Archive -Path '%1' -DestinationPath '%2' -Force")
               .arg(escapedSource, escapedDest);
 #else
-  // On macOS and Linux, 'zip' is standard
+  // On macOS and Linux, 'zip' is standard.
+  // -0 stores without recompressing: the video payload is already compressed
+  // zip updates an existing archive instead of replacing it (stale video, stale
+  // takes): build next to the destination, then swap once it is complete.
+  zipTarget = tempDir.path() + ".zip";
   zipProcess.setProgram("zip");
-  args << "-r" << zipPath << ".";
+  args << "-0" << "-r" << zipTarget << ".";
 #endif
 
   zipProcess.setArguments(args);
@@ -229,6 +396,7 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   // Wait indefinitely for the process to finish
   if (!zipProcess.waitForFinished(-1)) {
     qWarning() << "Zip process failed to finish";
+    discardPartial();
     if (errorMessage)
       *errorMessage = QObject::tr(
           "Le processus de compression a échoué (timeout ou erreur interne).");
@@ -238,10 +406,22 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   if (zipProcess.exitCode() != 0) {
     qWarning() << "Zip process failed with code:" << zipProcess.exitCode();
     qDebug() << zipProcess.readAllStandardError();
+    discardPartial();
     if (errorMessage)
       *errorMessage = QObject::tr("Erreur lors de la compression (Code: %1)")
                           .arg(zipProcess.exitCode());
     return false;
+  }
+
+  if (zipTarget != zipPath) {
+    QFile::remove(zipPath);
+    if (!QFile::rename(zipTarget, zipPath)) {
+      discardPartial();
+      if (errorMessage)
+        *errorMessage = QObject::tr("Impossible d'écrire l'archive :\n%1")
+                            .arg(QDir::toNativeSeparators(zipPath));
+      return false;
+    }
   }
 
   return true;
@@ -280,6 +460,13 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     return false;
   quint32 payloadSize = qFromLittleEndian(payloadSizeLE);
 
+  constexpr quint32 kMaxPayloadSize = 64 * 1024 * 1024;
+  if (payloadSize == 0 || payloadSize > kMaxPayloadSize ||
+      static_cast<qint64>(payloadSize) > file.size()) {
+    qWarning() << "Invalid payload size:" << payloadSize;
+    return false;
+  }
+
   // Payload
   QByteArray maskedPayload = file.read(payloadSize);
   if (maskedPayload.size() != static_cast<int>(payloadSize))
@@ -311,7 +498,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   data.videoVolume = (float)root.value("video_volume").toDouble(1.0);
   data.trackCount = root.value("track_count").toInt(1);
   data.scrollSpeed = root.value("scroll_speed").toInt(100);
-  data.isTextWhite = root.value("is_text_white").toBool(true);
+  data.isTextWhite = root.value("is_text_white").toBool(false);
 
   // Load audio tracks
   data.audioTracks.clear();
@@ -341,10 +528,16 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
       // New format (v0.9.0+)
       QJsonObject trackObj = val.toObject();
       trackData.text = trackObj.value("text").toString("");
+      trackData.charMs = trackObj.value("char_ms").toDouble(0.0);
 
       QJsonObject styleObj = trackObj.value("style").toObject();
       if (!styleObj.isEmpty()) {
         trackData.style.globalSize = styleObj.value("font_size").toInt(16);
+        QString fontFamily = styleObj.value("font_family").toString();
+        if (!fontFamily.isEmpty()) {
+          trackData.style.font.setFamily(fontFamily);
+        }
+        trackData.style.font.setBold(styleObj.value("font_bold").toBool(true));
         trackData.style.font.setPointSize(trackData.style.globalSize);
         trackData.style.textColor =
             QColor(styleObj.value("text_color").toString("#FFFFFFFF"));
@@ -355,23 +548,15 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     data.tracks.append(trackData);
   }
 
-  // Resolve relative path
-  if (!data.videoUrl.isEmpty()) {
-    QFileInfo videoInfo(data.videoUrl);
-    if (videoInfo.isRelative()) {
-      QDir saveDir = QFileInfo(filePath).dir();
-      data.videoUrl = saveDir.absoluteFilePath(data.videoUrl);
-    }
-  }
-
   file.close();
+  data = sanitize(data);
   return true;
 }
 
 SaveData SaveManager::sanitize(const SaveData &data) {
   SaveData clean = data;
   clean.videoVolume = qBound(0.0f, clean.videoVolume, 1.0f);
-  clean.trackCount = qBound(1, clean.trackCount, 4);
+  clean.trackCount = qBound(1, clean.trackCount, MAX_TRACKS);
   clean.scrollSpeed = qBound(10, clean.scrollSpeed, 500);
 
   for (int i = 0; i < clean.audioTracks.size(); ++i) {
@@ -379,7 +564,58 @@ SaveData SaveManager::sanitize(const SaveData &data) {
         qBound(0.0f, clean.audioTracks[i].audioGain, 1.0f);
   }
 
+  // Widest legitimate grid: 50 pt at 10 px/s stays under 10 s per character
+  for (TrackSaveData &track : clean.tracks) {
+    if (!(track.charMs >= 1.0 && track.charMs <= 10000.0))
+      track.charMs = 0.0;
+  }
+
   return clean;
+}
+
+QString SaveManager::resolveProjectPath(const QString &projectDir,
+                                        const QString &storedPath,
+                                        bool strictRelative,
+                                        bool allowOutside) {
+  if (storedPath.isEmpty())
+    return QString();
+
+#ifdef Q_OS_WIN
+  constexpr Qt::CaseSensitivity cs = Qt::CaseInsensitive;
+  if (storedPath.startsWith("\\\\") || storedPath.startsWith("//"))
+    return QString(); // UNC
+#else
+  constexpr Qt::CaseSensitivity cs = Qt::CaseSensitive;
+#endif
+
+  if (QFileInfo(storedPath).isAbsolute())
+    return strictRelative ? QString() : storedPath;
+
+  // Resolve against the canonical root so that an existing target (canonical)
+  // and a missing one (cleaned) are compared on the same footing.
+  const QString root = QFileInfo(projectDir).canonicalFilePath();
+  if (root.isEmpty())
+    return QString();
+
+  const QString abs = QDir(root).absoluteFilePath(storedPath);
+  if (allowOutside)
+    return QDir::cleanPath(abs);
+
+  const QString canonical = QFileInfo(abs).canonicalFilePath();
+  const QString resolved = canonical.isEmpty() ? QDir::cleanPath(abs) : canonical;
+
+  // Qt returns '/'-separated paths on every platform.
+  const QStringList rootParts = root.split('/', Qt::SkipEmptyParts);
+  if (rootParts.isEmpty())
+    return QString(); // projet à la racine du système : rien n'est « dedans »
+  const QStringList parts = resolved.split('/', Qt::SkipEmptyParts);
+  if (parts.size() <= rootParts.size())
+    return QString();
+  for (int i = 0; i < rootParts.size(); ++i) {
+    if (parts[i].compare(rootParts[i], cs) != 0)
+      return QString();
+  }
+  return resolved;
 }
 
 QByteArray SaveManager::applyXorMask(const QByteArray &data) {

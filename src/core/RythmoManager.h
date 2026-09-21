@@ -1,15 +1,9 @@
 /**
  * @file RythmoManager.h
- * @brief Core manager for Rythmo band synchronization and text management.
+ * @brief Per-track store for Rythmo text and styles.
  *
- * This class handles the business logic for the "Bande Rythmo" - the scrolling
- * text band used in dubbing. It manages:
- * - Multiple tracks (dynamically scalable)
- * - Time-to-position synchronization calculations
- * - Text content for each track
- *
- * The UI (RythmoWidget) receives pre-calculated values via signals, keeping
- * all computation in this Core layer.
+ * Computes nothing: rendering and editing live in RythmoWidget, which pushes
+ * every text change back through setText().
  *
  * @note Part of the Core layer - no UI dependencies allowed.
  */
@@ -20,7 +14,6 @@
 #include <QColor>
 #include <QFont>
 #include <QFontDatabase>
-#include <QFontMetrics>
 #include <QMap>
 #include <QObject>
 #include <QString>
@@ -40,43 +33,15 @@ struct RythmoTrackStyle {
 };
 
 /**
- * @struct RythmoTrackData
- * @brief Data structure emitted to UI for rendering a track.
- */
-struct RythmoTrackData {
-  int trackIndex;
-  QString text;
-  int cursorIndex;
-  qint64 positionMs;
-  int speed;
-  RythmoTrackStyle style;
-};
-
-/**
  * @class RythmoManager
- * @brief Manages synchronization logic and text for multiple Rythmo tracks.
+ * @brief Stores the text and style of each Rythmo track.
  *
- * Design Principles:
- * - Scalable: Supports any number of tracks via dynamic QVector
- * - Pure Logic: No rendering, only calculations
- * - Observable: All state changes emit signals for UI binding
- *
- * @example
- * @code
- * auto manager = new RythmoManager(this);
- * manager->setSpeed(100);  // 100 pixels/second
- * manager->setText(0, "First track text");
- * manager->setText(1, "Second track text");
- *
- * connect(playbackEngine, &PlaybackEngine::positionChanged,
- *         manager, &RythmoManager::sync);
- * connect(manager, &RythmoManager::trackDataChanged,
- *         rythmoWidget, &RythmoWidget::updateTrackDisplay);
- * @endcode
+ * Pure storage: no synchronization, cursor or seek logic. RythmoWidget owns
+ * rendering and editing and pushes text changes back through setText().
  */
 class RythmoManager : public QObject {
   Q_OBJECT
-  Q_PROPERTY(int speed READ speed WRITE setSpeed NOTIFY speedChanged)
+  Q_PROPERTY(int speed READ speed WRITE setSpeed)
 
 public:
   explicit RythmoManager(QObject *parent = nullptr);
@@ -116,21 +81,6 @@ public:
   RythmoTrackStyle trackStyle(int trackIndex) const;
 
   /**
-   * @brief Inserts a character at the cursor position for a track.
-   * @param trackIndex Index of the track.
-   * @param character The character to insert.
-   */
-  void insertCharacter(int trackIndex, const QString &character);
-
-  /**
-   * @brief Deletes a character at the cursor position for a track.
-   * @param trackIndex Index of the track.
-   * @param before If true, deletes character before cursor (Backspace
-   * behavior).
-   */
-  void deleteCharacter(int trackIndex, bool before = true);
-
-  /**
    * @brief Returns the number of active tracks.
    */
   int trackCount() const;
@@ -148,84 +98,13 @@ public:
   /** @brief Returns the current scrolling speed. */
   int speed() const;
 
-  // =========================================================================
-  // Position Calculations
-  // =========================================================================
-
-  /**
-   * @brief Calculates the cursor index for a given time position on a specific
-   * track.
-   * @param trackIndex Index of the track.
-   * @param positionMs Time position in milliseconds.
-   * @return Character index where the cursor should be.
-   */
-  int cursorIndex(int trackIndex, qint64 positionMs) const;
-
-  /**
-   * @brief Calculates the duration of one character in milliseconds for a
-   * specific track.
-   * @param trackIndex Index of the track.
-   * @return Duration in ms based on current speed and font metrics.
-   */
-  qint64 charDurationMs(int trackIndex) const;
-
-  /**
-   * @brief Returns the character width in pixels for a specific track (cached).
-   * @param trackIndex Index of the track.
-   */
-  int charWidth(int trackIndex) const;
-
-  /**
-   * @brief Returns the current playback position.
-   */
-  qint64 currentPosition() const;
-
-public slots:
-  /**
-   * @brief Synchronizes the manager to a new playback position.
-   * @param positionMs Current playback position in milliseconds.
-   *
-   * This is the main sync point - call this when video position changes.
-   * Emits trackDataChanged for each track with updated cursor positions.
-   */
-  void sync(qint64 positionMs);
-
-  /**
-   * @brief Requests a seek operation based on user interaction.
-   * @param trackIndex Track where the interaction occurred.
-   * @param deltaPixels Pixel offset from current position (positive = forward).
-   */
-  void requestSeek(int trackIndex, int deltaPixels);
-
 signals:
-  /**
-   * @brief Emitted when track data changes and UI needs update.
-   * @param data Complete data structure for UI rendering.
-   */
-  void trackDataChanged(const RythmoTrackData &data);
-
-  /**
-   * @brief Emitted when text content of a track changes.
-   * @param trackIndex Which track changed.
-   * @param text New text content.
-   */
-  void textChanged(int trackIndex, const QString &text);
-
   /**
    * @brief Emitted when the style of a track changes.
    * @param trackIndex Which track changed.
    * @param style The new style applied.
    */
   void trackStyleChanged(int trackIndex, const RythmoTrackStyle &style);
-
-  /** @brief Emitted when speed parameter changes. */
-  void speedChanged(int speed);
-
-  /**
-   * @brief Emitted to request video seek.
-   * @param positionMs Target position in milliseconds.
-   */
-  void seekRequested(qint64 positionMs);
 
 private:
   /**
@@ -234,33 +113,13 @@ private:
    */
   void ensureTrackExists(int trackIndex);
 
-  /**
-   * @brief Invalidates the cached font metrics for a specific track.
-   * @param trackIndex Index of the track.
-   */
-  void invalidateFontCache(int trackIndex);
-
-  /**
-   * @brief Gets or creates the cached font for a specific track.
-   * @param trackIndex Index of the track.
-   */
-  QFont getFont(int trackIndex) const;
-
   // =========================================================================
   // State
   // =========================================================================
 
   QVector<QString> m_tracks;                 ///< Dynamic list of track texts
   QMap<int, RythmoTrackStyle> m_trackStyles; ///< Track specific styles
-  int m_speed;              ///< Scrolling speed (pixels/second)
-  qint64 m_currentPosition; ///< Current playback position (ms)
-
-  // Insertion tracking (for correct character order)
-  qint64 m_lastInsertPosition; ///< Position when last insert occurred
-  int m_insertOffset;          ///< Offset for consecutive inserts
-
-  // Font metrics cache mapped by track index
-  mutable QMap<int, int> m_cachedCharWidths;
+  int m_speed;                               ///< Scrolling speed (pixels/second)
 
   // Configuration
   static constexpr int DEFAULT_FONT_SIZE = 16;

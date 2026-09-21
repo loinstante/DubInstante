@@ -33,8 +33,6 @@ public:
   explicit RythmoOverlay(QWidget *parent = nullptr);
   ~RythmoOverlay() override = default;
 
-  static constexpr int MAX_TRACKS = 4;
-
   // =========================================================================
   // Track Access
   // =========================================================================
@@ -69,8 +67,6 @@ protected:
   void paintEvent(QPaintEvent *event) override;
 
 private:
-  void updateVisualStyles();
-
   QVector<RythmoWidget *> m_tracks;
   QVBoxLayout *m_layout;
   

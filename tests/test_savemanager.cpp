@@ -225,6 +225,97 @@ int main(int argc, char *argv[]) {
     assert(failErr.contains("Impossible de copier l'enregistrement"));
     assert(failErr.contains("piste 1"));
     assert(!QFile::exists(failZipPath));
+
+    // --- 8. extractArchive: round trip of the archive written above ---
+    QString unzipErr;
+    if (SaveManager::isUnzipAvailable(&unzipErr)) {
+      const QString extractDir = dir.filePath("extracted");
+      QString extractErr;
+      assert(manager.extractArchive(zipPath, extractDir, &extractErr));
+
+      // audioFilePath must have been rewritten relative to the archive root
+      // (the caller passed "/tmp/track_1.wav"), and resolve strictly
+      SaveData restored;
+      assert(manager.load(extractDir + "/mon.projet.v2.dbi", restored));
+      assert(restored.audioTracks.size() == 1);
+      assert(restored.audioTracks[0].audioFilePath ==
+             "mon.projet.v2_audio/track_1.wav");
+      const QString wav = SaveManager::resolveProjectPath(
+          extractDir, restored.audioTracks[0].audioFilePath, true);
+      assert(!wav.isEmpty() && QFile::exists(wav));
+
+      // Video: relative name in the .dbi, resolves strictly inside the archive
+      // (the flags loadProjectFrom uses for an archive), and re-saving over an
+      // existing archive replaces it instead of merging (no stale entries).
+      const QString videoSrc = dir.filePath("clip.mp4");
+      {
+        QFile f(videoSrc);
+        assert(f.open(QIODevice::WriteOnly));
+        f.write("fake video");
+      }
+      SaveData withVideo = makeSampleData();
+      withVideo.videoUrl = videoSrc;
+      const QString zipVideo = dir.filePath("avec_video.zip");
+      assert(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      withVideo.videoUrl = dir.filePath("other.mp4");
+      {
+        QFile f(withVideo.videoUrl);
+        assert(f.open(QIODevice::WriteOnly));
+        f.write("another fake video");
+      }
+      withVideo.audioTracks[0].hasRecording = false;
+      assert(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      assert(QDir(dir.path()).entryList({".dbi_tmp_*"}, QDir::AllEntries | QDir::Hidden |
+                                                      QDir::NoDotAndDotDot).isEmpty());
+
+      const QString videoDir = dir.filePath("extracted_video");
+      assert(manager.extractArchive(zipVideo, videoDir, &extractErr));
+      SaveData withVideoBack;
+      assert(manager.load(videoDir + "/avec_video.dbi", withVideoBack));
+      assert(withVideoBack.videoUrl == "other.mp4");
+      const QString video = SaveManager::resolveProjectPath(
+          videoDir, withVideoBack.videoUrl, true, false);
+      assert(video.endsWith(".mp4") && QFile::exists(video));
+      assert(!QFile::exists(videoDir + "/clip.mp4"));
+      assert(!QFile::exists(videoDir + "/avec_video_audio")); // stale take gone
+
+      // Not an archive: exit code failure, message names the code
+      const QString garbage = dir.filePath("garbage.zip");
+      {
+        QFile f(garbage);
+        assert(f.open(QIODevice::WriteOnly));
+        f.write("not a zip");
+      }
+      QString badErr;
+      assert(!manager.extractArchive(garbage, dir.filePath("out1"), &badErr));
+      assert(badErr.contains("L'extraction a échoué"));
+
+      // Missing archive
+      badErr.clear();
+      assert(!manager.extractArchive(dir.filePath("absent.zip"),
+                                     dir.filePath("out2"), &badErr));
+      assert(badErr.contains("Impossible de lire"));
+
+      // Valid zip without any .dbi
+      const QString srcDir = dir.filePath("no_project");
+      assert(QDir().mkpath(srcDir));
+      {
+        QFile f(srcDir + "/readme.txt");
+        assert(f.open(QIODevice::WriteOnly));
+        f.write("x");
+      }
+      QProcess zipProc;
+      zipProc.setWorkingDirectory(srcDir);
+      zipProc.start("zip", QStringList() << "-0" << "-r"
+                                         << dir.filePath("no_project.zip") << ".");
+      assert(zipProc.waitForFinished() && zipProc.exitCode() == 0);
+      badErr.clear();
+      assert(!manager.extractArchive(dir.filePath("no_project.zip"),
+                                     dir.filePath("out3"), &badErr));
+      assert(badErr.contains("ne contient pas de projet"));
+    } else {
+      std::puts("test_savemanager: 'unzip' unavailable, skipping extractArchive checks");
+    }
   } else {
     std::puts("test_savemanager: 'zip' unavailable, skipping saveWithMedia checks");
   }

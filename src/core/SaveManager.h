@@ -77,6 +77,24 @@ public:
   static bool isZipAvailable(QString *errorMessage = nullptr);
 
   /**
+   * @brief Checks if an archive extraction tool is available: 'unzip', or
+   *        'tar' on Windows (native since Windows 10). The first one found wins.
+   * @param errorMessage Optional pointer to store install instructions.
+   */
+  static bool isUnzipAvailable(QString *errorMessage = nullptr);
+
+  /**
+   * @brief Extracts an archive written by saveWithMedia() into @p destDir.
+   *
+   * Requires free space of the archive size + 20 % on the destination volume,
+   * and at least one .dbi at the root of @p destDir afterwards. The caller
+   * validates the paths stored in that .dbi (resolveProjectPath, strict).
+   * Blocking: run it off the GUI thread for large archives.
+   */
+  bool extractArchive(const QString &zipPath, const QString &destDir,
+                      QString *errorMessage = nullptr);
+
+  /**
    * @brief Loads session data from a .dbi file.
    * @param filePath Source file path.
    * @param data Reference to store loaded data.

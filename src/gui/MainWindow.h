@@ -27,8 +27,10 @@
 #include <QMenu>
 #include <QProgressBar>
 #include <QPushButton>
+#include <memory>
 #include <QShortcut>
 #include <QSpinBox>
+#include <QTemporaryDir>
 #include <QVector>
 
 #include <QAction>
@@ -151,12 +153,16 @@ private:
   void checkForAutosaveRecovery();
   // strictRelative: project extracted from a .zip, see SaveManager::resolveProjectPath
   bool loadProjectFrom(const QString &path, bool strictRelative = false);
+  // Extracts a .zip into a fresh work dir (handed back through workDir) and
+  // returns the path of its .dbi, or an empty string after showing the error.
+  QString extractProjectArchive(const QString &zipPath,
+                                std::unique_ptr<QTemporaryDir> &workDir);
   void openVideoDialog();
   void setDirty(bool dirty);
   void updateWindowTitle();
   bool maybeSaveChanges();
   void cleanupTempAudioFiles();
-  void purgeStaleTempAudioFiles();
+  void purgeStaleTempFiles();
 
   // Dynamic track management
   void setTrackCount(int count);
@@ -251,6 +257,9 @@ private:
   // Project state & Autosave recovery
   bool m_isDirty;
   QString m_currentProjectPath;
+  // Extracted .zip project: PlaybackEngine plays its video in place, so it
+  // lives as long as the project stays open.
+  std::unique_ptr<QTemporaryDir> m_archiveWorkDir;
   int m_lastLoadLostTracksCount;
   QLockFile m_autosaveLock{autosaveFilePath() + QStringLiteral(".lock")};
   bool m_ownsAutosave = false;

@@ -126,6 +126,128 @@ bool SaveManager::isZipAvailable(QString *errorMessage) {
 #endif
 }
 
+namespace {
+
+// "tar" first on Windows (native since Windows 10, reads zip), "unzip" elsewhere.
+// Empty when none can be started.
+QString findExtractTool() {
+#ifdef Q_OS_WIN
+  const QStringList candidates{"tar", "unzip"};
+#else
+  const QStringList candidates{"unzip"};
+#endif
+  for (const QString &tool : candidates) {
+    QProcess probe;
+    probe.start(tool, tool == "tar" ? QStringList{"--version"}
+                                    : QStringList{"-v"});
+    if (probe.waitForStarted()) {
+      probe.waitForFinished(5000);
+      return tool;
+    }
+  }
+  return QString();
+}
+
+} // namespace
+
+bool SaveManager::isUnzipAvailable(QString *errorMessage) {
+  if (!findExtractTool().isEmpty())
+    return true;
+
+  if (errorMessage) {
+#if defined(Q_OS_WIN)
+    *errorMessage = QObject::tr(
+        "Aucun utilitaire d'extraction n'est disponible.\n\n"
+        "'tar' est fourni avec Windows 10 (version 1803) et suivants.\n"
+        "Mettez Windows à jour ou installez 'unzip'.");
+#elif defined(Q_OS_MAC)
+    *errorMessage = QObject::tr(
+        "L'utilitaire 'unzip' est introuvable.\n\n"
+        "Veuillez l'installer pour utiliser cette fonctionnalité.\n"
+        "Lien : https://formulae.brew.sh/formula/unzip");
+#else
+    *errorMessage =
+        QObject::tr("L'utilitaire 'unzip' est introuvable.\n\n"
+                    "Veuillez l'installer via votre terminal :\n"
+                    "Debian/Ubuntu : sudo apt install unzip\n"
+                    "Fedora : sudo dnf install unzip\n"
+                    "Arch : sudo pacman -S unzip\n\n"
+                    "Ou consultez : https://command-not-found.com/unzip");
+#endif
+  }
+  return false;
+}
+
+bool SaveManager::extractArchive(const QString &zipPath, const QString &destDir,
+                                 QString *errorMessage) {
+  const auto fail = [errorMessage](const QString &message) {
+    qWarning() << "extractArchive:" << message;
+    if (errorMessage)
+      *errorMessage = message;
+    return false;
+  };
+
+  const QFileInfo zipInfo(zipPath);
+  if (!zipInfo.isFile() || !zipInfo.isReadable())
+    return fail(QObject::tr("Impossible de lire l'archive :\n%1")
+                    .arg(QDir::toNativeSeparators(zipPath)));
+
+  if (!QDir().mkpath(destDir))
+    return fail(QObject::tr("Impossible de créer le dossier d'extraction."));
+
+  // Written with zip -0: the extracted size is close to the archive size
+  const qint64 needed = zipInfo.size() + zipInfo.size() / 5;
+  const QStorageInfo storage(destDir);
+  if (storage.isValid() && storage.isReady() &&
+      storage.bytesAvailable() < needed)
+    return fail(QObject::tr("Espace disque insuffisant pour extraire "
+                            "l'archive.\nIl faut environ %1 Mo libres.")
+                    .arg(needed / (1024 * 1024) + 1));
+
+  const QString tool = findExtractTool();
+  if (tool.isEmpty()) {
+    QString help; // message d'installation par plateforme
+    isUnzipAvailable(&help);
+    return fail(help);
+  }
+
+  // Absolute paths: an archive named "-x.zip" must not be parsed as an option
+  const QString zipAbs = zipInfo.absoluteFilePath();
+  const QString destAbs = QDir(destDir).absolutePath();
+  const QStringList args =
+      tool == "tar" ? QStringList{"-xf", zipAbs, "-C", destAbs}
+                    : QStringList{"-o", zipAbs, "-d", destAbs};
+
+  QProcess process;
+  process.setProcessChannelMode(QProcess::MergedChannels);
+  process.start(tool, args);
+  if (!process.waitForStarted())
+    return fail(QObject::tr("Impossible de lancer '%1'.").arg(tool));
+
+  // Videos can weigh several GB, and the archive may sit on a network share
+  constexpr int kExtractTimeoutMs = 2 * 60 * 60 * 1000;
+  if (!process.waitForFinished(kExtractTimeoutMs)) {
+    process.kill();
+    process.waitForFinished();
+    return fail(QObject::tr(
+        "L'extraction a échoué (délai dépassé ou erreur interne)."));
+  }
+
+  if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
+    const QString output =
+        QString::fromLocal8Bit(process.readAll()).trimmed().left(400);
+    return fail(QObject::tr("L'extraction a échoué (code %1).\n"
+                            "L'archive est peut-être corrompue ou incomplète.\n\n%2")
+                    .arg(process.exitCode())
+                    .arg(output));
+  }
+
+  if (QDir(destAbs).entryList({"*.dbi"}, QDir::Files).isEmpty())
+    return fail(QObject::tr("Cette archive ne contient pas de projet DubInstante."));
+
+  return true;
+}
+
 bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
                                 const QStringList &tempAudioPaths, QString *errorMessage) {
 
@@ -168,6 +290,14 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QString videoFileName = videoInfo.fileName();
   zipData.videoUrl = videoFileName; // Point to local file inside ZIP
 
+  // Same for the takes: the caller's paths are temp files of this machine
+  const QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
+  for (int i = 0; i < zipData.audioTracks.size(); ++i) {
+    if (zipData.audioTracks[i].hasRecording && i < tempAudioPaths.size())
+      zipData.audioTracks[i].audioFilePath =
+          QString("%1/track_%2.wav").arg(audioDirName).arg(i + 1);
+  }
+
   if (!save(dbiPath, zipData)) {
     if (errorMessage)
       *errorMessage = QObject::tr("Échec de la sauvegarde du fichier .dbi");
@@ -187,7 +317,6 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   }
 
   // 3.5 Copy audio tracks
-  QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
   QDir tempQDir(tempDir.path());
   bool hasAnyAudio = false;
   
@@ -221,6 +350,11 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QProcess zipProcess;
   zipProcess.setWorkingDirectory(tempDir.path());
   QStringList args;
+  QString zipTarget = zipPath;
+  const auto discardPartial = [&]() {
+    if (zipTarget != zipPath)
+      QFile::remove(zipTarget);
+  };
 
 #ifdef Q_OS_WIN
   // On Windows, use PowerShell's Compress-Archive
@@ -245,8 +379,11 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
 #else
   // On macOS and Linux, 'zip' is standard.
   // -0 stores without recompressing: the video payload is already compressed
+  // zip updates an existing archive instead of replacing it (stale video, stale
+  // takes): build next to the destination, then swap once it is complete.
+  zipTarget = tempDir.path() + ".zip";
   zipProcess.setProgram("zip");
-  args << "-0" << "-r" << zipPath << ".";
+  args << "-0" << "-r" << zipTarget << ".";
 #endif
 
   zipProcess.setArguments(args);
@@ -255,6 +392,7 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   // Wait indefinitely for the process to finish
   if (!zipProcess.waitForFinished(-1)) {
     qWarning() << "Zip process failed to finish";
+    discardPartial();
     if (errorMessage)
       *errorMessage = QObject::tr(
           "Le processus de compression a échoué (timeout ou erreur interne).");
@@ -264,10 +402,22 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   if (zipProcess.exitCode() != 0) {
     qWarning() << "Zip process failed with code:" << zipProcess.exitCode();
     qDebug() << zipProcess.readAllStandardError();
+    discardPartial();
     if (errorMessage)
       *errorMessage = QObject::tr("Erreur lors de la compression (Code: %1)")
                           .arg(zipProcess.exitCode());
     return false;
+  }
+
+  if (zipTarget != zipPath) {
+    QFile::remove(zipPath);
+    if (!QFile::rename(zipTarget, zipPath)) {
+      discardPartial();
+      if (errorMessage)
+        *errorMessage = QObject::tr("Impossible d'écrire l'archive :\n%1")
+                            .arg(QDir::toNativeSeparators(zipPath));
+      return false;
+    }
   }
 
   return true;

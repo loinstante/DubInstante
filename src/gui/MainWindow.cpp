@@ -31,6 +31,7 @@
 #include "TimeFormatter.h"
 
 #include <QDir>
+#include <QEventLoop>
 #include <QGraphicsDropShadowEffect>
 #include <QCloseEvent>
 #include <QCoreApplication>
@@ -143,7 +144,7 @@ MainWindow::MainWindow(QWidget *parent)
       return;
     }
     checkForAutosaveRecovery();
-    purgeStaleTempAudioFiles();
+    purgeStaleTempFiles();
   });
 }
 
@@ -1137,14 +1138,13 @@ void MainWindow::onQuickSaveProject() {
   if (deferSaveDuringTake(PendingSave::Save))
     return;
 
-  // Rebuilding a .zip re-copies the whole video behind a modal dialog, too
-  // heavy for a reflex Ctrl+S: those projects go through "Save as" instead.
-  if (m_currentProjectPath.isEmpty() ||
-      m_currentProjectPath.endsWith(".zip", Qt::CaseInsensitive)) {
+  if (m_currentProjectPath.isEmpty()) {
     onSaveProject();
     return;
   }
-  saveProjectTo(m_currentProjectPath, false);
+  // A project opened from a .zip is written back as a .zip, never as a bare .dbi
+  saveProjectTo(m_currentProjectPath,
+                m_currentProjectPath.endsWith(".zip", Qt::CaseInsensitive));
 }
 
 bool MainWindow::deferSaveDuringTake(PendingSave save) {
@@ -1298,16 +1298,97 @@ void MainWindow::onLoadProject() {
     return;
 
   QString fileName = QFileDialog::getOpenFileName(
-      this, tr("Charger un projet"), "", tr("DubInstante Project (*.dbi)"));
+      this, tr("Charger un projet"), "",
+      tr("Projets DubInstante (*.dbi *.zip);;Projet (*.dbi);;Archive (*.zip)"));
 
   if (fileName.isEmpty())
     return;
 
-  if (loadProjectFrom(fileName)) {
-    m_currentProjectPath = fileName;
-    setDirty(false);
-    updateWindowTitle();
+  const bool isArchive = fileName.endsWith(".zip", Qt::CaseInsensitive);
+  std::unique_ptr<QTemporaryDir> workDir;
+  QString projectFile = fileName;
+  if (isArchive) {
+    projectFile = extractProjectArchive(fileName, workDir);
+    if (projectFile.isEmpty())
+      return;
   }
+
+  if (!loadProjectFrom(projectFile, isArchive))
+    return;
+
+  // The previous project stays intact until the new one is loaded; reset()
+  // then deletes its work dir (none left for a plain .dbi).
+  m_archiveWorkDir = std::move(workDir);
+  // A later save must rewrite the archive, not the extracted temp .dbi
+  m_currentProjectPath = fileName;
+  setDirty(false);
+  updateWindowTitle();
+}
+
+QString MainWindow::extractProjectArchive(
+    const QString &zipPath, std::unique_ptr<QTemporaryDir> &workDir) {
+  // Never next to the archive: it may be on a read-only stick or share. Nor in
+  // the system temp, a RAM-backed tmpfs on most Linux setups — saveWithMedia()
+  // avoids it for the same reason: a multi-GB video would be extracted in RAM.
+  const QString cacheDir =
+      QStandardPaths::writableLocation(QStandardPaths::CacheLocation);
+  QDir().mkpath(cacheDir); // QTemporaryDir does not create parent directories
+  workDir = std::make_unique<QTemporaryDir>(cacheDir +
+                                            "/dubinstante_prj_XXXXXX");
+  if (!workDir->isValid()) {
+    workDir.reset();
+    QMessageBox::critical(
+        this, tr("Erreur"),
+        tr("Impossible de créer le dossier temporaire d'extraction."));
+    return QString();
+  }
+
+  QString error;
+
+  // Off the GUI thread: a video can weigh several GB. The nested loop keeps
+  // this function sequential while the window stays responsive.
+  QProgressDialog progress(this);
+  progress.setLabelText(
+      tr("Extraction de l'archive en cours...\nCela peut prendre quelques "
+         "minutes selon la taille de la vidéo."));
+  progress.setRange(0, 0);
+  progress.setCancelButton(nullptr);
+  progress.setWindowModality(Qt::WindowModal);
+  progress.show();
+
+  QFutureWatcher<bool> watcher;
+  QEventLoop loop;
+  connect(&watcher, &QFutureWatcher<bool>::finished, &loop, &QEventLoop::quit);
+  const QString destDir = workDir->path();
+  watcher.setFuture(QtConcurrent::run([&]() {
+    return m_saveManager->extractArchive(zipPath, destDir, &error);
+  }));
+  loop.exec();
+  progress.close();
+
+  if (!watcher.result()) {
+    workDir.reset();
+    QMessageBox::critical(this, tr("Erreur"), error);
+    return QString();
+  }
+
+  const QFileInfoList projects =
+      QDir(destDir).entryInfoList({"*.dbi"}, QDir::Files);
+  if (projects.size() == 1)
+    return projects.first().absoluteFilePath();
+
+  // Archive renamed then saved again: it holds the old and the new .dbi
+  const QString expected = QFileInfo(zipPath).completeBaseName();
+  for (const QFileInfo &project : projects) {
+    if (project.completeBaseName() == expected)
+      return project.absoluteFilePath();
+  }
+
+  workDir.reset();
+  QMessageBox::critical(this, tr("Erreur"),
+                        tr("Cette archive contient plusieurs projets et aucun "
+                           "ne porte le nom de l'archive (%1).").arg(expected));
+  return QString();
 }
 
 bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
@@ -1346,7 +1427,9 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
   QDir dir = fi.absoluteDir();
   int refusedPaths = 0;
 
-  // Restore video and volume
+  // Restore video and volume. Cleared first: the video of the previous project
+  // may live in a work dir this load is about to delete.
+  setProperty("currentVideoPath", QString());
   if (!data.videoUrl.isEmpty()) {
     QString storedVideo = data.videoUrl;
     if (storedVideo.startsWith("file://")) {
@@ -2247,7 +2330,7 @@ void MainWindow::cleanupTempAudioFiles() {
   }
 }
 
-void MainWindow::purgeStaleTempAudioFiles() {
+void MainWindow::purgeStaleTempFiles() {
   QDir tempDir(QStandardPaths::writableLocation(QStandardPaths::TempLocation));
   const QDateTime cutoff = QDateTime::currentDateTime().addDays(-7);
   const QFileInfoList orphans = tempDir.entryInfoList(
@@ -2256,6 +2339,18 @@ void MainWindow::purgeStaleTempAudioFiles() {
     if (fi.lastModified() < cutoff) {
       QFile::remove(fi.absoluteFilePath());
     }
+  }
+
+  // Une extraction interrompue par un crash laisse la vidéo entière derrière.
+  // Même seuil que les prises : trop court supprimerait le dossier de travail
+  // d'une autre instance, qui ne le réécrit pas une fois le projet ouvert.
+  QDir cacheDir(QStandardPaths::writableLocation(QStandardPaths::CacheLocation));
+  const QFileInfoList workDirs =
+      cacheDir.entryInfoList(QStringList(QStringLiteral("dubinstante_prj_*")),
+                             QDir::Dirs | QDir::NoDotAndDotDot);
+  for (const QFileInfo &fi : workDirs) {
+    if (fi.lastModified() < cutoff)
+      QDir(fi.absoluteFilePath()).removeRecursively();
   }
 }
 
@@ -2546,5 +2641,6 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
   discardAutosave();
   cleanupTempAudioFiles();
+  m_archiveWorkDir.reset();
   QMainWindow::closeEvent(event);
 }

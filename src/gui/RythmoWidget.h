@@ -25,9 +25,11 @@
  * @class RythmoWidget
  * @brief Displays a single Rythmo track with scrolling text.
  *
- * Position and speed are pushed in (sync / setSpeed); the widget derives the
- * cursor index and character duration from them itself. Text edits are
- * reported through textChanged(), seeks through seekRequested().
+ * Position and speed are pushed in (sync / setSpeed). Character i sits at
+ * i * charMs() on the timeline: that grid is set from the font and the speed
+ * while the band is empty, then kept and saved with the project, so a font,
+ * size or machine change rescales the band on screen without moving the sync.
+ * Text edits are reported through textChanged(), seeks through seekRequested().
  */
 class RythmoWidget : public QWidget {
   Q_OBJECT
@@ -44,8 +46,14 @@ public:
   void setTrackStyle(const RythmoTrackStyle &style);
   RythmoTrackStyle trackStyle() const;
 
+  /** @brief Nominal speed in pixels/second; a change rescales the time grid. */
   void setSpeed(int speed);
   int speed() const;
+
+  /** @brief Duration of one character in ms (the time grid of this band). */
+  double charMs() const;
+  /** @brief Restores a saved time grid; <= 0 derives it from font and speed. */
+  void setCharMs(double ms);
 
   /** @brief Enable/disable text editing on this band. */
   void setEditable(bool editable);
@@ -61,13 +69,11 @@ public slots:
 
   /**
    * @brief Updates the display with new track data.
-   * @param cursorIndex Character index for cursor position.
    * @param positionMs Current time position in milliseconds.
    * @param text Text content to display.
    * @param speed Scrolling speed in pixels/second.
    */
-  void updateDisplay(int cursorIndex, qint64 positionMs, const QString &text,
-                     int speed);
+  void updateDisplay(qint64 positionMs, const QString &text, int speed);
 
   /**
    * @brief Sets the playing state for visual feedback.
@@ -120,8 +126,10 @@ private:
   // Helpers
   bool isDarkTheme();
   int charWidth() const;
+  double nominalCharMs() const;
+  double pixelsPerMs() const;
   int cursorIndex() const;
-  qint64 charDurationMs() const;
+  qint64 timeAtIndex(int index) const;
   void requestDebouncedSeek(qint64 positionMs);
   void triggerSeek();
 
@@ -130,9 +138,9 @@ private:
   // =========================================================================
 
   QString m_text;
-  int m_cursorIndex;
   qint64 m_currentPosition;
   int m_speed;
+  double m_charMs;
   bool m_isPlaying;
   bool m_editable;
 

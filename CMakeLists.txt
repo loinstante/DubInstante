@@ -230,9 +230,26 @@ target_include_directories(test_exportdialog PRIVATE
 target_link_libraries(test_exportdialog PRIVATE Qt6::Widgets)
 add_test(NAME test_exportdialog COMMAND test_exportdialog)
 
+add_executable(test_rythmowidget
+    tests/test_rythmowidget.cpp
+    src/gui/RythmoWidget.h
+    src/gui/RythmoWidget.cpp
+    src/core/RythmoManager.h
+    src/core/RythmoManager.cpp
+    src/core/SettingsManager.h
+    src/core/SettingsManager.cpp
+)
+target_include_directories(test_rythmowidget PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/gui
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+)
+target_link_libraries(test_rythmowidget PRIVATE Qt6::Widgets)
+add_test(NAME test_rythmowidget COMMAND test_rythmowidget)
+
 # Les tests construisent un QGuiApplication : sans plugin de plateforme, ils
 # meurent sur une machine sans écran (CI comprise).
 set_tests_properties(
     test_savemanager test_settingsmanager test_exportservice test_exportdialog
+    test_rythmowidget
     PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
 )

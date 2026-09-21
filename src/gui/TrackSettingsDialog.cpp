@@ -104,7 +104,7 @@ void TrackSettingsDialog::setupUi() {
   m_previewWidget->setPlaying(true);
     m_previewWidget->setMinimumHeight(92);
   m_previewWidget->updateDisplay(
-      0, 0, "Hello, voici un aperçu de la piste Rythmo...  ", 100);
+      0, "Hello, voici un aperçu de la piste Rythmo...  ", 100);
 
   // Animate preview using its internal loop by providing changing simulated
   // position
@@ -180,7 +180,9 @@ void TrackSettingsDialog::setupUi() {
 
     m_fontComboBox = new QFontComboBox(fineGroup);
     m_fontComboBox->setObjectName("settingsFontCombo");
-  m_fontComboBox->setFontFilters(QFontComboBox::ScalableFonts);
+  // Fixed pitch only: the band draws one character per cell of the time grid,
+  // a proportional font stays in sync but is unevenly spaced.
+  m_fontComboBox->setFontFilters(QFontComboBox::MonospacedFonts);
   m_fontComboBox->setEditable(false);
   m_fontComboBox->setMinimumWidth(250);
   m_fontComboBox->setMaxVisibleItems(15);

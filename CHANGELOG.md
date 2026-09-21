@@ -20,7 +20,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Large Project Archives**: ZIP archiving now uses the destination volume for temporary files (instead of a RAM-backed tmpfs), pre-checks free space, and stores video without recompression.
 - **Autosave Completeness**: Autosave now serializes recording metadata (takes, durations, paths), matching manual saves.
 
+- **Export Punch-in**: Takes are placed at their recording position in the exported file (`adelay`/`atrim` in the filter graph); "Dernier enregistrement" exports the matching video excerpt instead of the first seconds of the film.
+- **Rythmo Sync Accuracy**: The band draws one character per cell of its time grid. The text used to slide away from the grid by up to ~120 ms, depending on window width.
+- **Rythmo Sync Portability**: Each track stores its time grid (`char_ms`) in the project. Changing the font size, or opening the project on a machine with other font metrics, no longer moves the sync; older projects load as before.
+- **Long Typing Sessions**: Cursor steps follow the time grid exactly instead of adding a rounded duration per key, which ended up swapping characters after ~160 keystrokes at some speeds.
+- **Preview After Loading a Project**: Loading a project over another one reloads the take previews (the previous project's take kept playing).
+- **Project Paths**: Paths read from a project file are confined to the project folder; absolute take paths are only accepted from the autosave.
+- **Recording Guards**: Recording is refused without an armed track or a microphone, and empty takes are reported. Recording or loading a project is refused while an export is reading the takes.
+
+### Added
+- **Reopenable Archives**: `.zip` project archives can be loaded back (video and takes included).
+- **Unsaved Changes**: Modified projects are marked in the title bar and prompt before closing, loading or opening a video; "Save" writes to the current project file.
+- **Autosave Recovery**: An autosave left by a crash is offered for restoration at startup.
+- **Bundled FFmpeg**: `ffmpeg` and `ffprobe` ship in every package; a missing tool is reported before the export dialog opens.
+
 ### Changed
+- **Shortcuts**: `Ctrl+S` saves the project (`Ctrl+Shift+S`: save as); stopping a recording moves to `Esc`.
+- **Rythmo Fonts**: The font selector only lists fixed-pitch fonts.
 - **Unified Version**: The application version now comes from CMake (`0.12.0`) — release candidate for human testing before v1.0.0.
 
 ## [0.11.0] - 2026-03-31

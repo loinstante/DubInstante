@@ -7,6 +7,7 @@
 
 // Core includes
 #include "AudioRecorder.h"
+#include "Constants.h"
 #include "ExportService.h"
 #include "ExportDialog.h"
 #include "PlaybackEngine.h"
@@ -430,10 +431,6 @@ void MainWindow::setupUi() {
   group2Layout->addWidget(m_speedUpButton);
 
 
-  m_textColorCheck = new QCheckBox("Texte Blanc", controlBar);
-  m_textColorCheck->setProperty("cssClass", "control-check");
-  m_textColorCheck->setVisible(false);
-
   m_recordButton = new QPushButton("● REC GLOBAL", controlBar);
   m_recordButton->setObjectName("recordButton");
   m_recordButton->setCheckable(true);
@@ -630,8 +627,6 @@ void MainWindow::createMenus() {
 
   // Track count selector using plain QActions (QWidgetAction with embedded
   // widgets doesn't work on macOS native menu bars).
-  m_trackCountLabel = new QLabel("1 bande rythmo");  // kept for programmatic updates
-
   QAction *actionRemoveTrack = new QAction(tr("Retirer une bande (−)"), this);
   connect(actionRemoveTrack, &QAction::triggered, this, [this]() {
     if (!m_isRecording) {
@@ -821,15 +816,6 @@ void MainWindow::setupConnections() {
             m_speedSpinBox->value() + 10));
     });
 
-
-  connect(m_textColorCheck, &QCheckBox::toggled, this, [this](bool checked) {
-    QColor color = checked ? QColor(Qt::white) : QColor(34, 34, 34);
-    for (int i = 0; i < m_trackCount; ++i) {
-      RythmoTrackStyle style = m_rythmoManager->trackStyle(i);
-      style.textColor = color;
-      m_rythmoManager->setTrackStyle(i, style);
-    }
-  });
 
   connect(m_actionPersonalizeRythmo, &QAction::triggered, this, [this]() {
     TrackSettingsDialog *dialog =
@@ -1048,14 +1034,6 @@ void MainWindow::setTrackCount(int count) {
     connectTrack(i);
   }
 
-  // Update label
-  if (m_trackCountLabel) {
-    m_trackCountLabel->setText(
-        QString("%1 bande%2 rythmo")
-            .arg(m_trackCount)
-            .arg(m_trackCount > 1 ? "s" : ""));
-  }
-
   setDirty(true);
 }
 
@@ -1137,7 +1115,7 @@ void MainWindow::openVideoDialog() {
 
   if (!fileName.isEmpty()) {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
-    setProperty("currentVideoPath", fileName);
+    m_currentVideoPath = fileName;
     // La dernière prise appartenait à la vidéo précédente : l'export ne doit
     // plus proposer sa plage.
     m_lastRecordedDurationMs = 0;
@@ -1148,11 +1126,10 @@ void MainWindow::openVideoDialog() {
 
 SaveData MainWindow::collectSaveData() {
   SaveData data;
-  data.videoUrl = property("currentVideoPath").toString();
+  data.videoUrl = m_currentVideoPath;
   data.videoVolume = m_playbackEngine->volume();
   data.trackCount = m_trackCount;
   data.scrollSpeed = m_speedSpinBox->value();
-  data.isTextWhite = m_textColorCheck->isChecked();
 
   for (int i = 0; i < m_trackCount; ++i) {
     TrackAudioSaveData audioData;
@@ -1479,7 +1456,6 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
 
   // Apply loaded data
   m_speedSpinBox->setValue(data.scrollSpeed);
-  m_textColorCheck->setChecked(data.isTextWhite);
 
   // Set track count
   int loadedTrackCount = qBound(1, data.trackCount, MAX_TRACKS);
@@ -1501,7 +1477,7 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
 
   // Restore video and volume. Cleared first: the video of the previous project
   // may live in a work dir this load is about to delete.
-  setProperty("currentVideoPath", QString());
+  m_currentVideoPath.clear();
   if (!data.videoUrl.isEmpty()) {
     QString storedVideo = data.videoUrl;
     if (storedVideo.startsWith("file://")) {
@@ -1530,7 +1506,7 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
       openVideoDialog(); // Simple relink via open file dialog
     } else {
       m_playbackEngine->openFile(QUrl::fromLocalFile(localPath));
-      setProperty("currentVideoPath", localPath);
+      m_currentVideoPath = localPath;
     }
   }
 
@@ -1704,7 +1680,7 @@ void MainWindow::toggleRecording() {
   }
 
   if (!m_isRecording) {
-    QString currentVideo = property("currentVideoPath").toString();
+    QString currentVideo = m_currentVideoPath;
     if (currentVideo.isEmpty()) {
       QMessageBox::warning(this, tr("Dubbing"),
                            tr("Chargez une vidéo avant d'enregistrer."));
@@ -1976,7 +1952,7 @@ void MainWindow::onExportFinished(bool success, const QString &message) {
 }
 
 void MainWindow::showExportDialog() {
-  QString currentVideo = property("currentVideoPath").toString();
+  QString currentVideo = m_currentVideoPath;
   if (currentVideo.isEmpty()) {
     QMessageBox::warning(this, tr("Export"), tr("Aucune vidéo chargée."));
     return;
@@ -2134,10 +2110,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
     }
   }
   return QMainWindow::eventFilter(watched, event);
-}
-
-void MainWindow::resizeEvent(QResizeEvent *event) {
-  QMainWindow::resizeEvent(event);
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {

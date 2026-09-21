@@ -35,26 +35,12 @@ class RythmoWidget : public QWidget {
   Q_PROPERTY(int speed READ speed WRITE setSpeed NOTIFY speedChanged)
 
 public:
-  /**
-   * @enum VisualStyle
-   * @brief Defines the visual appearance for unified multi-track display.
-   */
-  enum VisualStyle {
-    Standalone,   ///< Full borders and header
-    UnifiedTop,   ///< Top track in unified display
-    UnifiedBottom ///< Bottom track in unified display
-  };
-  Q_ENUM(VisualStyle)
-
   explicit RythmoWidget(QWidget *parent = nullptr);
   ~RythmoWidget() override = default;
 
   // =========================================================================
   // Display Configuration
   // =========================================================================
-
-  void setVisualStyle(VisualStyle style);
-  VisualStyle visualStyle() const;
 
   void setTrackStyle(const RythmoTrackStyle &style);
   RythmoTrackStyle trackStyle() const;
@@ -187,7 +173,6 @@ private:
   bool m_editable;
 
   // Visual configuration
-  VisualStyle m_visualStyle;
   RythmoTrackStyle m_style;
   QColor m_barColor;
   QColor m_playingBarColor;

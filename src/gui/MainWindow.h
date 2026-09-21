@@ -14,7 +14,6 @@
 
 #include <QAudioDevice>
 #include <QAudioOutput>
-#include <QCheckBox>
 #include <QCloseEvent>
 #include <QElapsedTimer>
 #include <QTimer>
@@ -80,13 +79,10 @@ public:
   explicit MainWindow(QWidget *parent = nullptr);
   ~MainWindow() override = default;
 
-  static constexpr int MAX_TRACKS = 4;
-
 protected:
   bool event(QEvent *event) override;
   bool eventFilter(QObject *watched, QEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
-  void resizeEvent(QResizeEvent *event) override;
   void closeEvent(QCloseEvent *event) override;
 
 private slots:
@@ -211,17 +207,12 @@ private:
   QPushButton *m_speedUpButton;
   QPushButton *m_speedResetButton;
   QSpinBox *m_speedSpinBox;
-  QCheckBox *m_textColorCheck;
   QProgressBar *m_exportProgressBar;
   QPushButton *m_exportCancelBtn;
-
-  // Track count controls
-  QLabel *m_trackCountLabel;
 
   // Fullscreen recording
   QFrame *m_videoFrame;
   QWidget *m_fullscreenContainer;
-  QMenu *m_shortcutsMenu;
 
   // Menus and Actions
   QAction *m_actionOpenMp4;
@@ -255,6 +246,7 @@ private:
 
   // Project state & Autosave recovery
   bool m_isDirty;
+  QString m_currentVideoPath;
   QString m_currentProjectPath;
   // Extracted .zip project: PlaybackEngine plays its video in place, so it
   // lives as long as the project stays open.

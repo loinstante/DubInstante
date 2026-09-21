@@ -1,6 +1,7 @@
 #include "TrackSettingsDialog.h"
 
 #include "../gui/RythmoWidget.h"
+#include "../core/Constants.h"
 #include "../core/SettingsManager.h"
 #include "Palette.h"
 #include <QButtonGroup>
@@ -21,8 +22,8 @@ TrackSettingsDialog::TrackSettingsDialog(RythmoManager *rythmoManager,
                                          int initialTrackIndex,
                                          QWidget *parent)
     : QDialog(parent), m_rythmoManager(rythmoManager),
-      m_currentTrackIndex(qBound(0, initialTrackIndex, qBound(1, trackCount, 4) - 1)),
-      m_trackCount(qBound(1, trackCount, 4)) {
+      m_currentTrackIndex(qBound(0, initialTrackIndex, qBound(1, trackCount, MAX_TRACKS) - 1)),
+      m_trackCount(qBound(1, trackCount, MAX_TRACKS)) {
 
   setupUi();
 
@@ -98,7 +99,6 @@ void TrackSettingsDialog::setupUi() {
     previewLayout->setSpacing(10);
 
     m_previewWidget = new RythmoWidget(previewGroup);
-  m_previewWidget->setVisualStyle(RythmoWidget::Standalone);
   m_previewWidget->setEditable(false);
   m_previewWidget->setSpeed(100);
   m_previewWidget->setPlaying(true);

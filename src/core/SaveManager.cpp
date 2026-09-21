@@ -1,4 +1,5 @@
 #include "SaveManager.h"
+#include "Constants.h"
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <QDebug>
@@ -494,7 +495,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   data.videoVolume = (float)root.value("video_volume").toDouble(1.0);
   data.trackCount = root.value("track_count").toInt(1);
   data.scrollSpeed = root.value("scroll_speed").toInt(100);
-  data.isTextWhite = root.value("is_text_white").toBool(true);
+  data.isTextWhite = root.value("is_text_white").toBool(false);
 
   // Load audio tracks
   data.audioTracks.clear();
@@ -551,7 +552,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
 SaveData SaveManager::sanitize(const SaveData &data) {
   SaveData clean = data;
   clean.videoVolume = qBound(0.0f, clean.videoVolume, 1.0f);
-  clean.trackCount = qBound(1, clean.trackCount, 4);
+  clean.trackCount = qBound(1, clean.trackCount, MAX_TRACKS);
   clean.scrollSpeed = qBound(10, clean.scrollSpeed, 500);
 
   for (int i = 0; i < clean.audioTracks.size(); ++i) {

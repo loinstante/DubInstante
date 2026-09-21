@@ -43,7 +43,7 @@ struct SaveData {
   float videoVolume = 1.0f;
   int trackCount = 1;
   int scrollSpeed = 100;
-  bool isTextWhite = false;
+  bool isTextWhite = false; // conservé pour compatibilité ascendante, plus exposé dans l'interface
 
   QList<TrackSaveData> tracks;
   QList<TrackAudioSaveData> audioTracks;

@@ -5,6 +5,8 @@
 
 #include "RythmoOverlay.h"
 
+#include "../core/Constants.h"
+
 #include <QPainter>
 
 RythmoOverlay::RythmoOverlay(QWidget *parent)
@@ -22,7 +24,6 @@ RythmoOverlay::RythmoOverlay(QWidget *parent)
 
   // Create initial track (always at least 1)
   RythmoWidget *firstTrack = new RythmoWidget(this);
-  firstTrack->setVisualStyle(RythmoWidget::Standalone);
   m_tracks.append(firstTrack);
   m_layout->addWidget(firstTrack);
 }
@@ -58,14 +59,6 @@ void RythmoOverlay::setTrackCount(int count) {
     RythmoWidget *removed = m_tracks.takeLast();
     m_layout->removeWidget(removed);
     removed->deleteLater();
-  }
-
-  updateVisualStyles();
-}
-
-void RythmoOverlay::updateVisualStyles() {
-  for (RythmoWidget *track : m_tracks) {
-    track->setVisualStyle(RythmoWidget::Standalone);
   }
 }
 

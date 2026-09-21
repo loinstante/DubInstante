@@ -69,6 +69,7 @@ set(CORE_SOURCES
     src/core/AudioRecorder.cpp
     src/core/ExportService.h
     src/core/ExportService.cpp
+    src/core/Constants.h
     src/core/SaveManager.h
     src/core/SaveManager.cpp
     src/core/SettingsManager.h
@@ -96,6 +97,7 @@ set(GUI_SOURCES
     src/gui/ExportDialog.h
     src/gui/ExportDialog.cpp
     src/gui/ClickableSlider.h
+    src/gui/Palette.h
 )
 
 # Utils Layer - Shared Utilities

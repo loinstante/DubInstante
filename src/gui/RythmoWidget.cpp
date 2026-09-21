@@ -17,7 +17,7 @@
 
 RythmoWidget::RythmoWidget(QWidget *parent)
     : QWidget(parent), m_cursorIndex(0), m_currentPosition(0), m_speed(100),
-      m_isPlaying(false), m_editable(true), m_visualStyle(Standalone),
+      m_isPlaying(false), m_editable(true),
       m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
       m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
@@ -38,18 +38,6 @@ RythmoWidget::RythmoWidget(QWidget *parent)
 // =============================================================================
 // Configuration
 // =============================================================================
-
-void RythmoWidget::setVisualStyle(VisualStyle style) {
-  if (m_visualStyle != style) {
-    m_visualStyle = style;
-    updateGeometry();
-    update();
-  }
-}
-
-RythmoWidget::VisualStyle RythmoWidget::visualStyle() const {
-  return m_visualStyle;
-}
 
 void RythmoWidget::setTrackStyle(const RythmoTrackStyle &style) {
   m_style = style;
@@ -206,13 +194,8 @@ void RythmoWidget::triggerSeek() { emit seekRequested(m_pendingSeekPosition); }
 // =============================================================================
 
 QSize RythmoWidget::sizeHint() const {
-  int h = 35; // Base band height
-
-  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
-    h += 25; // Header space for handle/timestamp
-  }
-
-  return QSize(QWidget::sizeHint().width(), h);
+  // 35 base band height + 25 header space for handle/timestamp
+  return QSize(QWidget::sizeHint().width(), 60);
 }
 
 // =============================================================================
@@ -250,10 +233,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.setRenderHint(QPainter::Antialiasing);
 
   // 1. Calculate layout dimensions
-  int headerHeight = 0;
-  if (m_visualStyle == Standalone || m_visualStyle == UnifiedTop) {
-    headerHeight = 25;
-  }
+  const int headerHeight = 25;
 
   int bandHeight = height() - headerHeight;
   int bandY = headerHeight;
@@ -322,18 +302,8 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
     // Force cursor to targetX for perfect alignment with target line
     double cursorScreenX = targetX;
 
-    bool drawHandle =
-        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
-    bool drawLabel =
-        (m_visualStyle == Standalone || m_visualStyle == UnifiedTop);
-
     int lineTop = bandY;
     int lineBottom = bandY + bandHeight;
-
-    if (m_visualStyle == UnifiedTop)
-      lineBottom += 2;
-    if (m_visualStyle == UnifiedBottom)
-      lineTop -= 2;
 
     // Vertical cursor line
     QPen cursorPen(accent, 3);
@@ -341,42 +311,38 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
     painter.drawLine(cursorScreenX, lineTop, cursorScreenX, lineBottom);
 
     // Triangle handle
-    if (drawHandle) {
-      QPolygon tri;
-      tri << QPoint(cursorScreenX, bandY)
-          << QPoint(cursorScreenX - 5, bandY - 10)
-          << QPoint(cursorScreenX + 5, bandY - 10);
-      painter.setBrush(accent);
-      painter.drawPolygon(tri);
-    }
+    QPolygon tri;
+    tri << QPoint(cursorScreenX, bandY)
+        << QPoint(cursorScreenX - 5, bandY - 10)
+        << QPoint(cursorScreenX + 5, bandY - 10);
+    painter.setBrush(accent);
+    painter.drawPolygon(tri);
 
     // Timestamp label
-    if (drawLabel) {
-      int mm = (m_currentPosition / 60000) % 60;
-      int ss = (m_currentPosition / 1000) % 60;
-      int ms = m_currentPosition % 1000;
-      QString timeStr = QString("%1:%2.%3")
-                            .arg(mm, 2, 10, QChar('0'))
-                            .arg(ss, 2, 10, QChar('0'))
-                            .arg(ms, 3, 10, QChar('0'));
+    int mm = (m_currentPosition / 60000) % 60;
+    int ss = (m_currentPosition / 1000) % 60;
+    int ms = m_currentPosition % 1000;
+    QString timeStr = QString("%1:%2.%3")
+                          .arg(mm, 2, 10, QChar('0'))
+                          .arg(ss, 2, 10, QChar('0'))
+                          .arg(ms, 3, 10, QChar('0'));
 
-      QFont smallFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
-      smallFont.setPointSize(8);
-      smallFont.setBold(true);
-      painter.setFont(smallFont);
-      int tw = painter.fontMetrics().horizontalAdvance(timeStr);
-      int th = painter.fontMetrics().height();
+    QFont smallFont = QFontDatabase::systemFont(QFontDatabase::GeneralFont);
+    smallFont.setPointSize(8);
+    smallFont.setBold(true);
+    painter.setFont(smallFont);
+    int tw = painter.fontMetrics().horizontalAdvance(timeStr);
+    int th = painter.fontMetrics().height();
 
-      // Draw a subtle translucent background pill for the timestamp (always readable over video)
-      QRectF pillRect(cursorScreenX - tw / 2.0 - 6, bandY - 12 - th + 2, tw + 12, th + 4);
-      painter.setBrush(QColor(13, 13, 18, 160)); // 62% opacity dark background
-      painter.setPen(Qt::NoPen);
-      painter.drawRoundedRect(pillRect, 4, 4);
+    // Draw a subtle translucent background pill for the timestamp (always readable over video)
+    QRectF pillRect(cursorScreenX - tw / 2.0 - 6, bandY - 12 - th + 2, tw + 12, th + 4);
+    painter.setBrush(QColor(13, 13, 18, 160)); // 62% opacity dark background
+    painter.setPen(Qt::NoPen);
+    painter.drawRoundedRect(pillRect, 4, 4);
 
-      // Draw text
-      painter.setPen(isDark ? QColor(243, 243, 246) : QColor(255, 255, 255));
-      painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
-    }
+    // Draw text
+    painter.setPen(isDark ? QColor(243, 243, 246) : QColor(255, 255, 255));
+    painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
   }
 }
 

@@ -129,7 +129,6 @@ void TrackWidget::setupConnections()
 {
     connect(m_volumeSlider, &QSlider::valueChanged, this, &TrackWidget::onVolumeSliderChanged);
     connect(m_optionsButton, &QPushButton::clicked, this, &TrackWidget::optionsClicked);
-    connect(m_inputCombo, &QComboBox::currentTextChanged, this, &TrackWidget::inputSelected);
     
     // Emit device index when selection changes (index 0 = "Aucune entrée", real devices start at 1)
     connect(m_inputCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
@@ -137,8 +136,6 @@ void TrackWidget::setupConnections()
                 // deviceIndex = index - 1 (to skip "Aucune entrée" at pos 0)
                 emit inputDeviceIndexChanged(index - 1);
             });
-
-    connect(m_recordArmButton, &QPushButton::toggled, this, &TrackWidget::recordArmChanged);
 }
 
 void TrackWidget::onVolumeSliderChanged(int value)

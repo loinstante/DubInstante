@@ -30,10 +30,8 @@ public:
 
 signals:
     void optionsClicked();
-    void inputSelected(const QString& inputName);
     void inputDeviceIndexChanged(int deviceIndex);
     void volumeChanged(int volume);
-    void recordArmChanged(bool armed);
 
 private slots:
     void onVolumeSliderChanged(int value);

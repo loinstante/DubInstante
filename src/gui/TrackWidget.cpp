@@ -5,7 +5,7 @@
 #include <QGraphicsDropShadowEffect>
 #include <QStyle>
 
-TrackWidget::TrackWidget(int trackIndex, const QString& title, const QString& badgeColor, QWidget *parent)
+TrackWidget::TrackWidget(int trackIndex, const QString& title, QWidget *parent)
     : QFrame(parent), m_trackIndex(trackIndex)
 {
     setObjectName(QString("track_%1").arg(trackIndex));
@@ -20,11 +20,11 @@ TrackWidget::TrackWidget(int trackIndex, const QString& title, const QString& ba
     shadow->setColor(QColor(17, 24, 39, 18));
     setGraphicsEffect(shadow);
 
-    setupUi(title, badgeColor);
+    setupUi(title);
     setupConnections();
 }
 
-void TrackWidget::setupUi(const QString& title, const QString& badgeColor)
+void TrackWidget::setupUi(const QString& title)
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
     mainLayout->setContentsMargins(16, 16, 16, 16);
@@ -97,7 +97,7 @@ void TrackWidget::setupUi(const QString& title, const QString& badgeColor)
 
     mainLayout->addLayout(volLayout);
 
-    // --- Spacer to push VU and Badge to bottom ---
+    // --- Spacer to push the VU meter to the bottom ---
     mainLayout->addStretch();
 
     // --- VU Meter ---
@@ -109,20 +109,6 @@ void TrackWidget::setupUi(const QString& title, const QString& badgeColor)
     m_recordingStateLabel->setObjectName("recordingStateLabel");
     m_recordingStateLabel->setVisible(false);
     mainLayout->addWidget(m_recordingStateLabel);
-
-    // --- Color Badge ---
-    QHBoxLayout *badgeLayout = new QHBoxLayout();
-    badgeLayout->setContentsMargins(0, 5, 0, 0);
-    badgeLayout->setSpacing(8);
-
-    QFrame *colorBox = new QFrame(this);
-    colorBox->setFixedSize(14, 14);
-    colorBox->setStyleSheet(QString("background-color: %1; border-radius: 3px;").arg(badgeColor));
-
-    badgeLayout->addWidget(colorBox);
-    badgeLayout->addStretch();
-
-    mainLayout->addLayout(badgeLayout);
 }
 
 void TrackWidget::setupConnections()

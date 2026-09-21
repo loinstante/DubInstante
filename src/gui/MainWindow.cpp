@@ -904,8 +904,8 @@ void MainWindow::setTrackCount(int count) {
             });
 
     // Create TrackWidget
-    TrackWidget *panel = new TrackWidget(idx + 1, 
-        QString("Piste %1").arg(idx + 1), Brand::Accent, this);
+    TrackWidget *panel = new TrackWidget(
+        idx + 1, QString("Piste %1").arg(idx + 1), this);
     m_trackPanels.append(panel);
     m_tracksLayout->addWidget(panel);
 

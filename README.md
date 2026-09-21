@@ -97,6 +97,7 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 * ✅ **v0.4.0 - v0.9.0 :** Gestion de projet `.dbi`, mode plein écran de secours, beta Android et personnalisation des styles.
 * ✅ **v0.10.0 :** Support multi-pistes rythmo (jusqu'à 4 pistes indépendantes).
 * ✅ **v0.11.0 :** Refonte de l'interface utilisateur (aesthetics wow factor).
+* ✅ **v0.12.0 :** Plein de fix et de correction de bug important (lot of fixed and important bug patching).
 * 🎯 **v1.0.0 (En cours) :** Finalisation des profils audio avancés, stabilité générale pour la production.
 
 ---

@@ -1327,7 +1327,7 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
 }
 
 void MainWindow::onLoadProject() {
-  if (!maybeSaveChanges())
+  if (exportLocksTakes() || !maybeSaveChanges())
     return;
 
   QString fileName = QFileDialog::getOpenFileName(
@@ -1497,6 +1497,12 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
 
   m_playbackEngine->setVolume(saveData.videoVolume);
 
+  // Only the autosave stores absolute take paths (the temp WAVs of a crashed
+  // session). A project file never does: accepting one would let a .dbi
+  // received from someone else pull any readable file into track_N.wav, which
+  // then leaves with the next archive.
+  const bool strictAudio = strictRelative || path != autosaveFilePath();
+
   // Restore audio device selection and gain
   m_lastLoadLostTracksCount = 0;
   for (int i = 0; i < qMin(saveData.audioTracks.size(), m_trackCount); ++i) {
@@ -1512,15 +1518,22 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
     if (m_hasRecording[i] && !saveData.audioTracks[i].audioFilePath.isEmpty()) {
         const QString savedWavPath = SaveManager::resolveProjectPath(
             dir.absolutePath(), saveData.audioTracks[i].audioFilePath,
-            strictRelative);
+            strictAudio);
         if (savedWavPath.isEmpty()) {
             m_hasRecording[i] = false;
             ++refusedPaths;
         } else if (QFile::exists(savedWavPath)) {
             QString tempPath = m_tempAudioPaths.value(i);
             if (savedWavPath != tempPath) {
+                // The preview player still holds the take of the previous
+                // project: same URL, so refreshPreviewSources() would not
+                // reload it, and Windows refuses to remove an open file.
+                releasePreviewSource(i);
                 if (QFile::exists(tempPath)) QFile::remove(tempPath);
-                QFile::copy(savedWavPath, tempPath);
+                if (!QFile::copy(savedWavPath, tempPath)) {
+                    m_hasRecording[i] = false;
+                    m_lastLoadLostTracksCount++;
+                }
             }
         } else {
             m_hasRecording[i] = false; // file is missing
@@ -1669,6 +1682,10 @@ void MainWindow::toggleRecording() {
     if (currentVideo.isEmpty()) {
       QMessageBox::warning(this, tr("Dubbing"),
                            tr("Chargez une vidéo avant d'enregistrer."));
+      m_recordButton->setChecked(false);
+      return;
+    }
+    if (exportLocksTakes()) {
       m_recordButton->setChecked(false);
       return;
     }
@@ -1934,6 +1951,18 @@ void MainWindow::onExportFinished(bool success, const QString &message) {
   } else {
     QMessageBox::critical(this, tr("Export"), message);
   }
+}
+
+// ffmpeg reads the temp WAVs for the whole export: recording a new take or
+// loading a project would replace them underneath it.
+bool MainWindow::exportLocksTakes() {
+  if (!m_exportService->isExporting())
+    return false;
+  QMessageBox::warning(
+      this, tr("Export en cours"),
+      tr("L'export lit les prises actuelles. Attendez sa fin ou annulez-le "
+         "avant de continuer."));
+  return true;
 }
 
 void MainWindow::showExportDialog() {
@@ -2345,7 +2374,7 @@ bool MainWindow::maybeSaveChanges() {
     return true;
   }
 
-  onSaveProject();
+  onQuickSaveProject(); // demande l'emplacement si le projet n'en a pas encore
   // ponytail: l'archive .zip est écrite en tâche de fond, m_isDirty ne retombe
   // qu'à la fin du QFutureWatcher. La fermeture est donc annulée et l'utilisateur
   // la relance une fois la barre de progression terminée. Passer à une fermeture

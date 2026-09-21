@@ -104,6 +104,7 @@ private slots:
   void onExportProgress(int percentage);
   void onExportFinished(bool success, const QString &message);
   void showExportDialog();
+  bool exportLocksTakes();
 
   // Error handling
   void onError(const QString &errorMessage);

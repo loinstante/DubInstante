@@ -218,6 +218,30 @@ QSize RythmoWidget::sizeHint() const {
 // Paint Event
 // =============================================================================
 
+bool RythmoWidget::isDarkTheme() {
+  if (m_isDark < 0) {
+    const QString themeMode = SettingsManager::instance().theme();
+    if (themeMode == "dark") {
+      m_isDark = 1;
+    } else if (themeMode == "system") {
+      m_isDark = palette().color(QPalette::Window).value() < 128;
+    } else {
+      m_isDark = 0;
+    }
+  }
+  return m_isDark;
+}
+
+// applyTheme() swaps the stylesheet (StyleChange); system theme flips arrive as PaletteChange.
+void RythmoWidget::changeEvent(QEvent *event) {
+  if (event->type() == QEvent::PaletteChange ||
+      event->type() == QEvent::StyleChange) {
+    m_isDark = -1;
+    update();
+  }
+  QWidget::changeEvent(event);
+}
+
 void RythmoWidget::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
 
@@ -278,23 +302,16 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
     }
   }
 
-  // Determine active theme accent color
-  bool isDark = false;
-  QString themeMode = SettingsManager::instance().theme();
-  if (themeMode == "dark") {
-    isDark = true;
-  } else if (themeMode == "system") {
-    isDark = (palette().color(QPalette::Window).value() < 128);
-  }
-  QColor accentColor = isDark ? QColor(146, 107, 255) : QColor(124, 86, 245); // #926bff vs #7c56f5
+  const bool isDark = isDarkTheme();
+  const QColor accent = isDark ? QColor(146, 107, 255) : QColor(124, 86, 245); // #926bff vs #7c56f5
 
   // 5. Draw band border
-  QPen borderPen(accentColor, 2);
+  QPen borderPen(accent, 2);
   painter.setPen(borderPen);
   painter.drawRect(bandRect);
 
   // 6. Draw target line (guide)
-  QPen targetPen(accentColor, 2);
+  QPen targetPen(accent, 2);
   targetPen.setStyle(Qt::DashLine);
   painter.setPen(targetPen);
   painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
@@ -318,7 +335,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
       lineTop -= 2;
 
     // Vertical cursor line
-    QPen cursorPen(accentColor, 3);
+    QPen cursorPen(accent, 3);
     painter.setPen(cursorPen);
     painter.drawLine(cursorScreenX, lineTop, cursorScreenX, lineBottom);
 
@@ -328,7 +345,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
       tri << QPoint(cursorScreenX, bandY)
           << QPoint(cursorScreenX - 5, bandY - 10)
           << QPoint(cursorScreenX + 5, bandY - 10);
-      painter.setBrush(accentColor);
+      painter.setBrush(accent);
       painter.drawPolygon(tri);
     }
 

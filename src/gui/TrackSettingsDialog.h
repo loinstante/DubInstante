@@ -64,6 +64,7 @@ private:
 
   // Preview
   RythmoWidget *m_previewWidget;
+  qint64 m_simulatedPosMs = 0;
 
   // Styles
   QColor m_currentTextColor;

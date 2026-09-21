@@ -109,13 +109,12 @@ void TrackSettingsDialog::setupUi() {
   // position
   QTimer *animTimer = new QTimer(this);
   connect(animTimer, &QTimer::timeout, this, [this]() {
-    static qint64 simulatedPosMs = 0;
-    simulatedPosMs += 20;
+    m_simulatedPosMs += 20;
     // Loop position roughly based on text length
-    if (simulatedPosMs > 5000) {
-      simulatedPosMs = 0;
+    if (m_simulatedPosMs > 5000) {
+      m_simulatedPosMs = 0;
     }
-    m_previewWidget->sync(simulatedPosMs);
+    m_previewWidget->sync(m_simulatedPosMs);
   });
   animTimer->start(20);
 

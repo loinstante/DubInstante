@@ -18,7 +18,19 @@ AudioMeterWidget::AudioMeterWidget(QWidget *parent)
 
     // Setup animation timer (approx 60 FPS)
     connect(&m_animationTimer, &QTimer::timeout, this, &AudioMeterWidget::updateAnimation);
+    // Timer runs only while visible (see showEvent/hideEvent)
+}
+
+void AudioMeterWidget::showEvent(QShowEvent *event)
+{
     m_animationTimer.start(16);
+    QWidget::showEvent(event);
+}
+
+void AudioMeterWidget::hideEvent(QHideEvent *event)
+{
+    m_animationTimer.stop();
+    QWidget::hideEvent(event);
 }
 
 void AudioMeterWidget::setLevel(float level)
@@ -35,6 +47,11 @@ void AudioMeterWidget::setLevel(float level)
     if (m_level >= m_peakLevel) {
         m_peakLevel = m_level;
         m_peakHoldTimer = 60; // Hold peak for approx 1 second (60 frames at 16ms)
+    }
+
+    // The timer stops itself once everything has settled
+    if (isVisible() && !m_animationTimer.isActive()) {
+        m_animationTimer.start(16);
     }
 }
 
@@ -67,6 +84,9 @@ void AudioMeterWidget::updateAnimation()
 
     if (needsUpdate || m_level > 0.0f) {
         update();
+    } else {
+        // Nothing left to animate on a silent track: setLevel() restarts it
+        m_animationTimer.stop();
     }
 }
 

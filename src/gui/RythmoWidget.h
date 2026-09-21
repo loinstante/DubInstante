@@ -164,9 +164,11 @@ protected:
   void mouseMoveEvent(QMouseEvent *event) override;
   void mouseDoubleClickEvent(QMouseEvent *event) override;
   void keyPressEvent(QKeyEvent *event) override;
+  void changeEvent(QEvent *event) override;
 
 private:
   // Helpers
+  bool isDarkTheme();
   int charWidth() const;
   int cursorIndex() const;
   qint64 charDurationMs() const;
@@ -189,6 +191,7 @@ private:
   RythmoTrackStyle m_style;
   QColor m_barColor;
   QColor m_playingBarColor;
+  int m_isDark = -1; // Cached theme lookup; -1 = recompute (theme/palette change)
 
   // Interaction state
   int m_lastMouseX;

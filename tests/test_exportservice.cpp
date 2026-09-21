@@ -1,4 +1,4 @@
-// Assert-based check for ExportService::removePartialOutput.
+// CHECK-based test for ExportService::removePartialOutput.
 // Regression: a failed export must never delete a file that already existed at
 // the output path (e.g. a previous successful export) and that ffmpeg never touched.
 // Build: cmake --build build --target test_exportservice && ./build/test_exportservice
@@ -12,15 +12,16 @@
 #include <QFileInfo>
 #include <QTemporaryDir>
 #include <QTimer>
-#include <cassert>
+
+#include "check.h"
 #include <cstdio>
 
 namespace {
 
 // Runs an export with PATH set to pathEnv and checks the pre-existing output survives.
-void checkPreexistingOutputSurvives(const QByteArray &pathEnv) {
+int checkPreexistingOutputSurvives(const QByteArray &pathEnv) {
   QTemporaryDir dir;
-  assert(dir.isValid());
+  CHECK(dir.isValid());
 
   const QString videoPath = dir.filePath("source.mp4");
   const QString audioPath = dir.filePath("track1.wav");
@@ -31,7 +32,7 @@ void checkPreexistingOutputSurvives(const QByteArray &pathEnv) {
 
   {
     QFile f(outputPath);
-    assert(f.open(QIODevice::WriteOnly));
+    CHECK(f.open(QIODevice::WriteOnly));
     f.write("previous export content");
   }
   const QDateTime mtimeBefore = QFileInfo(outputPath).lastModified();
@@ -65,23 +66,24 @@ void checkPreexistingOutputSurvives(const QByteArray &pathEnv) {
 
   qputenv("PATH", realPath);
 
-  assert(gotSignal);
-  assert(!finishedSuccess);
-  assert(!service.isExporting());
-  assert(QFile::exists(outputPath));
-  assert(QFileInfo(outputPath).lastModified() == mtimeBefore);
+  CHECK(gotSignal);
+  CHECK(!finishedSuccess);
+  CHECK(!service.isExporting());
+  CHECK(QFile::exists(outputPath));
+  CHECK(QFileInfo(outputPath).lastModified() == mtimeBefore);
   {
     QFile f(outputPath);
-    assert(f.open(QIODevice::ReadOnly));
-    assert(f.readAll() == "previous export content");
+    CHECK(f.open(QIODevice::ReadOnly));
+    CHECK(f.readAll() == "previous export content");
   }
+  return 0;
 }
 
 // Export audio lists are renumbered (first recorded track = primary), so a missing take
 // must be reported by file name, not by a track number the user would not recognise.
-void checkMissingExtraAudioIsNamed() {
+int checkMissingExtraAudioIsNamed() {
   QTemporaryDir dir;
-  assert(dir.isValid());
+  CHECK(dir.isValid());
 
   const QString videoPath = dir.filePath("source.mp4");
   const QString audioPath = dir.filePath("track2.wav");
@@ -107,9 +109,10 @@ void checkMissingExtraAudioIsNamed() {
   // Validation fails synchronously, before ffmpeg is started.
   service.startExport(config);
 
-  assert(!finishedSuccess);
-  assert(message.contains(missingPath));
-  assert(!service.isExporting());
+  CHECK(!finishedSuccess);
+  CHECK(message.contains(missingPath));
+  CHECK(!service.isExporting());
+  return 0;
 }
 
 }  // namespace
@@ -117,24 +120,25 @@ void checkMissingExtraAudioIsNamed() {
 int main(int argc, char *argv[]) {
   QCoreApplication app(argc, argv);
 
-  checkMissingExtraAudioIsNamed();
+  CHECK(checkMissingExtraAudioIsNamed() == 0);
 
   // ffmpeg missing from PATH: errorOccurred(FailedToStart) only.
-  checkPreexistingOutputSurvives("/nonexistent-path-for-test");
+  CHECK(checkPreexistingOutputSurvives("/nonexistent-path-for-test") == 0);
 
   // ffmpeg killed before opening its output: errorOccurred(Crashed) then finished,
   // so removePartialOutput runs twice for the same export.
   QTemporaryDir binDir;
-  assert(binDir.isValid());
+  CHECK(binDir.isValid());
   {
     QFile script(binDir.filePath("ffmpeg"));
-    assert(script.open(QIODevice::WriteOnly));
+    CHECK(script.open(QIODevice::WriteOnly));
     script.write("#!/bin/sh\nkill -9 $$\n");
     script.close();
-    assert(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+    CHECK(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
                                  QFileDevice::ExeOwner));
   }
-  checkPreexistingOutputSurvives(QDir::toNativeSeparators(binDir.path()).toLocal8Bit());
+  CHECK(checkPreexistingOutputSurvives(
+      QDir::toNativeSeparators(binDir.path()).toLocal8Bit()) == 0);
 
   std::puts("test_exportservice: OK");
   return 0;

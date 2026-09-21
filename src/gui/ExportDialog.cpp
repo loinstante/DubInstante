@@ -686,26 +686,26 @@ void ExportDialog::onAdvancedToggled(bool checked)
 void ExportDialog::onResolutionSelectionChanged(int index)
 {
     Q_UNUSED(index);
-    QString data = m_expResolutionCombo->currentData().toString();
-    m_expCustomResContainer->setVisible(data == "custom");
+    QString resolution = m_expResolutionCombo->currentData().toString();
+    m_expCustomResContainer->setVisible(resolution == "custom");
     validateSettings();
 }
 
 void ExportDialog::onRateControlSelectionChanged(int index)
 {
     Q_UNUSED(index);
-    QString data = m_expRateControlCombo->currentData().toString();
+    QString rateControl = m_expRateControlCombo->currentData().toString();
     
-    m_expCrfContainer->setVisible(data == "crf");
-    m_expBitrateContainer->setVisible(data == "bitrate");
+    m_expCrfContainer->setVisible(rateControl == "crf");
+    m_expBitrateContainer->setVisible(rateControl == "bitrate");
 
     // Retrieve layout label widgets in parent tab QFormLayout
     QFormLayout *layout = qobject_cast<QFormLayout *>(m_expCrfContainer->parentWidget()->layout());
     if (layout) {
         QWidget *crfLabel = layout->labelForField(m_expCrfContainer);
         QWidget *bitrateLabel = layout->labelForField(m_expBitrateContainer);
-        if (crfLabel) crfLabel->setVisible(data == "crf");
-        if (bitrateLabel) bitrateLabel->setVisible(data == "bitrate");
+        if (crfLabel) crfLabel->setVisible(rateControl == "crf");
+        if (bitrateLabel) bitrateLabel->setVisible(rateControl == "bitrate");
     }
     
     validateSettings();

@@ -307,7 +307,7 @@ void TrackSettingsDialog::onTrackSelected(int index) {
 }
 
 void TrackSettingsDialog::onManagerStyleChanged(int trackIndex,
-                                                const RythmoTrackStyle &style) {
+                                                const RythmoTrackStyle & /*style*/) {
   if (trackIndex == m_currentTrackIndex) {
     loadCurrentTrackStyle();
   }

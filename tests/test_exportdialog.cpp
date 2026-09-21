@@ -1,4 +1,4 @@
-// Assert-based check for ExportDialog's async ffprobe lifetime.
+// CHECK-based test for ExportDialog's async ffprobe lifetime.
 // Regression: closing the dialog after ffprobe exited but before its finished() was
 // delivered crashed: ~QProcess delivered it while the dialog's widgets were already gone.
 // Build: cmake --build build --target test_exportdialog && ./build/test_exportdialog
@@ -10,7 +10,8 @@
 #include <QFile>
 #include <QTemporaryDir>
 #include <QThread>
-#include <cassert>
+
+#include "check.h"
 #include <cstdio>
 
 int main(int argc, char *argv[]) {
@@ -18,7 +19,7 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
 
   QTemporaryDir dir;
-  assert(dir.isValid());
+  CHECK(dir.isValid());
   const QString videoPath = dir.filePath("source.mp4");
   QFile(videoPath).open(QIODevice::WriteOnly);
 
@@ -26,10 +27,10 @@ int main(int argc, char *argv[]) {
   // so its handler takes both widget-updating branches.
   {
     QFile script(dir.filePath("ffprobe"));
-    assert(script.open(QIODevice::WriteOnly));
+    CHECK(script.open(QIODevice::WriteOnly));
     script.write("#!/bin/sh\necho video,640,480\n");
     script.close();
-    assert(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
+    CHECK(script.setPermissions(QFileDevice::ReadOwner | QFileDevice::WriteOwner |
                                  QFileDevice::ExeOwner));
   }
   qputenv("PATH", QDir::toNativeSeparators(dir.path()).toLocal8Bit());

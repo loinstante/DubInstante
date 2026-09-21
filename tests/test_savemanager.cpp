@@ -1,5 +1,5 @@
-// Assert-based checks for SaveManager (.dbi format).
-// Build: cmake --build build --target test_savemanager && ./build/test_savemanager
+// CHECK-based tests for SaveManager (.dbi format); active in Release too.
+// Run: cmake --build build && ctest --test-dir build --output-on-failure
 
 #include "SaveManager.h"
 
@@ -8,8 +8,8 @@
 #include <QGuiApplication>
 #include <QProcess>
 #include <QTemporaryDir>
-#include <cassert>
-#include <cstdio>
+
+#include "check.h"
 
 namespace {
 
@@ -45,17 +45,15 @@ SaveData makeSampleData() {
   return data;
 }
 
-void corruptByteAt(const QString &path, qint64 offset) {
+bool corruptByteAt(const QString &path, qint64 offset) {
   QFile f(path);
-  bool ok = f.open(QIODevice::ReadWrite);
-  assert(ok);
-  ok = f.seek(offset);
-  assert(ok);
+  if (!f.open(QIODevice::ReadWrite) || !f.seek(offset))
+    return false;
   char b;
-  f.peek(&b, 1);
+  if (f.peek(&b, 1) != 1)
+    return false;
   b = static_cast<char>(b ^ 0xFF);
-  f.write(&b, 1);
-  f.close();
+  return f.write(&b, 1) == 1;
 }
 
 } // namespace
@@ -65,33 +63,33 @@ int main(int argc, char *argv[]) {
   QGuiApplication app(argc, argv);
 
   QTemporaryDir dir;
-  assert(dir.isValid());
+  CHECK(dir.isValid());
   SaveManager manager;
 
   // --- 1. Roundtrip with custom font and colors ---
   const QString path = dir.filePath("roundtrip.dbi");
   SaveData original = makeSampleData();
-  assert(manager.save(path, original));
+  CHECK(manager.save(path, original));
 
   SaveData loaded;
-  assert(manager.load(path, loaded));
-  assert(qFuzzyCompare(loaded.videoVolume, 0.7f));
-  assert(loaded.trackCount == 2);
-  assert(loaded.scrollSpeed == 120);
-  assert(loaded.isTextWhite == false);
-  assert(loaded.tracks.size() == 1);
-  assert(loaded.tracks[0].text == "Bonjour le monde");
-  assert(loaded.tracks[0].style.globalSize == 22);
-  assert(loaded.tracks[0].style.font.family() == "Liberation Mono");
-  assert(loaded.tracks[0].style.font.bold() == false);
-  assert(loaded.tracks[0].style.textColor.name(QColor::HexArgb) == "#ff112233");
-  assert(loaded.tracks[0].style.backgroundColor.name(QColor::HexArgb) ==
+  CHECK(manager.load(path, loaded));
+  CHECK(qFuzzyCompare(loaded.videoVolume, 0.7f));
+  CHECK(loaded.trackCount == 2);
+  CHECK(loaded.scrollSpeed == 120);
+  CHECK(loaded.isTextWhite == false);
+  CHECK(loaded.tracks.size() == 1);
+  CHECK(loaded.tracks[0].text == "Bonjour le monde");
+  CHECK(loaded.tracks[0].style.globalSize == 22);
+  CHECK(loaded.tracks[0].style.font.family() == "Liberation Mono");
+  CHECK(loaded.tracks[0].style.font.bold() == false);
+  CHECK(loaded.tracks[0].style.textColor.name(QColor::HexArgb) == "#ff112233");
+  CHECK(loaded.tracks[0].style.backgroundColor.name(QColor::HexArgb) ==
          "#80445566");
-  assert(loaded.audioTracks.size() == 1);
-  assert(loaded.audioTracks[0].audioInput == "Micro test");
-  assert(loaded.audioTracks[0].recordStartMs == 1500);
-  assert(loaded.audioTracks[0].recordDurationMs == 42000);
-  assert(loaded.audioTracks[0].hasRecording == true);
+  CHECK(loaded.audioTracks.size() == 1);
+  CHECK(loaded.audioTracks[0].audioInput == "Micro test");
+  CHECK(loaded.audioTracks[0].recordStartMs == 1500);
+  CHECK(loaded.audioTracks[0].recordDurationMs == 42000);
+  CHECK(loaded.audioTracks[0].hasRecording == true);
 
   // --- 2. Missing font fields fall back to Classic defaults (old files) ---
   // Old files simply lack font_family/font_bold; simulated by checking that
@@ -102,50 +100,50 @@ int main(int argc, char *argv[]) {
   const QString truncPath = dir.filePath("truncated.dbi");
   {
     QFile src(path), dst(truncPath);
-    assert(src.open(QIODevice::ReadOnly) && dst.open(QIODevice::WriteOnly));
+    CHECK(src.open(QIODevice::ReadOnly) && dst.open(QIODevice::WriteOnly));
     QByteArray all = src.readAll();
     dst.write(all.left(all.size() / 2));
   }
   SaveData ignored;
-  assert(!manager.load(truncPath, ignored));
+  CHECK(!manager.load(truncPath, ignored));
 
   // --- 4. Corrupted payload (checksum mismatch) is rejected ---
   const QString corruptPath = dir.filePath("corrupt.dbi");
-  assert(QFile::copy(path, corruptPath));
-  corruptByteAt(corruptPath, kPayloadSizeOffset + 4 + 10); // inside payload
-  assert(!manager.load(corruptPath, ignored));
+  CHECK(QFile::copy(path, corruptPath));
+  CHECK(corruptByteAt(corruptPath, kPayloadSizeOffset + 4 + 10)); // inside payload
+  CHECK(!manager.load(corruptPath, ignored));
 
   // --- 5. Huge payloadSize is rejected without allocating ---
   const QString hugePath = dir.filePath("huge.dbi");
-  assert(QFile::copy(path, hugePath));
+  CHECK(QFile::copy(path, hugePath));
   {
     QFile f(hugePath);
-    assert(f.open(QIODevice::ReadWrite));
+    CHECK(f.open(QIODevice::ReadWrite));
     f.seek(kPayloadSizeOffset);
     const quint32 huge = 0xFFFFFFFF;
     f.write(reinterpret_cast<const char *>(&huge), sizeof(huge));
   }
-  assert(!manager.load(hugePath, ignored));
+  CHECK(!manager.load(hugePath, ignored));
 
   // --- 6. Out-of-range values are clamped on load (sanitize) ---
   const QString dirtyPath = dir.filePath("dirty.dbi");
   SaveData dirty = makeSampleData();
   dirty.trackCount = 99;
   dirty.scrollSpeed = 100000;
-  assert(manager.save(dirtyPath, dirty));
+  CHECK(manager.save(dirtyPath, dirty));
   SaveData cleaned;
-  assert(manager.load(dirtyPath, cleaned));
-  assert(cleaned.trackCount >= 1 && cleaned.trackCount <= 4);
-  assert(cleaned.scrollSpeed >= 10 && cleaned.scrollSpeed <= 500);
+  CHECK(manager.load(dirtyPath, cleaned));
+  CHECK(cleaned.trackCount >= 1 && cleaned.trackCount <= 4);
+  CHECK(cleaned.scrollSpeed >= 10 && cleaned.scrollSpeed <= 500);
 
   // --- 6b. resolveProjectPath: paths read from a project file ---
   {
     const QString projDir = dir.filePath("projet");
-    assert(QDir().mkpath(projDir + "/sous/dossier"));
-    assert(QDir().mkpath(dir.filePath("projet-evil")));
+    CHECK(QDir().mkpath(projDir + "/sous/dossier"));
+    CHECK(QDir().mkpath(dir.filePath("projet-evil")));
     {
       QFile f(dir.filePath("projet-evil/x.wav"));
-      assert(f.open(QIODevice::WriteOnly));
+      CHECK(f.open(QIODevice::WriteOnly));
     }
     const auto resolve = [&](const QString &p, bool strict,
                              bool allowOutside = false) {
@@ -153,33 +151,33 @@ int main(int argc, char *argv[]) {
     };
     const QString root = QFileInfo(projDir).canonicalFilePath();
 
-    assert(resolve("", true).isEmpty());
-    assert(resolve("", false).isEmpty());
-    assert(resolve("../../../etc/passwd", true).isEmpty());
-    assert(resolve("../../../etc/passwd", false).isEmpty());
-    assert(resolve("sous/dossier/track_1.wav", true) ==
+    CHECK(resolve("", true).isEmpty());
+    CHECK(resolve("", false).isEmpty());
+    CHECK(resolve("../../../etc/passwd", true).isEmpty());
+    CHECK(resolve("../../../etc/passwd", false).isEmpty());
+    CHECK(resolve("sous/dossier/track_1.wav", true) ==
            root + "/sous/dossier/track_1.wav");
-    assert(resolve("./track_1.wav", true) == root + "/track_1.wav");
-    assert(resolve("sous/../track_1.wav", false) == root + "/track_1.wav");
-    assert(resolve("/etc/passwd", true).isEmpty());
-    assert(resolve("/home/u/video.mp4", false) == "/home/u/video.mp4");
-    assert(resolve(".", true).isEmpty()); // the directory itself is not inside it
+    CHECK(resolve("./track_1.wav", true) == root + "/track_1.wav");
+    CHECK(resolve("sous/../track_1.wav", false) == root + "/track_1.wav");
+    CHECK(resolve("/etc/passwd", true).isEmpty());
+    CHECK(resolve("/home/u/video.mp4", false) == "/home/u/video.mp4");
+    CHECK(resolve(".", true).isEmpty()); // the directory itself is not inside it
 
     // A project directory that canonicalises to "/" contains nothing
-    assert(SaveManager::resolveProjectPath("/", "track_1.wav", true).isEmpty());
+    CHECK(SaveManager::resolveProjectPath("/", "track_1.wav", true).isEmpty());
 
     // A sibling sharing the directory name as a prefix is outside it
-    assert(resolve("../projet-evil/x.wav", true).isEmpty());
-    assert(resolve("../projet-evil/x.wav", false).isEmpty());
+    CHECK(resolve("../projet-evil/x.wav", true).isEmpty());
+    CHECK(resolve("../projet-evil/x.wav", false).isEmpty());
 
     // videoUrl of a standalone .dbi is relative to the .dbi, often outside it
-    assert(!resolve("../videos/film.mp4", false, true).isEmpty());
-    assert(resolve("../videos/film.mp4", true).isEmpty());
+    CHECK(!resolve("../videos/film.mp4", false, true).isEmpty());
+    CHECK(resolve("../videos/film.mp4", true).isEmpty());
 
 #ifndef Q_OS_WIN
     // A link inside the project that points outside is refused
-    assert(QFile::link(dir.filePath("projet-evil"), projDir + "/lien"));
-    assert(resolve("lien/x.wav", true).isEmpty());
+    CHECK(QFile::link(dir.filePath("projet-evil"), projDir + "/lien"));
+    CHECK(resolve("lien/x.wav", true).isEmpty());
 #endif
   }
 
@@ -189,7 +187,7 @@ int main(int argc, char *argv[]) {
     const QString audioSrc = dir.filePath("take1.wav");
     {
       QFile f(audioSrc);
-      assert(f.open(QIODevice::WriteOnly));
+      CHECK(f.open(QIODevice::WriteOnly));
       f.write("fake wav payload");
     }
 
@@ -201,17 +199,17 @@ int main(int argc, char *argv[]) {
     // Dotted project name to check .dbi/_audio naming consistency (S13).
     const QString zipPath = dir.filePath("mon.projet.v2.zip");
     QString err;
-    assert(manager.saveWithMedia(zipPath, noVideo, {audioSrc}, &err));
-    assert(err.isEmpty());
-    assert(QFile::exists(zipPath));
+    CHECK(manager.saveWithMedia(zipPath, noVideo, {audioSrc}, &err));
+    CHECK(err.isEmpty());
+    CHECK(QFile::exists(zipPath));
 
     QProcess list;
     list.start("unzip", QStringList() << "-l" << zipPath);
-    assert(list.waitForFinished());
+    CHECK(list.waitForFinished());
     const QString listing = QString::fromUtf8(list.readAllStandardOutput());
-    assert(listing.contains("mon.projet.v2.dbi"));
-    assert(listing.contains("mon.projet.v2_audio/"));
-    assert(!listing.contains(".mp4"));
+    CHECK(listing.contains("mon.projet.v2.dbi"));
+    CHECK(listing.contains("mon.projet.v2_audio/"));
+    CHECK(!listing.contains(".mp4"));
 
     // A track whose WAV vanished must abort the archive, naming the track (S6).
     SaveData failData = makeSampleData();
@@ -220,29 +218,29 @@ int main(int argc, char *argv[]) {
 
     const QString failZipPath = dir.filePath("shouldfail.zip");
     QString failErr;
-    assert(!manager.saveWithMedia(failZipPath, failData,
+    CHECK(!manager.saveWithMedia(failZipPath, failData,
                                   {dir.filePath("deleted.wav")}, &failErr));
-    assert(failErr.contains("Impossible de copier l'enregistrement"));
-    assert(failErr.contains("piste 1"));
-    assert(!QFile::exists(failZipPath));
+    CHECK(failErr.contains("Impossible de copier l'enregistrement"));
+    CHECK(failErr.contains("piste 1"));
+    CHECK(!QFile::exists(failZipPath));
 
     // --- 8. extractArchive: round trip of the archive written above ---
     QString unzipErr;
     if (SaveManager::isUnzipAvailable(&unzipErr)) {
       const QString extractDir = dir.filePath("extracted");
       QString extractErr;
-      assert(manager.extractArchive(zipPath, extractDir, &extractErr));
+      CHECK(manager.extractArchive(zipPath, extractDir, &extractErr));
 
       // audioFilePath must have been rewritten relative to the archive root
       // (the caller passed "/tmp/track_1.wav"), and resolve strictly
       SaveData restored;
-      assert(manager.load(extractDir + "/mon.projet.v2.dbi", restored));
-      assert(restored.audioTracks.size() == 1);
-      assert(restored.audioTracks[0].audioFilePath ==
+      CHECK(manager.load(extractDir + "/mon.projet.v2.dbi", restored));
+      CHECK(restored.audioTracks.size() == 1);
+      CHECK(restored.audioTracks[0].audioFilePath ==
              "mon.projet.v2_audio/track_1.wav");
       const QString wav = SaveManager::resolveProjectPath(
           extractDir, restored.audioTracks[0].audioFilePath, true);
-      assert(!wav.isEmpty() && QFile::exists(wav));
+      CHECK(!wav.isEmpty() && QFile::exists(wav));
 
       // Video: relative name in the .dbi, resolves strictly inside the archive
       // (the flags loadProjectFrom uses for an archive), and re-saving over an
@@ -250,69 +248,69 @@ int main(int argc, char *argv[]) {
       const QString videoSrc = dir.filePath("clip.mp4");
       {
         QFile f(videoSrc);
-        assert(f.open(QIODevice::WriteOnly));
+        CHECK(f.open(QIODevice::WriteOnly));
         f.write("fake video");
       }
       SaveData withVideo = makeSampleData();
       withVideo.videoUrl = videoSrc;
       const QString zipVideo = dir.filePath("avec_video.zip");
-      assert(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      CHECK(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
       withVideo.videoUrl = dir.filePath("other.mp4");
       {
         QFile f(withVideo.videoUrl);
-        assert(f.open(QIODevice::WriteOnly));
+        CHECK(f.open(QIODevice::WriteOnly));
         f.write("another fake video");
       }
       withVideo.audioTracks[0].hasRecording = false;
-      assert(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
-      assert(QDir(dir.path()).entryList({".dbi_tmp_*"}, QDir::AllEntries | QDir::Hidden |
+      CHECK(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      CHECK(QDir(dir.path()).entryList({".dbi_tmp_*"}, QDir::AllEntries | QDir::Hidden |
                                                       QDir::NoDotAndDotDot).isEmpty());
 
       const QString videoDir = dir.filePath("extracted_video");
-      assert(manager.extractArchive(zipVideo, videoDir, &extractErr));
+      CHECK(manager.extractArchive(zipVideo, videoDir, &extractErr));
       SaveData withVideoBack;
-      assert(manager.load(videoDir + "/avec_video.dbi", withVideoBack));
-      assert(withVideoBack.videoUrl == "other.mp4");
+      CHECK(manager.load(videoDir + "/avec_video.dbi", withVideoBack));
+      CHECK(withVideoBack.videoUrl == "other.mp4");
       const QString video = SaveManager::resolveProjectPath(
           videoDir, withVideoBack.videoUrl, true, false);
-      assert(video.endsWith(".mp4") && QFile::exists(video));
-      assert(!QFile::exists(videoDir + "/clip.mp4"));
-      assert(!QFile::exists(videoDir + "/avec_video_audio")); // stale take gone
+      CHECK(video.endsWith(".mp4") && QFile::exists(video));
+      CHECK(!QFile::exists(videoDir + "/clip.mp4"));
+      CHECK(!QFile::exists(videoDir + "/avec_video_audio")); // stale take gone
 
       // Not an archive: exit code failure, message names the code
       const QString garbage = dir.filePath("garbage.zip");
       {
         QFile f(garbage);
-        assert(f.open(QIODevice::WriteOnly));
+        CHECK(f.open(QIODevice::WriteOnly));
         f.write("not a zip");
       }
       QString badErr;
-      assert(!manager.extractArchive(garbage, dir.filePath("out1"), &badErr));
-      assert(badErr.contains("L'extraction a échoué"));
+      CHECK(!manager.extractArchive(garbage, dir.filePath("out1"), &badErr));
+      CHECK(badErr.contains("L'extraction a échoué"));
 
       // Missing archive
       badErr.clear();
-      assert(!manager.extractArchive(dir.filePath("absent.zip"),
+      CHECK(!manager.extractArchive(dir.filePath("absent.zip"),
                                      dir.filePath("out2"), &badErr));
-      assert(badErr.contains("Impossible de lire"));
+      CHECK(badErr.contains("Impossible de lire"));
 
       // Valid zip without any .dbi
       const QString srcDir = dir.filePath("no_project");
-      assert(QDir().mkpath(srcDir));
+      CHECK(QDir().mkpath(srcDir));
       {
         QFile f(srcDir + "/readme.txt");
-        assert(f.open(QIODevice::WriteOnly));
+        CHECK(f.open(QIODevice::WriteOnly));
         f.write("x");
       }
       QProcess zipProc;
       zipProc.setWorkingDirectory(srcDir);
       zipProc.start("zip", QStringList() << "-0" << "-r"
                                          << dir.filePath("no_project.zip") << ".");
-      assert(zipProc.waitForFinished() && zipProc.exitCode() == 0);
+      CHECK(zipProc.waitForFinished() && zipProc.exitCode() == 0);
       badErr.clear();
-      assert(!manager.extractArchive(dir.filePath("no_project.zip"),
+      CHECK(!manager.extractArchive(dir.filePath("no_project.zip"),
                                      dir.filePath("out3"), &badErr));
-      assert(badErr.contains("ne contient pas de projet"));
+      CHECK(badErr.contains("ne contient pas de projet"));
     } else {
       std::puts("test_savemanager: 'unzip' unavailable, skipping extractArchive checks");
     }

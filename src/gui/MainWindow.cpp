@@ -66,7 +66,9 @@ MainWindow::MainWindow(QWidget *parent)
       m_playbackEngine(new PlaybackEngine(this)),
       m_rythmoManager(new RythmoManager(this)),
       m_exportService(new ExportService(this)),
-      m_saveManager(new SaveManager(this))
+      m_saveManager(new SaveManager(this)),
+      m_postRecordBar(nullptr),
+      m_postRecordLabel(nullptr)
       // Initialize state
       ,
       m_trackCount(0), m_previousVolume(100), m_isRecording(false),
@@ -74,12 +76,10 @@ MainWindow::MainWindow(QWidget *parent)
       m_lastRecordedStartMs(0), m_recordingStartTimeMs(0),
       m_isDirty(false), m_lastLoadLostTracksCount(0),
       m_autoSaveTimer(new QTimer(this)),
-      m_countdownTimer(new QTimer(this)),
-      m_countdownRemaining(0),
+      m_outputDevicesGroup(new QActionGroup(this)),
       m_countdownLabel(nullptr),
-      m_postRecordBar(nullptr),
-      m_postRecordLabel(nullptr),
-      m_outputDevicesGroup(new QActionGroup(this)) {
+      m_countdownTimer(new QTimer(this)),
+      m_countdownRemaining(0) {
   applyTheme();
   setupUi();
   createMenus();
@@ -1002,8 +1002,6 @@ void MainWindow::setTrackCount(int count) {
 
   // Remove tracks if needed
   while (m_trackCount > count) {
-    int idx = m_trackCount - 1;
-
     // Remove TrackWidget
     TrackWidget *panel = m_trackPanels.takeLast();
     m_tracksLayout->removeWidget(panel);
@@ -1111,11 +1109,11 @@ void MainWindow::openVideoDialog() {
 }
 
 SaveData MainWindow::collectSaveData() {
-  SaveData data;
-  data.videoUrl = m_currentVideoPath;
-  data.videoVolume = m_playbackEngine->volume();
-  data.trackCount = m_trackCount;
-  data.scrollSpeed = m_speedSpinBox->value();
+  SaveData saveData;
+  saveData.videoUrl = m_currentVideoPath;
+  saveData.videoVolume = m_playbackEngine->volume();
+  saveData.trackCount = m_trackCount;
+  saveData.scrollSpeed = m_speedSpinBox->value();
 
   for (int i = 0; i < m_trackCount; ++i) {
     TrackAudioSaveData audioData;
@@ -1124,17 +1122,17 @@ SaveData MainWindow::collectSaveData() {
     audioData.hasRecording = m_hasRecording.value(i, false);
     audioData.recordStartMs = m_trackRecordStartMs.value(i, 0);
     audioData.recordDurationMs = m_trackRecordDurationMs.value(i, 0);
-    data.audioTracks.append(audioData);
+    saveData.audioTracks.append(audioData);
   }
 
   for (int i = 0; i < m_trackCount; ++i) {
     TrackSaveData trackData;
     trackData.text = m_rythmoManager->text(i);
     trackData.style = m_rythmoManager->trackStyle(i);
-    data.tracks.append(trackData);
+    saveData.tracks.append(trackData);
   }
 
-  return data;
+  return saveData;
 }
 
 void MainWindow::onSaveProject() {
@@ -1204,7 +1202,7 @@ bool MainWindow::deferSaveDuringTake(PendingSave save) {
 }
 
 void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
-  SaveData data = collectSaveData();
+  SaveData saveData = collectSaveData();
 
   // Setup audio sub-directory for this project
   QFileInfo fi(fileName);
@@ -1228,8 +1226,8 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
   }
 
   // Attach project-relative audio paths and copy takes next to the .dbi
-  for (int i = 0; i < data.audioTracks.size(); ++i) {
-    TrackAudioSaveData &audioData = data.audioTracks[i];
+  for (int i = 0; i < saveData.audioTracks.size(); ++i) {
+    TrackAudioSaveData &audioData = saveData.audioTracks[i];
     if (!audioData.hasRecording)
       continue;
 
@@ -1309,13 +1307,13 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
 
     // Copy: the worker thread must not read members owned by the GUI thread
     const QStringList audioPaths = m_tempAudioPaths;
-    QFuture<bool> future = QtConcurrent::run([this, fileName, data, audioPaths, errorMessage]() {
-      return m_saveManager->saveWithMedia(fileName, data, audioPaths, errorMessage.get());
+    QFuture<bool> future = QtConcurrent::run([this, fileName, saveData, audioPaths, errorMessage]() {
+      return m_saveManager->saveWithMedia(fileName, saveData, audioPaths, errorMessage.get());
     });
     watcher->setFuture(future);
 
   } else {
-    if (m_saveManager->save(fileName, data)) {
+    if (m_saveManager->save(fileName, saveData)) {
       discardAutosave();
       m_currentProjectPath = fileName;
       setDirty(false);
@@ -1427,8 +1425,8 @@ QString MainWindow::extractProjectArchive(
 }
 
 bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
-  SaveData data;
-  if (!m_saveManager->load(path, data)) {
+  SaveData saveData;
+  if (!m_saveManager->load(path, saveData)) {
     QMessageBox::critical(
         this, tr("Erreur"),
         tr("Le fichier est corrompu ou d'une version incompatible."));
@@ -1441,19 +1439,19 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
   m_lastRecordedStartMs = 0;
 
   // Apply loaded data
-  m_speedSpinBox->setValue(data.scrollSpeed);
+  m_speedSpinBox->setValue(saveData.scrollSpeed);
 
   // Set track count
-  int loadedTrackCount = qBound(1, data.trackCount, MAX_TRACKS);
+  int loadedTrackCount = qBound(1, saveData.trackCount, MAX_TRACKS);
   setTrackCount(loadedTrackCount);
 
   // Restore rythmo tracks
-  for (int i = 0; i < qMin(data.tracks.size(), m_trackCount); ++i) {
-    m_rythmoManager->setText(i, data.tracks[i].text);
-    m_rythmoManager->setTrackStyle(i, data.tracks[i].style);
+  for (int i = 0; i < qMin(saveData.tracks.size(), m_trackCount); ++i) {
+    m_rythmoManager->setText(i, saveData.tracks[i].text);
+    m_rythmoManager->setTrackStyle(i, saveData.tracks[i].style);
     RythmoWidget *w = m_rythmoOverlay->track(i);
     if (w)
-      w->setText(data.tracks[i].text);
+      w->setText(saveData.tracks[i].text);
   }
 
   // Paths come from a file that may have been written by someone else
@@ -1464,8 +1462,8 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
   // Restore video and volume. Cleared first: the video of the previous project
   // may live in a work dir this load is about to delete.
   m_currentVideoPath.clear();
-  if (!data.videoUrl.isEmpty()) {
-    QString storedVideo = data.videoUrl;
+  if (!saveData.videoUrl.isEmpty()) {
+    QString storedVideo = saveData.videoUrl;
     if (storedVideo.startsWith("file://")) {
       storedVideo = QUrl(storedVideo).toLocalFile();
     }
@@ -1497,23 +1495,23 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
     }
   }
 
-  m_playbackEngine->setVolume(data.videoVolume);
+  m_playbackEngine->setVolume(saveData.videoVolume);
 
   // Restore audio device selection and gain
   m_lastLoadLostTracksCount = 0;
-  for (int i = 0; i < qMin(data.audioTracks.size(), m_trackCount); ++i) {
-    m_trackPanels[i]->setInputDevice(data.audioTracks[i].audioInput);
-    m_trackPanels[i]->setVolume(static_cast<int>(data.audioTracks[i].audioGain * 100));
+  for (int i = 0; i < qMin(saveData.audioTracks.size(), m_trackCount); ++i) {
+    m_trackPanels[i]->setInputDevice(saveData.audioTracks[i].audioInput);
+    m_trackPanels[i]->setVolume(static_cast<int>(saveData.audioTracks[i].audioGain * 100));
 
     // Restore recording metadata
-    m_hasRecording[i] = data.audioTracks[i].hasRecording;
-    m_trackRecordStartMs[i] = data.audioTracks[i].recordStartMs;
-    m_trackRecordDurationMs[i] = data.audioTracks[i].recordDurationMs;
+    m_hasRecording[i] = saveData.audioTracks[i].hasRecording;
+    m_trackRecordStartMs[i] = saveData.audioTracks[i].recordStartMs;
+    m_trackRecordDurationMs[i] = saveData.audioTracks[i].recordDurationMs;
 
     // Restore WAV file
-    if (m_hasRecording[i] && !data.audioTracks[i].audioFilePath.isEmpty()) {
+    if (m_hasRecording[i] && !saveData.audioTracks[i].audioFilePath.isEmpty()) {
         const QString savedWavPath = SaveManager::resolveProjectPath(
-            dir.absolutePath(), data.audioTracks[i].audioFilePath,
+            dir.absolutePath(), saveData.audioTracks[i].audioFilePath,
             strictRelative);
         if (savedWavPath.isEmpty()) {
             m_hasRecording[i] = false;
@@ -2404,16 +2402,16 @@ void MainWindow::onAutoSaveTriggered() {
     dir.mkpath(".");
   }
 
-  SaveData data = collectSaveData();
+  SaveData saveData = collectSaveData();
 
   // Autosave keeps the temp WAV paths: takes are recoverable without a copy pass
-  for (int i = 0; i < data.audioTracks.size(); ++i) {
-    if (data.audioTracks[i].hasRecording) {
-      data.audioTracks[i].audioFilePath = m_tempAudioPaths.value(i);
+  for (int i = 0; i < saveData.audioTracks.size(); ++i) {
+    if (saveData.audioTracks[i].hasRecording) {
+      saveData.audioTracks[i].audioFilePath = m_tempAudioPaths.value(i);
     }
   }
 
-  if (m_saveManager->save(autosaveFile, data)) {
+  if (m_saveManager->save(autosaveFile, saveData)) {
     statusBar()->showMessage(tr("Sauvegarde automatique cache effectuée"), 2000);
   }
 }

@@ -111,7 +111,13 @@ set(UTILS_SOURCES
 # =============================================================================
 
 if(APPLE)
-    set(MACOS_PLIST_INFO "${CMAKE_CURRENT_SOURCE_DIR}/deploy/Info.plist")
+    # Info.plist is a template: the versions come from the project version
+    set(MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}")
+    set(MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}")
+    configure_file(
+        "${CMAKE_CURRENT_SOURCE_DIR}/deploy/Info.plist"
+        "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
+    )
     add_executable(DubInstante MACOSX_BUNDLE
         main.cpp
         ${CORE_SOURCES}
@@ -120,11 +126,9 @@ if(APPLE)
         resources.qrc
     )
     set_target_properties(DubInstante PROPERTIES
-        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_SOURCE_DIR}/deploy/Info.plist"
+        MACOSX_BUNDLE_INFO_PLIST "${CMAKE_CURRENT_BINARY_DIR}/Info.plist"
         MACOSX_BUNDLE_BUNDLE_NAME "DubInstante"
         MACOSX_BUNDLE_GUI_IDENTIFIER "com.dubinstante.app"
-        MACOSX_BUNDLE_BUNDLE_VERSION "${PROJECT_VERSION}"
-        MACOSX_BUNDLE_SHORT_VERSION_STRING "${PROJECT_VERSION}"
         MACOSX_BUNDLE_COPYRIGHT "Copyright © 2024 DubInstante"
     )
 else()
@@ -150,6 +154,13 @@ target_include_directories(DubInstante PRIVATE
 # Single source of truth for the application version
 target_compile_definitions(DubInstante PRIVATE APP_VERSION="${PROJECT_VERSION}")
 
+# Warnings (main target only)
+if(MSVC)
+    target_compile_options(DubInstante PRIVATE /W4)
+else()
+    target_compile_options(DubInstante PRIVATE -Wall -Wextra -Wshadow)
+endif()
+
 # =============================================================================
 # Link Libraries
 # =============================================================================
@@ -165,10 +176,12 @@ target_link_libraries(DubInstante PRIVATE
 )
 
 # =============================================================================
-# Tests (opt-in: cmake --build . --target test_savemanager)
+# Tests (ctest)
 # =============================================================================
 
-add_executable(test_savemanager EXCLUDE_FROM_ALL
+enable_testing()
+
+add_executable(test_savemanager
     tests/test_savemanager.cpp
     src/core/SaveManager.h
     src/core/SaveManager.cpp
@@ -179,8 +192,9 @@ target_include_directories(test_savemanager PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_savemanager PRIVATE Qt6::Gui)
+add_test(NAME test_savemanager COMMAND test_savemanager)
 
-add_executable(test_settingsmanager EXCLUDE_FROM_ALL
+add_executable(test_settingsmanager
     tests/test_settingsmanager.cpp
     src/core/SettingsManager.h
     src/core/SettingsManager.cpp
@@ -189,8 +203,9 @@ target_include_directories(test_settingsmanager PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_settingsmanager PRIVATE Qt6::Core Qt6::Gui)
+add_test(NAME test_settingsmanager COMMAND test_settingsmanager)
 
-add_executable(test_exportservice EXCLUDE_FROM_ALL
+add_executable(test_exportservice
     tests/test_exportservice.cpp
     src/core/ExportService.h
     src/core/ExportService.cpp
@@ -199,8 +214,9 @@ target_include_directories(test_exportservice PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_exportservice PRIVATE Qt6::Core)
+add_test(NAME test_exportservice COMMAND test_exportservice)
 
-add_executable(test_exportdialog EXCLUDE_FROM_ALL
+add_executable(test_exportdialog
     tests/test_exportdialog.cpp
     src/gui/ExportDialog.h
     src/gui/ExportDialog.cpp
@@ -212,3 +228,11 @@ target_include_directories(test_exportdialog PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
 )
 target_link_libraries(test_exportdialog PRIVATE Qt6::Widgets)
+add_test(NAME test_exportdialog COMMAND test_exportdialog)
+
+# Les tests construisent un QGuiApplication : sans plugin de plateforme, ils
+# meurent sur une machine sans écran (CI comprise).
+set_tests_properties(
+    test_savemanager test_settingsmanager test_exportservice test_exportdialog
+    PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
+)

@@ -623,7 +623,7 @@ void ExportDialog::populateFields()
     if (!m_sourceVideoPath.isEmpty()) {
         QFileInfo videoInfo(m_sourceVideoPath);
         QString defaultDir = videoInfo.absolutePath();
-        QString baseName = videoInfo.baseName();
+        QString baseName = videoInfo.completeBaseName();
         QString formatExt = m_formatCombo->currentData().toString();
         m_outputPathEdit->setText(QDir(defaultDir).filePath(baseName + "_double." + formatExt));
     } else {
@@ -650,7 +650,7 @@ void ExportDialog::onFormatChanged(int index)
     if (!currentPath.isEmpty()) {
         QFileInfo fileInfo(currentPath);
         QString absoluteDir = fileInfo.absolutePath();
-        QString baseName = fileInfo.baseName();
+        QString baseName = fileInfo.completeBaseName();
         m_outputPathEdit->setText(QDir(absoluteDir).filePath(baseName + "." + formatExt));
     }
 

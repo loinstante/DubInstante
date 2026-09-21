@@ -51,6 +51,7 @@
 #include <QProgressDialog>
 #include <QtConcurrent>
 #include <algorithm>
+#include <memory>
 #include <limits>
 
 MainWindow::MainWindow(QWidget *parent)
@@ -1173,7 +1174,7 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
   // Setup audio sub-directory for this project
   QFileInfo fi(fileName);
   QDir dir = fi.absoluteDir();
-  QString baseName = fi.baseName();
+  QString baseName = fi.completeBaseName();
   QString audioDirName = baseName + "_audio";
   QString audioDirPath = dir.absoluteFilePath(audioDirName);
   QDir audioDir(audioDirPath);
@@ -1247,8 +1248,9 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
 
     // Run in background thread
     QFutureWatcher<bool> *watcher = new QFutureWatcher<bool>(this);
+    auto errorMessage = std::make_shared<QString>();
     connect(watcher, &QFutureWatcher<bool>::finished, this,
-            [this, watcher, progressDialog, fileName]() {
+            [this, watcher, progressDialog, fileName, errorMessage]() {
               bool result = watcher->result();
               progressDialog->close();
               progressDialog->deleteLater();
@@ -1263,15 +1265,17 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
               } else {
                 QMessageBox::critical(
                     this, tr("Erreur"),
-                    tr("Impossible de créer l'archive ZIP.\nVérifiez l'espace "
-                       "disque ou les permissions."));
+                    errorMessage->isEmpty()
+                        ? tr("Impossible de créer l'archive ZIP.\nVérifiez "
+                             "l'espace disque ou les permissions.")
+                        : *errorMessage);
               }
             });
 
     // Copy: the worker thread must not read members owned by the GUI thread
     const QStringList audioPaths = m_tempAudioPaths;
-    QFuture<bool> future = QtConcurrent::run([this, fileName, data, audioPaths]() {
-      return m_saveManager->saveWithMedia(fileName, data, audioPaths);
+    QFuture<bool> future = QtConcurrent::run([this, fileName, data, audioPaths, errorMessage]() {
+      return m_saveManager->saveWithMedia(fileName, data, audioPaths, errorMessage.get());
     });
     watcher->setFuture(future);
 

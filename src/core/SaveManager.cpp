@@ -174,18 +174,20 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
     return false;
   }
 
-  // 3. Copy video file
-  QString videoDest = tempDir.filePath(videoFileName);
-  if (!QFile::copy(videoSource, videoDest)) {
-    qWarning() << "Failed to copy video file to temp dir:" << videoSource;
-    if (errorMessage)
-      *errorMessage =
-          QObject::tr("Impossible de copier la vidéo dans l'archive.");
-    return false;
+  // 3. Copy video file (projects without video legitimately have no source)
+  if (!videoSource.isEmpty()) {
+    QString videoDest = tempDir.filePath(videoFileName);
+    if (!QFile::copy(videoSource, videoDest)) {
+      qWarning() << "Failed to copy video file to temp dir:" << videoSource;
+      if (errorMessage)
+        *errorMessage =
+            QObject::tr("Impossible de copier la vidéo dans l'archive.");
+      return false;
+    }
   }
 
   // 3.5 Copy audio tracks
-  QString audioDirName = QFileInfo(zipPath).baseName() + "_audio";
+  QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
   QDir tempQDir(tempDir.path());
   bool hasAnyAudio = false;
   
@@ -203,14 +205,13 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
       for (int i = 0; i < data.audioTracks.size(); ++i) {
           if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
               QString sourcePath = tempAudioPaths[i];
-              if (QFile::exists(sourcePath)) {
-                  QString destFilename = QString("track_%1.wav").arg(i + 1);
-                  if (!QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
-                      qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
-                      if (errorMessage)
-                          *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
-                      return false;
-                  }
+              QString destFilename = QString("track_%1.wav").arg(i + 1);
+              if (!QFile::exists(sourcePath) ||
+                  !QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
+                  qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
+                  if (errorMessage)
+                      *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
+                  return false;
               }
           }
       }

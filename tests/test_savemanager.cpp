@@ -3,8 +3,10 @@
 
 #include "SaveManager.h"
 
+#include <QDir>
 #include <QFile>
 #include <QGuiApplication>
+#include <QProcess>
 #include <QTemporaryDir>
 #include <cassert>
 #include <cstdio>
@@ -135,6 +137,52 @@ int main(int argc, char *argv[]) {
   assert(manager.load(dirtyPath, cleaned));
   assert(cleaned.trackCount >= 1 && cleaned.trackCount <= 4);
   assert(cleaned.scrollSpeed >= 10 && cleaned.scrollSpeed <= 500);
+
+  // --- 7. saveWithMedia archive checks (zip path) ---
+  QString zipErr;
+  if (SaveManager::isZipAvailable(&zipErr)) {
+    const QString audioSrc = dir.filePath("take1.wav");
+    {
+      QFile f(audioSrc);
+      assert(f.open(QIODevice::WriteOnly));
+      f.write("fake wav payload");
+    }
+
+    // Project without video must succeed and skip the video entry (S8).
+    SaveData noVideo = makeSampleData();
+    noVideo.videoUrl = "";
+    noVideo.audioTracks[0].hasRecording = true;
+
+    // Dotted project name to check .dbi/_audio naming consistency (S13).
+    const QString zipPath = dir.filePath("mon.projet.v2.zip");
+    QString err;
+    assert(manager.saveWithMedia(zipPath, noVideo, {audioSrc}, &err));
+    assert(err.isEmpty());
+    assert(QFile::exists(zipPath));
+
+    QProcess list;
+    list.start("unzip", QStringList() << "-l" << zipPath);
+    assert(list.waitForFinished());
+    const QString listing = QString::fromUtf8(list.readAllStandardOutput());
+    assert(listing.contains("mon.projet.v2.dbi"));
+    assert(listing.contains("mon.projet.v2_audio/"));
+    assert(!listing.contains(".mp4"));
+
+    // A track whose WAV vanished must abort the archive, naming the track (S6).
+    SaveData failData = makeSampleData();
+    failData.videoUrl = "";
+    failData.audioTracks[0].hasRecording = true;
+
+    const QString failZipPath = dir.filePath("shouldfail.zip");
+    QString failErr;
+    assert(!manager.saveWithMedia(failZipPath, failData,
+                                  {dir.filePath("deleted.wav")}, &failErr));
+    assert(failErr.contains("Impossible de copier l'enregistrement"));
+    assert(failErr.contains("piste 1"));
+    assert(!QFile::exists(failZipPath));
+  } else {
+    std::puts("test_savemanager: 'zip' unavailable, skipping saveWithMedia checks");
+  }
 
   std::puts("test_savemanager: OK");
   return 0;

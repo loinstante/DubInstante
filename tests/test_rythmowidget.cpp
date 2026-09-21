@@ -6,8 +6,8 @@
 #include "check.h"
 
 #include <QApplication>
-#include <QFontMetrics>
 #include <QEventLoop>
+#include <QFontMetrics>
 #include <QKeyEvent>
 #include <QTimer>
 
@@ -38,12 +38,12 @@ int main(int argc, char *argv[]) {
   QApplication app(argc, argv);
 
   RythmoTrackStyle style;
-  const int cw16 = QFontMetrics(style.font).horizontalAdvance('A');
+  const double cw16 = QFontMetricsF(style.font).horizontalAdvance('A');
   RythmoTrackStyle big = style;
   big.globalSize = 24;
   big.font.setPointSize(24);
-  const int cw24 = QFontMetrics(big.font).horizontalAdvance('A');
-  CHECK(cw16 > 0 && cw24 > cw16);
+  const double cw24 = QFontMetricsF(big.font).horizontalAdvance('A');
+  CHECK(cw16 > 0.0 && cw24 > cw16);
 
   // --- 1. Empty band: the grid follows font and speed (legacy behaviour) ---
   {
@@ -86,7 +86,7 @@ int main(int argc, char *argv[]) {
   // Adding a truncated 108 ms per key used to end 100 ms (one cell) early.
   {
     RythmoWidget w;
-    w.setCharMs(13 * 1000.0 / 120);
+    w.setCharMs(cw16 * 1000.0 / 120);
     int textChanges = 0;
     QObject::connect(&w, &RythmoWidget::textChanged, &w,
                      [&textChanges]() { ++textChanges; });

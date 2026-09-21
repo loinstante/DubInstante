@@ -125,7 +125,7 @@ protected:
 private:
   // Helpers
   bool isDarkTheme();
-  int charWidth() const;
+  double charWidth() const;
   double nominalCharMs() const;
   double pixelsPerMs() const;
   int cursorIndex() const;
@@ -154,7 +154,7 @@ private:
   int m_lastMouseX;
 
   // Font cache
-  mutable int m_cachedCharWidth;
+  mutable double m_cachedCharWidth;
 
   // Seek debouncing
   QTimer *m_seekTimer;

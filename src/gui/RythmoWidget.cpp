@@ -19,7 +19,7 @@ RythmoWidget::RythmoWidget(QWidget *parent)
     : QWidget(parent), m_currentPosition(0), m_speed(100), m_charMs(0.0),
       m_isPlaying(false), m_editable(true),
       m_barColor(QColor(0, 0, 0, 0)), m_playingBarColor(QColor(0, 0, 0, 0)),
-      m_lastMouseX(0), m_cachedCharWidth(-1), m_seekTimer(new QTimer(this)),
+      m_lastMouseX(0), m_cachedCharWidth(-1.0), m_seekTimer(new QTimer(this)),
       m_pendingSeekPosition(0), m_animationTimer(new QTimer(this)),
       m_lastSyncPosition(0), m_lastSyncTime(0) {
   m_charMs = nominalCharMs();
@@ -42,7 +42,7 @@ RythmoWidget::RythmoWidget(QWidget *parent)
 
 void RythmoWidget::setTrackStyle(const RythmoTrackStyle &style) {
   m_style = style;
-  m_cachedCharWidth = -1;
+  m_cachedCharWidth = -1.0;
   // An empty band has no sync to preserve: it follows the nominal speed.
   // Otherwise the time grid stays put and the band is only rescaled on screen.
   if (m_text.trimmed().isEmpty()) {
@@ -148,17 +148,20 @@ void RythmoWidget::animate() {
 // Helpers
 // =============================================================================
 
-int RythmoWidget::charWidth() const {
-  if (m_cachedCharWidth == -1) {
-    QFontMetrics fm(m_style.font);
+// The real, fractional advance: rounding it to a whole pixel would stretch the
+// band by the difference (3.2% on the default font, 13 px against 12.59) and
+// space the glyphs off their natural positions.
+double RythmoWidget::charWidth() const {
+  if (m_cachedCharWidth < 0.0) {
+    QFontMetricsF fm(m_style.font);
     m_cachedCharWidth = fm.horizontalAdvance('A');
   }
   return m_cachedCharWidth;
 }
 
 double RythmoWidget::nominalCharMs() const {
-  const int cw = charWidth();
-  return cw > 0 ? cw * 1000.0 / m_speed : 40.0; // Fallback ~1 frame
+  const double cw = charWidth();
+  return cw > 0.0 ? cw * 1000.0 / m_speed : 40.0; // Fallback ~1 frame
 }
 
 double RythmoWidget::pixelsPerMs() const { return charWidth() / m_charMs; }
@@ -233,11 +236,11 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   QRect bandRect(0, bandY, width(), bandHeight);
 
   // 2. Calculate drawing parameters
-  int cw = charWidth();
+  const double cw = charWidth();
   int targetX = width() / 5; // Target line position
 
   double pixelOffset;
-  if (m_isPlaying && cw > 0) {
+  if (m_isPlaying && cw > 0.0) {
     // Smooth scrolling using continuous position
     pixelOffset = m_currentPosition * pixelsPerMs();
   } else {
@@ -256,7 +259,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.fillRect(bandRect, bgColor);
 
   // 4. Draw scrolling text (virtualized for performance)
-  if (cw > 0 && !m_text.isEmpty()) {
+  if (cw > 0.0 && !m_text.isEmpty()) {
     painter.setFont(m_style.font);
     painter.setPen(m_style.textColor);
 
@@ -268,9 +271,8 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
         std::min(static_cast<int>(m_text.length()),
                  static_cast<int>((width() - textStartX) / cw) + 1);
 
-    // One cell per character: drawn as a single string, the text follows the
-    // fractional advances of the font (12.59 px for a 13 px cell) and slides
-    // away from the time grid, by ~120 ms under the target line.
+    // One cell per character, at the cell width: the band cannot drift off its
+    // time grid through a ligature or a substituted glyph whose advance differs.
     for (int i = firstVisibleIdx; i < lastVisibleIdx; ++i) {
       const bool isPair = m_text[i].isHighSurrogate() &&
                           i + 1 < m_text.length() &&
@@ -297,7 +299,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   painter.drawLine(targetX, bandY, targetX, bandY + bandHeight);
 
   // 7. Draw edit cursor (always at targetX to align with playback line)
-  if (cw > 0) {
+  if (cw > 0.0) {
     // Force cursor to targetX for perfect alignment with target line
     double cursorScreenX = targetX;
 
@@ -356,7 +358,7 @@ void RythmoWidget::mousePressEvent(QMouseEvent *event) {
 
   m_lastMouseX = event->pos().x();
 
-  if (charWidth() <= 0) {
+  if (charWidth() <= 0.0) {
     return;
   }
 
@@ -378,7 +380,7 @@ void RythmoWidget::mouseMoveEvent(QMouseEvent *event) {
     return;
   }
 
-  if (charWidth() <= 0) {
+  if (charWidth() <= 0.0) {
     return;
   }
 

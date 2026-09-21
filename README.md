@@ -7,11 +7,11 @@
 
 ### [FR] 🇫🇷
 
-**DubInstante** est un outil de doublage professionnel conçu pour les comédiens, fandubbers, monteurs vidéo et étudiants en cinéma. Grâce à sa bande rythmo dynamique synchronisée à l'image près et son moteur audio/vidéo ultra-léger, il remplace les logiciels hors de prix ou vieillissants par une alternative moderne, rapide et gratuite.
+**DubInstante** est un outil de doublage professionnel conçu pour les comédiens, fandubbers, monteurs vidéo et étudiants en cinéma. Grâce à sa navigation image par image, sa bande rythmo dynamique et son moteur audio/vidéo ultra-léger, il remplace les logiciels hors de prix ou vieillissants par une alternative moderne, rapide et gratuite.
 
 ### [EN] 🇬🇧
 
-**DubInstante** is a professional-grade dubbing workbench built for voice actors, fandubbers, video editors, and cinema students. Combining a frame-accurate dynamic Rythmo Band with an ultra-lightweight audio/video engine, it replaces overpriced or legacy proprietary software with a modern, fast, and free alternative.
+**DubInstante** is a professional-grade dubbing workbench built for voice actors, fandubbers, video editors, and cinema students. Combining frame-by-frame navigation, a dynamic Rythmo Band, and an ultra-lightweight audio/video engine, it replaces overpriced or legacy proprietary software with a modern, fast, and free alternative.
 
 ---
 
@@ -48,8 +48,8 @@ Seeing the rythmo band scrolling in sync with the video beats reading any text d
 * **EN :** Zero forced cloud services, zero tracking, zero mandatory accounts. Your massive HD video files and lossless PCM recordings stay entirely on your local machine. Your work remains yours.
 
 ### ⚡ Ingénierie Sans Concession / Extreme Engineering
-* **FR :** Fini les applications Electron lourdes et gourmandes. DubInstante est écrit en C++ natif avec Qt 6 et OpenGL pour offrir des performances maximales et une réactivité instantanée, même sur des configurations modestes.
-* **EN :** No heavy Electron wrappers or bloated frameworks. DubInstante is written in native C++ using Qt 6 and OpenGL-accelerated rendering, delivering peak performance and immediate response times.
+* **FR :** Fini les applications Electron lourdes et gourmandes. DubInstante est écrit en C++ natif avec Qt 6 pour offrir des performances maximales et une réactivité instantanée, même sur des configurations modestes.
+* **EN :** No heavy Electron wrappers or bloated frameworks. DubInstante is written in native C++ using Qt 6, delivering peak performance and immediate response times.
 
 ---
 
@@ -60,11 +60,13 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 | Action (FR) | Action (EN) | Raccourci / Shortcut |
 |:---|:---|:---|
 | **Lecture / Pause** | Play / Pause | `Espace` / `Space` |
-| **Arrêt de l'enregistrement** | Stop recording | `Ctrl+S` |
-| **Insérer espace & lecture** | Insert space & play | `Échap` / `Esc` |
+| **Démarrer l'enregistrement** | Start recording | `Ctrl+R` |
+| **Arrêt de l'enregistrement** | Stop recording | `Échap` / `Esc` |
+| **Insérer espace & lecture** (hors enregistrement) | Insert space & play (when not recording) | `Échap` / `Esc` |
+| **Sauvegarder le projet** | Save project | `Ctrl+S` |
 | **Navigation image par image** | Frame-by-frame navigation | `←` / `→` |
-| **Retour arrière rapide (-5s)** | Quick seek back (-5s) | `Alt + ←` |
-| **Avance rapide (+5s)** | Quick seek forward (+5s) | `Alt + →` |
+| **Retour arrière rapide (-5s)** | Quick seek back (-5s) | `Shift + ←` |
+| **Avance rapide (+5s)** | Quick seek forward (+5s) | `Shift + →` |
 
 ---
 
@@ -74,9 +76,9 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 * **FR : Moteur N-Pistes & Fichiers 50 Go+** : Conçu pour lire directement les fichiers vidéo HD non compressés de plus de 50 Go sans latence ni saccade.
 * **EN : N-Track Engine & 50GB+ Files** : Designed to smoothly play and record alongside massive uncompressed HD video files directly without lagging.
 
-### 🎨 Bande Rythmo OpenGL Dynamique
-* **FR : Jusqu'à 4 Pistes Synchros** : Affichez et éditez jusqu'à 4 pistes de texte simultanées, synchronisées à la milliseconde près, avec accélération matérielle OpenGL pour un défilement parfait.
-* **EN : Up to 4 Synced Tracks** : Display and edit up to 4 simultaneous text tracks, frame-accurately synced, powered by hardware-accelerated OpenGL rendering.
+### 🎨 Bande Rythmo Dynamique
+* **FR : Jusqu'à 4 Pistes Synchros** : Affichez et éditez jusqu'à 4 pistes de texte simultanées, défilant avec la vidéo à la vitesse que vous réglez.
+* **EN : Up to 4 Synced Tracks** : Display and edit up to 4 simultaneous text tracks, scrolling with the video at the speed you set.
 
 ### 🎚️ Moteur Audio & FFmpeg
 * **FR : Export Sans Perte** : Ajustez les gains de chaque micro en temps réel et exportez le mix final proprement avec FFmpeg. Le moteur intercepte proprement les erreurs système (comme le manque d'espace disque) sans bloquer l'application.

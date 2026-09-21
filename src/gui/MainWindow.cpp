@@ -158,6 +158,18 @@ MainWindow::MainWindow(QWidget *parent)
 
 namespace {
 
+// Types vidéo acceptés. Le sélecteur de fichiers et la barrière de type du
+// chargement de projet lisent la même liste : sans ça, un projet enregistré
+// avec un .mkv ne se rouvre pas.
+const QStringList &videoSuffixes() {
+  static const QStringList suffixes{"mp4", "mkv", "mov", "avi", "m4v", "webm", "mxf"};
+  return suffixes;
+}
+
+bool hasVideoSuffix(const QString &path) {
+  return videoSuffixes().contains(QFileInfo(path).suffix().toLower());
+}
+
 // Every role Fusion draws with is set explicitly, including the Disabled group:
 // a role left unset falls back to the OS theme palette, which is the opposite
 // scheme half the time (light frames under the dark theme). The Disabled
@@ -1078,8 +1090,14 @@ void MainWindow::onOpenFile() {
 // Sans garde de sauvegarde : appelée aussi par loadProjectFrom() pour relier une
 // vidéo introuvable, au milieu d'un chargement déjà engagé.
 void MainWindow::openVideoDialog() {
-  QString fileName = QFileDialog::getOpenFileName(this, tr("Ouvrir"), "",
-                                                  tr("Vidéos MP4 (*.mp4)"));
+  QStringList globs;
+  for (const QString &suffix : videoSuffixes())
+    globs << QLatin1String("*.") + suffix;
+
+  QString fileName = QFileDialog::getOpenFileName(
+      this, tr("Ouvrir"), "",
+      tr("Fichiers vidéo (%1);;Tous les fichiers (*)")
+          .arg(globs.join(QLatin1Char(' '))));
 
   if (!fileName.isEmpty()) {
     m_playbackEngine->openFile(QUrl::fromLocalFile(fileName));
@@ -1461,8 +1479,9 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
     // Hors du dossier projet il n'y a plus de confinement : le type de fichier
     // est la dernière barrière. Sans elle, un .dbi reçu d'un tiers désigne
     // n'importe quel fichier lisible, qui repart ensuite dans l'archive
-    // produite par saveWithMedia(). Même filtre que openVideoDialog().
-    if (!localPath.endsWith(".mp4", Qt::CaseInsensitive))
+    // produite par saveWithMedia(). Mêmes extensions que le sélecteur, sans son
+    // échappatoire « Tous les fichiers » : ici personne ne choisit.
+    if (!hasVideoSuffix(localPath))
       localPath.clear();
 
     if (localPath.isEmpty()) {

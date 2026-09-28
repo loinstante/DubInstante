@@ -100,6 +100,8 @@ set(GUI_SOURCES
     src/gui/GlobalSettingsDialog.cpp
     src/gui/ExportDialog.h
     src/gui/ExportDialog.cpp
+    src/gui/TakeTimeline.h
+    src/gui/TakeTimeline.cpp
     src/gui/ClickableSlider.h
     src/gui/Palette.h
 )

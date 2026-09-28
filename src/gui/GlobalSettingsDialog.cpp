@@ -29,7 +29,8 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
 
     m_recordActions = {
         "record_start",
-        "record_stop"
+        "record_stop",
+        "take_split"
     };
 
     m_audioActions = {
@@ -510,6 +511,7 @@ QString GlobalSettingsDialog::getActionName(const QString &actionId) const {
     if (actionId == "video_seek_forward_5s") return tr("Avancer de 5 secondes");
     if (actionId == "record_start") return tr("Démarrer l'enregistrement");
     if (actionId == "record_stop") return tr("Arrêter l'enregistrement");
+    if (actionId == "take_split") return tr("Couper la prise à la tête de lecture");
     if (actionId == "audio_volume_up") return tr("Augmenter le volume");
     if (actionId == "audio_volume_down") return tr("Diminuer le volume");
     if (actionId == "audio_volume_mute") return tr("Couper / Activer le son (Mute)");

@@ -161,6 +161,7 @@ QKeySequence SettingsManager::defaultShortcut(const QString &actionId) const {
     if (actionId == "audio_volume_up") return QKeySequence(Qt::Key_Up);
     if (actionId == "audio_volume_down") return QKeySequence(Qt::Key_Down);
     if (actionId == "audio_volume_mute") return QKeySequence("M");
+    if (actionId == "take_split") return QKeySequence("S");
     return QKeySequence();
 }
 

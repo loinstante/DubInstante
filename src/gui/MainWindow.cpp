@@ -18,6 +18,7 @@
 // GUI includes
 #include "ClickableSlider.h"
 #include "RythmoOverlay.h"
+#include "TakeTimeline.h"
 #include "Palette.h"
 #include "TrackWidget.h"
 #include "TrackSettingsDialog.h"
@@ -48,6 +49,9 @@
 #include <QLocale>
 #include <QMessageBox>
 #include <QResizeEvent>
+#include <QScrollArea>
+#include <QSettings>
+#include <QSplitter>
 #include <QStandardPaths>
 #include <QStatusBar>
 #include <QVBoxLayout>
@@ -292,6 +296,7 @@ void MainWindow::applyTrackEdit(int trackIndex, const TakeTrack &takes) {
     return;
   m_takeTracks[trackIndex] = takes;
   m_trackPlayers[trackIndex]->setSegments(takes.segments());
+  m_takeTimeline->setTrack(trackIndex, takes);
   syncTrackPlayers();
   setDirty(true);
 }
@@ -355,12 +360,29 @@ void MainWindow::setupUi() {
   m_rythmoOverlay = new RythmoOverlay(m_videoFrame);
   m_rythmoOverlay->show();
 
-  QVBoxLayout *playerContainerLayout = new QVBoxLayout();
-  playerContainerLayout->setContentsMargins(0, 0, 0, 0);
-  playerContainerLayout->setSpacing(0);
-  playerContainerLayout->addWidget(m_videoFrame, 1);
+  // Takes timeline under the video, resizable against it
+  QScrollArea *timelineScroll = new QScrollArea(this);
+  timelineScroll->setObjectName("takeTimelineScroll");
+  timelineScroll->setWidgetResizable(true);
+  timelineScroll->setFrameShape(QFrame::NoFrame);
+  timelineScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+  m_takeTimeline = new TakeTimeline(timelineScroll);
+  timelineScroll->setWidget(m_takeTimeline);
 
-  mainLayout->addLayout(playerContainerLayout, 1);
+  QSplitter *videoSplitter = new QSplitter(Qt::Vertical, this);
+  videoSplitter->setObjectName("videoSplitter");
+  videoSplitter->setChildrenCollapsible(false);
+  videoSplitter->addWidget(m_videoFrame);
+  videoSplitter->addWidget(timelineScroll);
+  videoSplitter->setStretchFactor(0, 1);
+  videoSplitter->setStretchFactor(1, 0);
+  if (!videoSplitter->restoreState(QSettings().value("ui/video_splitter").toByteArray()))
+    videoSplitter->setSizes({1000, m_takeTimeline->sizeHint().height()});
+  connect(videoSplitter, &QSplitter::splitterMoved, this, [videoSplitter]() {
+    QSettings().setValue("ui/video_splitter", videoSplitter->saveState());
+  });
+
+  mainLayout->addWidget(videoSplitter, 1);
 
   // Watch for resize events
   m_videoFrame->installEventFilter(this);
@@ -371,15 +393,6 @@ void MainWindow::setupUi() {
   m_fullscreenContainer->setObjectName("fullscreenContainer");
   m_fullscreenContainer->setStyleSheet("background-color: black;");
   m_fullscreenContainer->hide();
-
-  // =========================================================================
-  // Position Slider
-  // =========================================================================
-
-  m_positionSlider = new ClickableSlider(Qt::Horizontal, this);
-  m_positionSlider->setObjectName("positionSlider");
-  m_positionSlider->setRange(0, 0);
-  mainLayout->addWidget(m_positionSlider);
 
   // =========================================================================
   // Control Bar
@@ -756,18 +769,19 @@ void MainWindow::setupConnections() {
           });
 
   // =========================================================================
-  // Position Slider
+  // Takes Timeline
   // =========================================================================
 
-  connect(m_positionSlider, &QSlider::sliderMoved, m_playbackEngine,
+  connect(m_takeTimeline, &TakeTimeline::seekRequested, m_playbackEngine,
           &PlaybackEngine::seek);
-
-  // Frame stepping configuration
-  connect(m_playbackEngine, &PlaybackEngine::metaDataChanged, this, [this]() {
-    const int step = static_cast<int>(frameStepMs());
-    m_positionSlider->setSingleStep(step);
-    m_positionSlider->setPageStep(10 * step);
-  });
+  connect(m_takeTimeline, &TakeTimeline::playRequested, m_playbackEngine,
+          &PlaybackEngine::play);
+  connect(m_takeTimeline, &TakeTimeline::trackEdited, this,
+          &MainWindow::applyTrackEdit);
+  connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged, this,
+          [this](QMediaPlayer::PlaybackState state) {
+            m_takeTimeline->setPlaying(state == QMediaPlayer::PlayingState);
+          });
 
   // =========================================================================
   // Volume Controls
@@ -1028,6 +1042,7 @@ void MainWindow::setTrackCount(int count) {
 
   // Update RythmoOverlay
   m_rythmoOverlay->setTrackCount(count);
+  m_takeTimeline->setTrackCount(count);
 
   // Connect signals for all current tracks
   // (reconnecting is safe because we use lambdas with captured index)
@@ -1537,16 +1552,14 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
 // =============================================================================
 
 void MainWindow::onPositionChanged(qint64 position) {
-  if (!m_positionSlider->isSliderDown()) {
-    m_positionSlider->setValue(static_cast<int>(position));
-  }
+  m_takeTimeline->setPosition(position);
 
   m_timeLabel->setText(TimeFormatter::format(position) + " / " +
                        TimeFormatter::format(m_playbackEngine->duration()));
 }
 
 void MainWindow::onDurationChanged(qint64 duration) {
-  m_positionSlider->setRange(0, static_cast<int>(duration));
+  m_takeTimeline->setDuration(duration);
 }
 
 void MainWindow::onPlaybackStateChanged(QMediaPlayer::PlaybackState state) {
@@ -1839,6 +1852,7 @@ void MainWindow::applyShortcuts() {
   m_shortcutVolumeUp = sm.shortcut("audio_volume_up");
   m_shortcutVolumeDown = sm.shortcut("audio_volume_down");
   m_shortcutVolumeMute = sm.shortcut("audio_volume_mute");
+  m_shortcutTakeSplit = sm.shortcut("take_split");
 }
 
 
@@ -2103,6 +2117,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
     if (!m_shortcutVolumeMute.isEmpty() && pressedSeq == m_shortcutVolumeMute) {
       m_volumeMuteButton->click();
+      event->accept();
+      return;
+    }
+
+    if (!m_shortcutTakeSplit.isEmpty() && pressedSeq == m_shortcutTakeSplit) {
+      m_takeTimeline->splitSelectedAtPlayhead();
       event->accept();
       return;
     }

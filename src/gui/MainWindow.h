@@ -55,6 +55,7 @@ class VideoWidget;
 class RythmoOverlay;
 class TrackWidget;
 class ClickableSlider;
+class TakeTimeline;
 class QVBoxLayout;
 class QHBoxLayout;
 class QGridLayout;
@@ -197,7 +198,7 @@ private:
   QPushButton *m_playPauseButton;
   QPushButton *m_stopButton;
   QPushButton *m_stepForwardButton;
-  ClickableSlider *m_positionSlider;
+  TakeTimeline *m_takeTimeline;
   QLabel *m_timeLabel;
   QLabel *m_recordDurationLabel;
 
@@ -295,6 +296,7 @@ private:
   QKeySequence m_shortcutVolumeUp;
   QKeySequence m_shortcutVolumeDown;
   QKeySequence m_shortcutVolumeMute;
+  QKeySequence m_shortcutTakeSplit;
 };
 
 #endif // MAINWINDOW_H

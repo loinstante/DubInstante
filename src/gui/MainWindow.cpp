@@ -1542,6 +1542,14 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
         tr("Ce projet référence des fichiers situés hors de son dossier. "
            "Ils ont été ignorés par sécurité."));
   }
+  // The autosave recovery reports its own losses in the status bar
+  if (m_lastLoadLostTracksCount > 0 && path != autosaveFilePath()) {
+    QMessageBox::warning(
+        this, tr("Projet"),
+        tr("%1 prise(s) de ce projet sont introuvables dans son dossier audio et "
+           "n'ont pas été chargées. Enregistrer maintenant les retirerait du projet.")
+            .arg(m_lastLoadLostTracksCount));
+  }
 
   statusBar()->showMessage(tr("Projet chargé"), 3000);
   return true;

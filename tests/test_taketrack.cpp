@@ -97,6 +97,20 @@ static int checkRemoveTake() {
   track.removeTake(2);
   track.removeTake(1);
   CHECK(track.segments().isEmpty());
+
+  // A short newer take must not win over an older one covering the whole region
+  track.addRecording(makeTake(5, 0, 30000), 0, 30000);
+  track.addRecording(makeTake(6, 10000, 5000), 10000, 15000);
+  track.removeCut(10000);
+  track.removeCut(15000);                                   // one region [0, 30 s)
+  track.addRecording(makeTake(8, 0, 30000), 0, 30000);
+  track.removeTake(8);     // falls back on take 5, not on the newer but partial 6
+  CHECK(track.segments().size() == 1);
+  CHECK(track.segments()[0].takeId == 5 && track.segments()[0].durationMs == 30000);
+
+  track.removeTake(5);
+  track.removeTake(6);
+  CHECK(track.segments().isEmpty());
   CHECK(track.regions().size() == 1);   // cuts inside silence are merged away
   return 0;
 }

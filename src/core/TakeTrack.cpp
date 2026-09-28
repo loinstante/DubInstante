@@ -83,6 +83,7 @@ void TakeTrack::choose(qint64 timeMs, int takeId) {
   if (takeId != 0 && !take(takeId))
     return;
   m_regions[regionIndexAt(timeMs)].takeId = takeId;
+  mergeSilence();
 }
 
 void TakeTrack::removeTake(int takeId) {
@@ -95,13 +96,21 @@ void TakeTrack::removeTake(int takeId) {
   for (int i = 0; i < m_regions.size(); ++i) {
     if (m_regions[i].takeId != takeId)
       continue;
+    // Newest take covering the whole region, else the one heard the longest there
     const qint64 start = m_regions[i].startMs;
     const qint64 end = regionEndMs(i);
     int fallback = 0;
+    qint64 bestOverlap = 0;
     for (int k = m_takes.size() - 1; k >= 0; --k) {
-      if (m_takes[k].audibleStartMs() < end && m_takes[k].audibleEndMs() > start) {
-        fallback = m_takes[k].id;
+      const Take &t = m_takes[k];
+      if (t.audibleStartMs() <= start && t.audibleEndMs() >= end) {
+        fallback = t.id;
         break;
+      }
+      const qint64 overlap = qMin(end, t.audibleEndMs()) - qMax(start, t.audibleStartMs());
+      if (overlap > bestOverlap) {
+        bestOverlap = overlap;
+        fallback = t.id;
       }
     }
     m_regions[i].takeId = fallback;

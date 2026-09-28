@@ -10,6 +10,7 @@
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
+#include <QHash>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStorageInfo>
@@ -411,17 +412,26 @@ QString ExportService::buildAudioGraph(const ExportConfig &config, QStringList *
 
 int ExportService::ffmpegMajorVersion(const QString &program)
 {
+    // Probed once per binary: startExport() runs on the GUI thread
+    static QHash<QString, int> cache;
+    if (cache.contains(program))
+        return cache.value(program);
+
     QProcess probe;
     probe.start(program, {"-hide_banner", "-version"});
-    if (!probe.waitForFinished(5000) || probe.exitStatus() != QProcess::NormalExit)
-        return 0;
+    if (!probe.waitForFinished(5000) || probe.exitStatus() != QProcess::NormalExit) {
+        probe.kill();
+        probe.waitForFinished(1000);
+        return 0;   // not cached: a transient failure gets another chance
+    }
     // "ffmpeg version 6.1.1-3ubuntu5", "ffmpeg version n7.1", "ffmpeg version N-118000-g..."
     const QRegularExpressionMatch match =
         QRegularExpression(R"(ffmpeg version (N-|n?(\d+)))")
             .match(QString::fromUtf8(probe.readAllStandardOutput()));
-    if (!match.hasMatch())
-        return 0;
-    return match.captured(1) == "N-" ? 99 : match.captured(2).toInt();
+    const int major = !match.hasMatch() ? 0
+                      : match.captured(1) == "N-" ? 99 : match.captured(2).toInt();
+    cache.insert(program, major);
+    return major;
 }
 
 QStringList ExportService::buildFFmpegArgs(const ExportConfig &config,

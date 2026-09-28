@@ -1,4 +1,4 @@
-// CHECK-based tests for SettingsManager shortcut defaults + one-time shortcut migration.
+// CHECK-based tests for SettingsManager shortcut defaults + shortcut migrations.
 // Build: cmake --build build --target test_settingsmanager && ./build/test_settingsmanager
 // Headless: QT_QPA_PLATFORM=offscreen ./build/test_settingsmanager
 
@@ -31,21 +31,28 @@ int main(int argc, char *argv[]) {
     QSettings raw;
     raw.setValue("shortcuts/record_stop", QKeySequence("Ctrl+S").toString());
     raw.setValue("shortcuts/audio_volume_mute", QKeySequence("Ctrl+Shift+S").toString());
+    // Saved by the settings dialog: shares Space with record_stop by design
+    raw.setValue("shortcuts/video_play_pause", QKeySequence(Qt::Key_Space).toString());
+    // Home, the later "go to start" default, already taken by the user
+    raw.setValue("shortcuts/video_frame_back", QKeySequence(Qt::Key_Home).toString());
   }
 
   SettingsManager &sm = SettingsManager::instance();
 
   // Literal sequences, not the StandardKey enums: SaveAs is empty on offscreen,
   // KDE and Windows, which an enum-to-enum comparison would not catch.
-  CHECK(sm.defaultShortcut("record_stop") == QKeySequence(Qt::Key_Escape));
+  CHECK(sm.defaultShortcut("record_stop") == QKeySequence(Qt::Key_Space));
   CHECK(sm.defaultShortcut("project_save") == QKeySequence("Ctrl+S"));
   CHECK(sm.defaultShortcut("project_save_as") == QKeySequence("Ctrl+Shift+S"));
 
   QSettings raw;
 
-  // The stale Ctrl+S override is gone: record_stop falls back to Escape.
+  // The stale Ctrl+S override is gone: record_stop falls back to Space, which
+  // play/pause holding it does not block.
   CHECK(!raw.contains("shortcuts/record_stop"));
-  CHECK(sm.shortcut("record_stop") == QKeySequence(Qt::Key_Escape));
+  CHECK(sm.shortcut("record_stop") == QKeySequence(Qt::Key_Space));
+  CHECK(SettingsManager::sharesKeyByDesign("record_stop", "video_play_pause"));
+  CHECK(!SettingsManager::sharesKeyByDesign("record_stop", "audio_volume_mute"));
 
   // Ctrl+S was freed before the collision check, so project_save keeps it.
   CHECK(!raw.contains("shortcuts/project_save"));
@@ -56,7 +63,14 @@ int main(int argc, char *argv[]) {
   CHECK(raw.value("shortcuts/project_save_as").toString() == "none");
   CHECK(sm.shortcut("project_save_as").isEmpty());
 
-  CHECK(raw.value("shortcuts_migration_version").toInt() == 1);
+  // Shortcuts added in version 2 get their default unless the user holds the key
+  CHECK(sm.shortcut("video_frame_back") == QKeySequence(Qt::Key_Home));
+  CHECK(raw.value("shortcuts/video_go_start").toString() == "none");
+  CHECK(sm.shortcut("video_go_start").isEmpty());
+  CHECK(sm.shortcut("project_export") == QKeySequence("Ctrl+E"));
+  CHECK(sm.shortcut("video_open") == QKeySequence("Ctrl+Shift+O"));
+
+  CHECK(raw.value("shortcuts_migration_version").toInt() == 2);
 
   printf("test_settingsmanager: OK\n");
   return 0;

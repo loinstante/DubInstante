@@ -11,29 +11,41 @@ SettingsManager::SettingsManager(QObject *parent) : QObject(parent) {
 
 void SettingsManager::migrateLegacyShortcuts() {
     QSettings settings;
-    if (settings.value("shortcuts_migration_version", 0).toInt() >= 1) {
+    const int version = settings.value("shortcuts_migration_version", 0).toInt();
+    if (version >= 2) {
         return;
     }
 
     settings.beginGroup("shortcuts");
 
-    // record_stop used to default to Ctrl+S, which now belongs to "project_save".
-    // Only the old default is dropped, not a deliberate user rebind.
-    if (QKeySequence(settings.value("record_stop").toString()) == QKeySequence("Ctrl+S")) {
+    QStringList changedDefaults;
+    if (version < 1) {
+        // record_stop used to default to Ctrl+S, which now belongs to "project_save".
+        // Only the old default is dropped, not a deliberate user rebind.
+        if (QKeySequence(settings.value("record_stop").toString()) == QKeySequence("Ctrl+S")) {
+            settings.remove("record_stop");
+        }
+        changedDefaults << "project_save" << "project_save_as";
+    }
+    // record_stop moved from Escape to Space: drop the old default like Ctrl+S above
+    if (QKeySequence(settings.value("record_stop").toString()) == QKeySequence(Qt::Key_Escape)) {
         settings.remove("record_stop");
     }
+    changedDefaults << "record_stop" << "take_split" << "edit_undo" << "edit_redo" << "project_open"
+                    << "video_open" << "project_export" << "video_go_start"
+                    << "view_fullscreen";
 
     // A new default must not steal a key the user already gave to another
     // action: that action would silently stop working. Leave the new one unset.
     const QStringList storedActions = settings.childKeys();
-    const QStringList changedDefaults = {"record_stop", "project_save", "project_save_as"};
     for (const QString &actionId : changedDefaults) {
         if (settings.contains(actionId)) {
             continue;
         }
         const QKeySequence newDefault = defaultShortcut(actionId);
         for (const QString &other : storedActions) {
-            if (QKeySequence(settings.value(other).toString()) == newDefault) {
+            if (!sharesKeyByDesign(actionId, other) &&
+                QKeySequence(settings.value(other).toString()) == newDefault) {
                 settings.setValue(actionId, "none");
                 break;
             }
@@ -41,7 +53,7 @@ void SettingsManager::migrateLegacyShortcuts() {
     }
 
     settings.endGroup();
-    settings.setValue("shortcuts_migration_version", 1);
+    settings.setValue("shortcuts_migration_version", 2);
 }
 
 QString SettingsManager::theme() const {
@@ -151,7 +163,7 @@ QKeySequence SettingsManager::defaultShortcut(const QString &actionId) const {
     if (actionId == "video_seek_back_5s") return QKeySequence(Qt::SHIFT | Qt::Key_Left);
     if (actionId == "video_seek_forward_5s") return QKeySequence(Qt::SHIFT | Qt::Key_Right);
     if (actionId == "record_start") return QKeySequence("Ctrl+R");
-    if (actionId == "record_stop") return QKeySequence(Qt::Key_Escape);
+    if (actionId == "record_stop") return QKeySequence(Qt::Key_Space);
     if (actionId == "project_save") return QKeySequence(QKeySequence::Save); // Ctrl+S
     if (actionId == "project_save_as") {
         // Qt only binds SaveAs on GNOME and macOS: empty on KDE and Windows
@@ -162,7 +174,24 @@ QKeySequence SettingsManager::defaultShortcut(const QString &actionId) const {
     if (actionId == "audio_volume_down") return QKeySequence(Qt::Key_Down);
     if (actionId == "audio_volume_mute") return QKeySequence("M");
     if (actionId == "take_split") return QKeySequence("S");
+    if (actionId == "edit_undo") return QKeySequence(QKeySequence::Undo);
+    if (actionId == "edit_redo") return QKeySequence(QKeySequence::Redo);
+    if (actionId == "project_open") return QKeySequence(QKeySequence::Open);
+    if (actionId == "video_open") return QKeySequence(Qt::CTRL | Qt::SHIFT | Qt::Key_O);
+    if (actionId == "project_export") return QKeySequence(Qt::CTRL | Qt::Key_E);
+    if (actionId == "video_go_start") return QKeySequence(Qt::Key_Home);
+    if (actionId == "view_fullscreen") {
+        const QKeySequence fullScreen(QKeySequence::FullScreen);
+        return fullScreen.isEmpty() ? QKeySequence(Qt::Key_F11) : fullScreen;
+    }
     return QKeySequence();
+}
+
+// Space plays and pauses, and stops a take while recording: the stop shortcut
+// only fires during a take and hands the key back otherwise.
+bool SettingsManager::sharesKeyByDesign(const QString &a, const QString &b) {
+    const QStringList pair = {"video_play_pause", "record_stop"};
+    return a != b && pair.contains(a) && pair.contains(b);
 }
 
 QKeySequence SettingsManager::shortcut(const QString &actionId) const {

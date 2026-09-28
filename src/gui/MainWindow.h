@@ -56,6 +56,7 @@ class RythmoOverlay;
 class TrackWidget;
 class ClickableSlider;
 class TakeTimeline;
+class QUndoStack;
 class QVBoxLayout;
 class QHBoxLayout;
 class QGridLayout;
@@ -103,6 +104,8 @@ private slots:
 
   // Recording
   void toggleRecording();
+  // Play/pause; during a take it stops the recording, never the video alone
+  void togglePlayback();
 
   // Export
   void onExportProgress(int percentage);
@@ -139,8 +142,15 @@ private:
   void enterFullscreenRecording();
   void exitFullscreenRecording();
   void updateVolumeIcon(int value);
-  // Single entry point for every take/comp change (a future undo command)
+  // Single entry point for every take/comp change; editTakes() records it for undo
   void applyTrackEdit(int trackIndex, const TakeTrack &takes);
+  void editTakes(int trackIndex, const TakeTrack &takes, const QString &label);
+  void applyRythmoText(int trackIndex, const QString &text);
+  // A track count change the user asked for, undoable (loading uses setTrackCount)
+  void changeTrackCount(int count);
+  // Opening, exporting and undoing stay out of reach while a take is recorded
+  void updateEditActions();
+  void toggleWindowFullScreen();
   QString sessionDir() const;
   QString sessionTakePath(int trackIndex, int takeId) const;
   // Rewrites take files relative to the project and lists the copies to make
@@ -229,6 +239,10 @@ private:
   QAction *m_actionManualExport;
 
   QAction *m_actionFullscreen;
+  QAction *m_actionWindowFullScreen;
+  QAction *m_actionUndo;
+  QAction *m_actionRedo;
+  QUndoStack *m_undoStack;
   QAction *m_actionGlobalSettings;
 
   QAction *m_actionPersonalizeRythmo;
@@ -288,6 +302,7 @@ private:
   QShortcut *m_shRecordStop;
   QShortcut *m_shProjectSave;
   QShortcut *m_shProjectSaveAs;
+  QShortcut *m_shFullscreenEscape;
   QKeySequence m_shortcutPlayPause;
   QKeySequence m_shortcutFrameBack;
   QKeySequence m_shortcutFrameForward;
@@ -297,6 +312,7 @@ private:
   QKeySequence m_shortcutVolumeDown;
   QKeySequence m_shortcutVolumeMute;
   QKeySequence m_shortcutTakeSplit;
+  QKeySequence m_shortcutGoToStart;
 };
 
 #endif // MAINWINDOW_H

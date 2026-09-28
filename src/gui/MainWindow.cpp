@@ -58,6 +58,59 @@
 
 #include <QFutureWatcher>
 #include <QProgressDialog>
+#include <QSignalBlocker>
+#include <QUndoStack>
+#include <functional>
+
+namespace {
+
+// An undoable edit: the closures reapply the values before and after it.
+class EditCommand : public QUndoCommand {
+public:
+  EditCommand(const QString &text, std::function<void()> undo,
+              std::function<void()> redo)
+      : QUndoCommand(text), m_undo(std::move(undo)), m_redo(std::move(redo)) {}
+  void undo() override { m_undo(); }
+  void redo() override { m_redo(); }
+
+private:
+  std::function<void()> m_undo;
+  std::function<void()> m_redo;
+};
+
+// Keystrokes on one band merge into a single step until typing pauses, so
+// undo does not go back one letter at a time.
+class TypingCommand : public QUndoCommand {
+public:
+  using Apply = std::function<void(int, const QString &)>;
+
+  TypingCommand(int track, const QString &before, const QString &after, Apply apply)
+      : QUndoCommand(QObject::tr("Saisie sur la bande")), m_track(track),
+        m_before(before), m_after(after), m_apply(std::move(apply)) {
+    m_lastKey.start();
+  }
+  int id() const override { return 1; }
+  bool mergeWith(const QUndoCommand *other) override {
+    const auto *next = static_cast<const TypingCommand *>(other);
+    if (next->m_track != m_track || m_lastKey.elapsed() > 1500)
+      return false;
+    m_after = next->m_after;
+    m_lastKey.restart();
+    setObsolete(m_after == m_before);
+    return true;
+  }
+  void undo() override { m_apply(m_track, m_before); }
+  void redo() override { m_apply(m_track, m_after); }
+
+private:
+  int m_track;
+  QString m_before;
+  QString m_after;
+  Apply m_apply;
+  QElapsedTimer m_lastKey;
+};
+
+} // namespace
 #include <QtConcurrent>
 #include <algorithm>
 #include <memory>
@@ -299,6 +352,62 @@ void MainWindow::applyTrackEdit(int trackIndex, const TakeTrack &takes) {
   m_takeTimeline->setTrack(trackIndex, takes);
   syncTrackPlayers();
   setDirty(true);
+}
+
+void MainWindow::editTakes(int trackIndex, const TakeTrack &takes, const QString &label) {
+  if (trackIndex < 0 || trackIndex >= m_takeTracks.size())
+    return;
+  const TakeTrack before = m_takeTracks[trackIndex];
+  m_undoStack->push(new EditCommand(
+      label, [this, trackIndex, before]() { applyTrackEdit(trackIndex, before); },
+      [this, trackIndex, takes]() { applyTrackEdit(trackIndex, takes); }));
+}
+
+void MainWindow::applyRythmoText(int trackIndex, const QString &text) {
+  m_rythmoManager->setText(trackIndex, text);
+  if (RythmoWidget *widget = m_rythmoOverlay->track(trackIndex)) {
+    const QSignalBlocker blocker(widget); // not a new edit to record
+    widget->setText(text);
+    widget->update();
+  }
+  setDirty(true);
+}
+
+void MainWindow::changeTrackCount(int count) {
+  count = qBound(1, count, MAX_TRACKS);
+  if (count == m_trackCount || m_isRecording)
+    return;
+  // A removed track keeps its files in the session dir: undo brings it back whole
+  const int before = m_trackCount;
+  QStringList texts;
+  QVector<TakeTrack> takes;
+  for (int i = count; i < before; ++i) {
+    texts << m_rythmoManager->text(i);
+    takes << m_takeTracks[i];
+  }
+  m_undoStack->push(new EditCommand(
+      count < before ? tr("Retirer une bande") : tr("Ajouter une bande"),
+      [this, count, before, texts, takes]() {
+        setTrackCount(before);
+        for (int i = 0; i < texts.size(); ++i) {
+          applyRythmoText(count + i, texts[i]);
+          applyTrackEdit(count + i, takes[i]);
+        }
+      },
+      [this, count]() { setTrackCount(count); }));
+}
+
+void MainWindow::updateEditActions() {
+  const bool idle = !m_isRecording;
+  m_actionUndo->setEnabled(idle && m_undoStack->canUndo());
+  m_actionRedo->setEnabled(idle && m_undoStack->canRedo());
+  m_actionOpenMp4->setEnabled(idle);
+  m_actionLoadProject->setEnabled(idle);
+  m_actionManualExport->setEnabled(idle);
+}
+
+void MainWindow::toggleWindowFullScreen() {
+  setWindowState(windowState() ^ Qt::WindowFullScreen); // back to maximized or normal
 }
 
 // The start time is part of the name: a pid reused after a reboot must not
@@ -667,12 +776,42 @@ void MainWindow::createMenus() {
           &MainWindow::showExportDialog);
   filesMenu->addAction(m_actionManualExport);
 
+  for (QAction *action : {m_actionOpenMp4, m_actionLoadProject, m_actionManualExport})
+    action->setAutoRepeat(false);
+
+  // === Edit Menu ===
+  QMenu *editMenu = mb->addMenu(tr("Édition"));
+  m_undoStack = new QUndoStack(this);
+
+  m_actionUndo = new QAction(tr("Annuler"), this);
+  connect(m_actionUndo, &QAction::triggered, m_undoStack, &QUndoStack::undo);
+  editMenu->addAction(m_actionUndo);
+
+  m_actionRedo = new QAction(tr("Rétablir"), this);
+  connect(m_actionRedo, &QAction::triggered, m_undoStack, &QUndoStack::redo);
+  editMenu->addAction(m_actionRedo);
+
+  connect(m_undoStack, &QUndoStack::undoTextChanged, this, [this](const QString &text) {
+    m_actionUndo->setText(text.isEmpty() ? tr("Annuler") : tr("Annuler : %1").arg(text));
+  });
+  connect(m_undoStack, &QUndoStack::redoTextChanged, this, [this](const QString &text) {
+    m_actionRedo->setText(text.isEmpty() ? tr("Rétablir") : tr("Rétablir : %1").arg(text));
+  });
+  connect(m_undoStack, &QUndoStack::indexChanged, this, &MainWindow::updateEditActions);
+  updateEditActions();
+
   // === Application Menu ===
   QMenu *appMenu = mb->addMenu(tr("Application"));
 
   m_actionFullscreen = new QAction(tr("Fullscreen mode"), this);
   m_actionFullscreen->setCheckable(true);
   appMenu->addAction(m_actionFullscreen);
+
+  m_actionWindowFullScreen = new QAction(tr("Plein écran (fenêtre)"), this);
+  m_actionWindowFullScreen->setAutoRepeat(false);
+  connect(m_actionWindowFullScreen, &QAction::triggered, this,
+          &MainWindow::toggleWindowFullScreen);
+  appMenu->addAction(m_actionWindowFullScreen);
 
 
 
@@ -685,19 +824,13 @@ void MainWindow::createMenus() {
   // Track count selector using plain QActions (QWidgetAction with embedded
   // widgets doesn't work on macOS native menu bars).
   QAction *actionRemoveTrack = new QAction(tr("Retirer une bande (−)"), this);
-  connect(actionRemoveTrack, &QAction::triggered, this, [this]() {
-    if (!m_isRecording) {
-      setTrackCount(m_trackCount - 1);
-    }
-  });
+  connect(actionRemoveTrack, &QAction::triggered, this,
+          [this]() { changeTrackCount(m_trackCount - 1); });
   rythmoMenu->addAction(actionRemoveTrack);
 
   QAction *actionAddTrack = new QAction(tr("Ajouter une bande (+)"), this);
-  connect(actionAddTrack, &QAction::triggered, this, [this]() {
-    if (!m_isRecording) {
-      setTrackCount(m_trackCount + 1);
-    }
-  });
+  connect(actionAddTrack, &QAction::triggered, this,
+          [this]() { changeTrackCount(m_trackCount + 1); });
   rythmoMenu->addAction(actionAddTrack);
 
   rythmoMenu->addSeparator();
@@ -716,13 +849,7 @@ void MainWindow::setupConnections() {
   // Playback Controls
   // =========================================================================
 
-  connect(m_playPauseButton, &QPushButton::clicked, this, [this]() {
-    if (m_playbackEngine->playbackState() == QMediaPlayer::PlayingState) {
-      m_playbackEngine->pause();
-    } else {
-      m_playbackEngine->play();
-    }
-  });
+  connect(m_playPauseButton, &QPushButton::clicked, this, &MainWindow::togglePlayback);
 
   connect(m_stepBackButton, &QPushButton::clicked, this, [this]() {
     m_playbackEngine->seek(qMax(0LL, m_playbackEngine->position() - frameStepMs()));
@@ -777,7 +904,9 @@ void MainWindow::setupConnections() {
   connect(m_takeTimeline, &TakeTimeline::playRequested, m_playbackEngine,
           &PlaybackEngine::play);
   connect(m_takeTimeline, &TakeTimeline::trackEdited, this,
-          &MainWindow::applyTrackEdit);
+          [this](int index, const TakeTrack &takes) {
+            editTakes(index, takes, tr("Montage des prises"));
+          });
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged, this,
           [this](QMediaPlayer::PlaybackState state) {
             m_takeTimeline->setPlaying(state == QMediaPlayer::PlayingState);
@@ -1071,8 +1200,12 @@ void MainWindow::connectTrack(int index) {
   // Text changed: RythmoWidget -> RythmoManager
   connect(widget, &RythmoWidget::textChanged, this,
           [this, index](const QString &text) {
-            m_rythmoManager->setText(index, text);
-            setDirty(true);
+            const QString before = m_rythmoManager->text(index);
+            if (before == text)
+              return;
+            m_undoStack->push(new TypingCommand(
+                index, before, text,
+                [this](int track, const QString &value) { applyRythmoText(track, value); }));
           });
 }
 
@@ -1551,6 +1684,8 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
             .arg(m_lastLoadLostTracksCount));
   }
 
+  // Loading pushed its own text edits; nothing before it can be undone into this project
+  m_undoStack->clear();
   statusBar()->showMessage(tr("Projet chargé"), 3000);
   return true;
 }
@@ -1583,6 +1718,17 @@ void MainWindow::onPlaybackStateChanged(QMediaPlayer::PlaybackState state) {
 // =============================================================================
 // Slots - Recording
 // =============================================================================
+
+void MainWindow::togglePlayback() {
+  // Pausing the video alone would leave the microphone running out of sync
+  if (m_isRecording || m_countdownTimer->isActive()) {
+    toggleRecording();
+  } else if (m_playbackEngine->playbackState() == QMediaPlayer::PlayingState) {
+    m_playbackEngine->pause();
+  } else {
+    m_playbackEngine->play();
+  }
+}
 
 void MainWindow::toggleRecording() {
   if (m_countdownTimer->isActive()) {
@@ -1687,7 +1833,7 @@ void MainWindow::toggleRecording() {
     m_recordDurationLabel->setVisible(false);
     m_recordButton->setChecked(false);
     m_recordButton->setText("REC GLOBAL");
-    m_actionOpenMp4->setEnabled(true);
+    updateEditActions();
 
     // A recorder that already stopped (failed to start, device lost mid-take)
     // will not emit StoppedState again: validate its take now.
@@ -1716,7 +1862,7 @@ void MainWindow::checkRecordedTake(int trackIndex) {
       take.durationMs > take.inMs) {
     TakeTrack takes = m_takeTracks[trackIndex];
     takes.addRecording(take, take.audibleStartMs(), take.audibleEndMs());
-    applyTrackEdit(trackIndex, takes);
+    editTakes(trackIndex, takes, tr("Enregistrement"));
   } else {
     QFile::remove(take.file);
     m_failedTakeTracks.append(trackIndex);
@@ -1842,6 +1988,14 @@ void MainWindow::setupShortcuts() {
   connect(m_shProjectSaveAs, &QShortcut::activated, this,
           &MainWindow::onSaveProject);
 
+  // The fullscreen recording is its own window: Escape leaves it by ending the take
+  m_shFullscreenEscape = new QShortcut(m_fullscreenContainer);
+  m_shFullscreenEscape->setAutoRepeat(false);
+  connect(m_shFullscreenEscape, &QShortcut::activated, this, [this]() {
+    if (m_isRecording)
+      toggleRecording();
+  });
+
   applyShortcuts();
 }
 
@@ -1851,6 +2005,9 @@ void MainWindow::applyShortcuts() {
   m_shRecordStop->setKey(sm.shortcut("record_stop"));
   m_shProjectSave->setKey(sm.shortcut("project_save"));
   m_shProjectSaveAs->setKey(sm.shortcut("project_save_as"));
+  // Same key on both would be ambiguous there and fire neither
+  const QKeySequence escape(Qt::Key_Escape);
+  m_shFullscreenEscape->setKey(m_shRecordStop->key() == escape ? QKeySequence() : escape);
 
   m_shortcutPlayPause = sm.shortcut("video_play_pause");
   m_shortcutFrameBack = sm.shortcut("video_frame_back");
@@ -1861,6 +2018,15 @@ void MainWindow::applyShortcuts() {
   m_shortcutVolumeDown = sm.shortcut("audio_volume_down");
   m_shortcutVolumeMute = sm.shortcut("audio_volume_mute");
   m_shortcutTakeSplit = sm.shortcut("take_split");
+  m_shortcutGoToStart = sm.shortcut("video_go_start");
+
+  // Menu actions show their key next to the entry
+  m_actionUndo->setShortcut(sm.shortcut("edit_undo"));
+  m_actionRedo->setShortcut(sm.shortcut("edit_redo"));
+  m_actionLoadProject->setShortcut(sm.shortcut("project_open"));
+  m_actionOpenMp4->setShortcut(sm.shortcut("video_open"));
+  m_actionManualExport->setShortcut(sm.shortcut("project_export"));
+  m_actionWindowFullScreen->setShortcut(sm.shortcut("view_fullscreen"));
 }
 
 
@@ -1976,9 +2142,9 @@ void MainWindow::onError(const QString &errorMessage) {
 // =============================================================================
 
 bool MainWindow::event(QEvent *event) {
-  // With nothing to stop, the record_stop key (Escape by default) goes to the
-  // focused widget instead of the application-wide shortcut: RythmoWidget uses
-  // Escape to push the text.
+  // With nothing to stop, the record_stop key (Space by default) goes to the
+  // focused widget instead of the application-wide shortcut: it plays and
+  // pauses, or types on a band.
   if (event->type() == QEvent::ShortcutOverride && !m_isRecording &&
       !m_countdownTimer->isActive()) {
     const QKeyCombination combo = static_cast<QKeyEvent *>(event)->keyCombination();
@@ -2034,14 +2200,6 @@ bool MainWindow::eventFilter(QObject *watched, QEvent *event) {
 }
 
 void MainWindow::keyPressEvent(QKeyEvent *event) {
-  // Escape in fullscreen recording: stop recording + exit fullscreen
-  if (event->key() == Qt::Key_Escape && m_isFullscreenRecording &&
-      m_isRecording) {
-    toggleRecording();
-    event->accept();
-    return;
-  }
-
   // Resolve modifiers & key combo
   int key = event->key();
   if (key == Qt::Key_Control || key == Qt::Key_Shift || key == Qt::Key_Alt || key == Qt::Key_Meta) {
@@ -2078,11 +2236,7 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
   if (!inInput) {
     if (!m_shortcutPlayPause.isEmpty() && pressedSeq == m_shortcutPlayPause) {
-      if (m_playbackEngine->playbackState() == QMediaPlayer::PlayingState) {
-        m_playbackEngine->pause();
-      } else {
-        m_playbackEngine->play();
-      }
+      togglePlayback();
       event->accept();
       return;
     }
@@ -2131,6 +2285,12 @@ void MainWindow::keyPressEvent(QKeyEvent *event) {
 
     if (!m_shortcutTakeSplit.isEmpty() && pressedSeq == m_shortcutTakeSplit) {
       m_takeTimeline->splitSelectedAtPlayhead();
+      event->accept();
+      return;
+    }
+
+    if (!m_shortcutGoToStart.isEmpty() && pressedSeq == m_shortcutGoToStart) {
+      m_playbackEngine->seek(0);
       event->accept();
       return;
     }
@@ -2543,7 +2703,7 @@ void MainWindow::startRecordingProcess() {
   m_recordButton->setChecked(true);
   m_recordButton->setText("STOP");
   m_exportProgressBar->setVisible(false);
-  m_actionOpenMp4->setEnabled(false);
+  updateEditActions();
 }
 
 void MainWindow::closeEvent(QCloseEvent *event) {

@@ -61,9 +61,15 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 |:---|:---|:---|
 | **Lecture / Pause** | Play / Pause | `Espace` / `Space` |
 | **Démarrer l'enregistrement** | Start recording | `Ctrl+R` |
-| **Arrêt de l'enregistrement** | Stop recording | `Échap` / `Esc` |
-| **Insérer espace & lecture** (hors enregistrement) | Insert space & play (when not recording) | `Échap` / `Esc` |
+| **Arrêt de l'enregistrement** | Stop recording | `Espace` / `Space` (`Échap` / `Esc` en plein écran) |
+| **Insérer espace & lecture** (bande rythmo, hors enregistrement) | Insert space & play (rythmo band, when not recording) | `Échap` / `Esc` |
+| **Annuler / Rétablir** | Undo / Redo | `Ctrl+Z` / `Ctrl+Shift+Z` |
+| **Ajouter une coupe au montage** | Add a comp cut at the playhead | `S` |
+| **Ouvrir un projet / une vidéo** | Open project / video | `Ctrl+O` / `Ctrl+Shift+O` |
 | **Sauvegarder le projet** | Save project | `Ctrl+S` |
+| **Exporter le doublage** | Export the dub | `Ctrl+E` |
+| **Aller au début** | Go to start | `Début` / `Home` |
+| **Plein écran** | Fullscreen | `F11` |
 | **Navigation image par image** | Frame-by-frame navigation | `←` / `→` |
 | **Retour arrière rapide (-5s)** | Quick seek back (-5s) | `Shift + ←` |
 | **Avance rapide (+5s)** | Quick seek forward (+5s) | `Shift + →` |

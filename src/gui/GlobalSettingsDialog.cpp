@@ -24,13 +24,17 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
         "video_frame_back",
         "video_frame_forward",
         "video_seek_back_5s",
-        "video_seek_forward_5s"
+        "video_seek_forward_5s",
+        "video_go_start",
+        "view_fullscreen"
     };
 
     m_recordActions = {
         "record_start",
         "record_stop",
-        "take_split"
+        "take_split",
+        "edit_undo",
+        "edit_redo"
     };
 
     m_audioActions = {
@@ -40,8 +44,11 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
     };
 
     m_projectActions = {
+        "project_open",
+        "video_open",
         "project_save",
-        "project_save_as"
+        "project_save_as",
+        "project_export"
     };
 
     setupUi();
@@ -511,12 +518,19 @@ QString GlobalSettingsDialog::getActionName(const QString &actionId) const {
     if (actionId == "video_seek_forward_5s") return tr("Avancer de 5 secondes");
     if (actionId == "record_start") return tr("Démarrer l'enregistrement");
     if (actionId == "record_stop") return tr("Arrêter l'enregistrement");
-    if (actionId == "take_split") return tr("Couper la prise à la tête de lecture");
+    if (actionId == "take_split") return tr("Ajouter une coupe au montage");
     if (actionId == "audio_volume_up") return tr("Augmenter le volume");
     if (actionId == "audio_volume_down") return tr("Diminuer le volume");
     if (actionId == "audio_volume_mute") return tr("Couper / Activer le son (Mute)");
     if (actionId == "project_save") return tr("Enregistrer le projet");
     if (actionId == "project_save_as") return tr("Enregistrer sous...");
+    if (actionId == "project_open") return tr("Ouvrir un projet");
+    if (actionId == "video_open") return tr("Ouvrir une vidéo");
+    if (actionId == "project_export") return tr("Exporter le doublage");
+    if (actionId == "edit_undo") return tr("Annuler");
+    if (actionId == "edit_redo") return tr("Rétablir");
+    if (actionId == "video_go_start") return tr("Aller au début");
+    if (actionId == "view_fullscreen") return tr("Plein écran (fenêtre)");
     return actionId;
 }
 
@@ -578,7 +592,8 @@ bool GlobalSettingsDialog::checkConflict(const QKeySequence &seq, const QString 
     if (seq.isEmpty()) return false;
 
     for (auto it = m_tempShortcuts.begin(); it != m_tempShortcuts.end(); ++it) {
-        if (it.key() != currentActionId && it.value() == seq) {
+        if (it.key() != currentActionId && it.value() == seq &&
+            !SettingsManager::sharesKeyByDesign(it.key(), currentActionId)) {
             QString otherActionName = getActionName(it.key());
             QMessageBox::StandardButton reply = QMessageBox::question(
                 this,

@@ -765,9 +765,8 @@ Intercepte `QEvent::Resize` sur `videoFrame` et `fullscreenContainer`. Redimensi
 
 | Touche | Action | Condition |
 |--------|--------|-----------|
-| `Escape` | Stop recording | Fullscreen + recording |
-| `Space` | Toggle play/pause | Toujours |
-| `←` / `→` | ±1 frame | Sauf focus dans SpinBox |
+| `Space` | `togglePlayback()` : play/pause, ou arrêt de la prise pendant un enregistrement | Hors saisie |
+| `←` / `→` | ±1 frame | Hors saisie |
 
 #### `onSaveProject()` / `onLoadProject()`
 
@@ -1235,15 +1234,15 @@ Composants stylisés : boutons (radius 4px), sliders (groove 6px + handle 16px),
 
 | Raccourci | Action | Condition |
 |-----------|--------|-----------|
-| `Space` | Play / Pause | Toujours |
-| `←` / `→` | ±1 frame | Sauf focus SpinBox |
-| `Escape` | Stop recording | Fullscreen + recording |
+| `Space` | Play / Pause | Hors saisie |
+| `←` / `→` | ±1 frame | Hors saisie |
 
 ### Dédié (`QShortcut`)
 
 | Raccourci | Action |
 |-----------|--------|
-| `Ctrl+S` | Stop recording (contexte application) |
+| `Space` | Stop recording (contexte application, rendu au widget hors enregistrement) |
+| `Escape` | Stop recording dans la fenêtre plein écran |
 
 ### Bande rythmo (`RythmoWidget::keyPressEvent`)
 

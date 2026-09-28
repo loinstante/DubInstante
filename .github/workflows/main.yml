@@ -108,7 +108,7 @@ jobs:
         pacman -Syu --noconfirm
         pacman -S --noconfirm --needed \
           git cmake wget pkgconf patchelf \
-          qt6-base qt6-multimedia qt6-multimedia-ffmpeg \
+          qt6-base qt6-multimedia qt6-multimedia-ffmpeg qt6-tools qt6-translations \
           ffmpeg mesa libglvnd alsa-lib libpulse xcb-util-cursor
 
     - name: Checkout code
@@ -179,7 +179,7 @@ jobs:
         copy C:\ffmpeg\ffmpeg-bin\bin\ffprobe.exe dist\
         copy LICENSE dist\
         copy THIRD_PARTY_LICENSES dist\
-        windeployqt.exe --release --no-translations --compiler-runtime --multimedia dist\DubInstante.exe
+        windeployqt.exe --release --compiler-runtime --multimedia dist\DubInstante.exe
 
     - name: Verify bundled FFmpeg
       run: |

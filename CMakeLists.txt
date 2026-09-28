@@ -25,6 +25,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     OpenGLWidgets
     OpenGL
     Concurrent
+    LinguistTools
 )
 
 # =============================================================================
@@ -179,6 +180,20 @@ target_link_libraries(DubInstante PRIVATE
     Qt6::OpenGL
     Qt6::Concurrent
     PkgConfig::FFMPEG
+)
+
+# =============================================================================
+# Translations (compiled into the resources under :/i18n)
+# =============================================================================
+
+# Update the .ts files from the sources: target DubInstante_lupdate (Qt 6.5)
+# or update_translations (Qt 6.7+)
+set(DUBINSTANTE_LANGUAGES en fr es pt_BR de it ja zh_CN ru ar)
+list(TRANSFORM DUBINSTANTE_LANGUAGES
+     REPLACE "(.+)" "translations/dubinstante_\\1.ts" OUTPUT_VARIABLE DUBINSTANTE_TS_FILES)
+qt_add_translations(DubInstante
+    TS_FILES ${DUBINSTANTE_TS_FILES}
+    RESOURCE_PREFIX "/i18n"
 )
 
 # =============================================================================

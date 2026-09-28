@@ -1,5 +1,8 @@
 #include "SettingsManager.h"
 
+#include <QDir>
+#include <QTranslator>
+
 SettingsManager& SettingsManager::instance() {
     static SettingsManager inst;
     return inst;
@@ -64,6 +67,30 @@ QString SettingsManager::theme() const {
 void SettingsManager::setTheme(const QString &theme) {
     QSettings settings;
     settings.setValue("theme", theme);
+}
+
+QString SettingsManager::language() const {
+    QSettings settings;
+    return settings.value("language", "system").toString();
+}
+
+void SettingsManager::setLanguage(const QString &language) {
+    QSettings settings;
+    settings.setValue("language", language);
+}
+
+QStringList SettingsManager::shippedLanguages() {
+    QStringList codes;
+    const QStringList files = QDir(":/i18n").entryList({"dubinstante_*.qm"}, QDir::Files);
+    for (const QString &file : files)
+        codes << file.mid(12, file.size() - 12 - 3); // dubinstante_<code>.qm
+    return codes;
+}
+
+QString SettingsManager::shippedLanguage(const QLocale &locale) {
+    // QTranslator walks the locale's UI languages: fr-CA falls back to fr
+    QTranslator probe;
+    return probe.load(locale, "dubinstante", "_", ":/i18n") ? probe.language() : QString();
 }
 
 bool SettingsManager::autoSaveEnabled() const {

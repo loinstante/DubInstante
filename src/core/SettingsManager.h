@@ -6,6 +6,7 @@
 #include <QStringList>
 #include <QSettings>
 #include <QKeySequence>
+#include <QLocale>
 
 /**
  * @class SettingsManager
@@ -20,6 +21,14 @@ public:
     // Theme: "light", "dark", "system"
     QString theme() const;
     void setTheme(const QString &theme);
+
+    // Language: "system" or a shipped translation code ("fr", "pt_BR"...)
+    QString language() const;
+    void setLanguage(const QString &language);
+    /// Codes of the translations compiled into the resources
+    static QStringList shippedLanguages();
+    /// Shipped translation the locale resolves to, or empty (English source)
+    static QString shippedLanguage(const QLocale &locale);
 
     // Auto-save config
     bool autoSaveEnabled() const;

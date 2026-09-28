@@ -59,6 +59,7 @@ private:
         QString zeroText;
     };
     QWidget *createStepper(QWidget *parent, SecondsStepper &stepper);
+    static QString languageName(const QString &code);
     void updateStepper(SecondsStepper &stepper);
 
     // Tab control
@@ -68,6 +69,7 @@ private:
 
     // General Controls
     QComboBox *m_themeCombo;
+    QComboBox *m_languageCombo;
     SecondsStepper m_countdown;
     SecondsStepper m_preRoll;
 

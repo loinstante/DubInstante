@@ -9,6 +9,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QLocale>
 #include <QMessageBox>
 #include <QFrame>
 #include <QScrollArea>
@@ -132,6 +133,16 @@ void GlobalSettingsDialog::setupUi() {
     m_themeCombo->addItem(tr("Mode Clair"), "light");
     m_themeCombo->addItem(tr("Mode Sombre Premium"), "dark");
     genForm->addRow(themeLabel, m_themeCombo);
+
+    // Language: every name in its own language, whatever the current one
+    QLabel *languageLabel = new QLabel(tr("Langue"), generalPage);
+    languageLabel->setProperty("cssClass", "fineLabel");
+    m_languageCombo = new QComboBox(generalPage);
+    m_languageCombo->addItem(tr("Système (%1)").arg(languageName(
+        SettingsManager::shippedLanguage(QLocale::system()))), "system");
+    for (const QString &code : SettingsManager::shippedLanguages())
+        m_languageCombo->addItem(languageName(code), code);
+    genForm->addRow(languageLabel, m_languageCombo);
 
     // Countdown Selector (Stepper layout)
     QLabel *countdownLabel = new QLabel(tr("Décompte pré-enregistrement"), generalPage);
@@ -389,6 +400,8 @@ void GlobalSettingsDialog::loadSettings() {
     // General tab
     int themeIdx = m_themeCombo->findData(sm.theme());
     if (themeIdx >= 0) m_themeCombo->setCurrentIndex(themeIdx);
+    const int languageIdx = m_languageCombo->findData(sm.language());
+    m_languageCombo->setCurrentIndex(qMax(0, languageIdx));
 
     m_countdown.seconds = sm.countdownDuration();
     updateStepper(m_countdown);
@@ -465,6 +478,13 @@ void GlobalSettingsDialog::saveSettings() {
 
     // General settings
     sm.setTheme(m_themeCombo->currentData().toString());
+    const QString language = m_languageCombo->currentData().toString();
+    if (language != sm.language()) {
+        sm.setLanguage(language);
+        // Every label is built once: a restart is how they all change
+        QMessageBox::information(this, tr("Langue"),
+                                 tr("Redémarrez DubInstante pour appliquer la langue."));
+    }
     sm.setCountdownDuration(m_countdown.seconds);
     sm.setPreRollSeconds(m_preRoll.seconds);
     sm.setAutoSaveEnabled(m_autoSaveCheck->isChecked());
@@ -508,6 +528,18 @@ void GlobalSettingsDialog::updateShortcutButtons() {
             }
         }
     }
+}
+
+// Empty code: no shipped translation matches, the English source is shown
+QString GlobalSettingsDialog::languageName(const QString &code) {
+    if (code.isEmpty() || code == "en")
+        return QStringLiteral("English");
+    const QLocale locale(code);
+    QString name = locale.nativeLanguageName();
+    // pt_BR reads "Português (Brasil)"; zh_CN already names its variant
+    if (code.contains('_') && name == QLocale(locale.language()).nativeLanguageName())
+        name += " (" + locale.nativeTerritoryName() + ")";
+    return name.left(1).toUpper() + name.mid(1);
 }
 
 QString GlobalSettingsDialog::getActionName(const QString &actionId) const {

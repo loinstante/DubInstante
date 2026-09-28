@@ -6,347 +6,358 @@
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="15"/>
         <source>%1%</source>
-        <translation type="unfinished"></translation>
+        <translation>%1 %</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="51"/>
         <source>Export Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Exporteinstellungen</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="60"/>
         <source>Export Project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt exportieren</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="64"/>
         <source>Set the export options and the final mix of your dub.</source>
-        <translation type="unfinished"></translation>
+        <translation>Legen Sie die Exportoptionen und die Endmischung Ihrer Synchronfassung fest.</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="75"/>
         <source>Destination File</source>
-        <translation type="unfinished"></translation>
+        <translation>Zieldatei</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="83"/>
         <source>Output path...</source>
-        <translation type="unfinished"></translation>
+        <translation>Ausgabepfad...</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="88"/>
         <source>Browse...</source>
-        <translation type="unfinished"></translation>
+        <translation>Durchsuchen...</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="113"/>
         <source>Encoding Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Kodierungseinstellungen</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="130"/>
         <location filename="../src/gui/ExportDialog.cpp" line="220"/>
         <source>Original (no scaling)</source>
-        <translation type="unfinished"></translation>
+        <translation>Original (keine Skalierung)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="131"/>
         <source>Full HD (1080p)</source>
-        <translation type="unfinished"></translation>
+        <translation>Full HD (1080p)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="132"/>
         <source>HD (720p)</source>
-        <translation type="unfinished"></translation>
+        <translation>HD (720p)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="135"/>
         <source>Fast (standard quality - CRF 26)</source>
-        <translation type="unfinished"></translation>
+        <translation>Schnell (Standardqualität - CRF 26)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="136"/>
         <source>Standard (recommended - CRF 21)</source>
-        <translation type="unfinished"></translation>
+        <translation>Standard (empfohlen - CRF 21)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="137"/>
         <source>High (slow processing - CRF 16)</source>
-        <translation type="unfinished"></translation>
+        <translation>Hoch (langsame Verarbeitung - CRF 16)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="141"/>
         <source>Economy (128 kbps)</source>
-        <translation type="unfinished"></translation>
+        <translation>Sparsam (128 kbps)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="143"/>
         <source>Superior (256 kbps)</source>
-        <translation type="unfinished"></translation>
+        <translation>Hoch (256 kbps)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="147"/>
         <location filename="../src/gui/ExportDialog.cpp" line="201"/>
         <source>Container Format</source>
-        <translation type="unfinished"></translation>
+        <translation>Containerformat</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="151"/>
         <location filename="../src/gui/ExportDialog.cpp" line="300"/>
         <source>Resolution</source>
-        <translation type="unfinished"></translation>
+        <translation>Auflösung</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="155"/>
         <source>Video quality</source>
-        <translation type="unfinished"></translation>
+        <translation>Videoqualität</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="159"/>
         <source>Audio quality</source>
-        <translation type="unfinished"></translation>
+        <translation>Audioqualität</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="191"/>
         <location filename="../src/gui/ExportDialog.cpp" line="199"/>
         <source>No encoding (copy)</source>
-        <translation type="unfinished"></translation>
+        <translation>Keine Kodierung (Kopie)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="197"/>
         <source>PCM 16-bit uncompressed</source>
-        <translation type="unfinished"></translation>
+        <translation>PCM 16 Bit unkomprimiert</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="198"/>
         <source>PCM 24-bit uncompressed</source>
-        <translation type="unfinished"></translation>
+        <translation>PCM 24 Bit unkomprimiert</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="203"/>
         <source>Video Codec</source>
-        <translation type="unfinished"></translation>
+        <translation>Videocodec</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="205"/>
         <source>Audio Codec</source>
-        <translation type="unfinished"></translation>
+        <translation>Audiocodec</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="208"/>
         <source>Streams &amp; Codecs</source>
-        <translation type="unfinished"></translation>
+        <translation>Streams &amp; Codecs</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="227"/>
         <source>Custom...</source>
-        <translation type="unfinished"></translation>
+        <translation>Benutzerdefiniert...</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="252"/>
         <source>Link ratio</source>
-        <translation type="unfinished"></translation>
+        <translation>Seitenverhältnis koppeln</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="257"/>
         <source>Constant quality (CRF)</source>
-        <translation type="unfinished"></translation>
+        <translation>Konstante Qualität (CRF)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="258"/>
         <source>Target bitrate (VBR)</source>
-        <translation type="unfinished"></translation>
+        <translation>Ziel-Bitrate (VBR)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="304"/>
         <source>Bitrate Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>Bitratenmodus</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="306"/>
         <source>Quality (CRF)</source>
-        <translation type="unfinished"></translation>
+        <translation>Qualität (CRF)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="307"/>
         <source>Target bitrate</source>
-        <translation type="unfinished"></translation>
+        <translation>Ziel-Bitrate</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="309"/>
         <source>Speed Preset</source>
-        <translation type="unfinished"></translation>
+        <translation>Geschwindigkeitsvorgabe</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="312"/>
         <source>Picture &amp; Quality</source>
-        <translation type="unfinished"></translation>
+        <translation>Bild &amp; Qualität</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="335"/>
         <source>Additional flags (e.g. -preset slow)...</source>
-        <translation type="unfinished"></translation>
+        <translation>Zusätzliche Flags (z. B. -preset slow)...</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="337"/>
         <source>Audio Bitrate</source>
-        <translation type="unfinished"></translation>
+        <translation>Audio-Bitrate</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="343"/>
         <source>FFmpeg Flags</source>
-        <translation type="unfinished"></translation>
+        <translation>FFmpeg-Flags</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="357"/>
         <source>Time range</source>
-        <translation type="unfinished"></translation>
+        <translation>Zeitbereich</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="361"/>
         <source>Whole project (full video)</source>
-        <translation type="unfinished"></translation>
+        <translation>Gesamtes Projekt (ganzes Video)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="363"/>
         <source>Last recording only</source>
-        <translation type="unfinished"></translation>
+        <translation>Nur letzte Aufnahme</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="384"/>
         <source>Volume Mix</source>
-        <translation type="unfinished"></translation>
+        <translation>Lautstärkemischung</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="407"/>
         <source>Original audio:</source>
-        <translation type="unfinished"></translation>
+        <translation>Originalton:</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="449"/>
         <source>Enable Expert Mode (sound &amp; video engineer)</source>
-        <translation type="unfinished"></translation>
+        <translation>Expertenmodus aktivieren (Ton- &amp; Videotechnik)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="455"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Abbrechen</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="460"/>
         <source>Export</source>
-        <translation type="unfinished"></translation>
+        <translation>Exportieren</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="505"/>
         <source>Track %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Spur %1</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="511"/>
         <source>%1:</source>
-        <translation type="unfinished"></translation>
+        <translation>%1:</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="654"/>
         <source>Choose the export file</source>
-        <translation type="unfinished"></translation>
+        <translation>Exportdatei wählen</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="741"/>
         <source>⚠️ ProRes is not standard in an MP4 container. Use MOV or MKV.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ ProRes ist im MP4-Container nicht üblich. Verwenden Sie MOV oder MKV.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="744"/>
         <source>⚠️ Uncompressed audio (PCM) is not standard in an MP4 container. Use MOV or MKV.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Unkomprimiertes Audio (PCM) ist im MP4-Container nicht üblich. Verwenden Sie MOV oder MKV.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="748"/>
         <source>⚠️ The AAC audio codec is not standard in an AVI container. Use MP3 or PCM.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Der Audiocodec AAC ist im AVI-Container nicht üblich. Verwenden Sie MP3 oder PCM.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="751"/>
         <source>⚠️ HEVC and VP9 are not recommended in AVI. Use MP4 or MKV.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ HEVC und VP9 werden in AVI nicht empfohlen. Verwenden Sie MP4 oder MKV.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="756"/>
         <source>⚠️ Video stream copy: the cut snaps to the nearest keyframe, so the start may be off by a few frames.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Videostream-Kopie: Der Schnitt rastet am nächsten Keyframe ein, der Anfang kann daher um einige Frames abweichen.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="760"/>
         <source>⚠️ Resizing is ignored when copying the video stream: the original resolution is kept.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Beim Kopieren des Videostreams wird die Skalierung ignoriert: Die Originalauflösung bleibt erhalten.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="767"/>
         <source>⚠️ FFmpeg needs even dimensions (divisible by 2) to encode H.264/H.265.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ FFmpeg benötigt gerade Abmessungen (durch 2 teilbar), um H.264/H.265 zu kodieren.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="774"/>
         <source>⚠️ Very low CRF (%1): the video file will be huge.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Sehr niedriger CRF (%1): Die Videodatei wird sehr groß.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="776"/>
         <source>⚠️ Very high CRF (%1): the video will be heavily pixelated.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Sehr hoher CRF (%1): Das Video wird stark verpixelt.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="783"/>
         <source>⚠️ Low audio bitrate (%1 kbps): compression artifacts will be audible.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Niedrige Audio-Bitrate (%1 kbps): Kompressionsartefakte werden hörbar sein.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="785"/>
         <source>⚠️ Unnecessary audio bitrate (%1 kbps): AAC gains nothing above 320 kbps.
 </source>
-        <translation type="unfinished"></translation>
+        <translation>⚠️ Unnötig hohe Audio-Bitrate (%1 kbps): AAC gewinnt über 320 kbps nichts hinzu.
+</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="142"/>
         <source>Standard (192 kbps)</source>
-        <translation type="unfinished"></translation>
+        <translation>Standard (192 kbps)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="144"/>
         <source>Studio (320 kbps)</source>
-        <translation type="unfinished"></translation>
+        <translation>Studio (320 kbps)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="194"/>
         <source>AAC (standard)</source>
-        <translation type="unfinished"></translation>
+        <translation>AAC (Standard)</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="329"/>
         <source>Original</source>
-        <translation type="unfinished"></translation>
+        <translation>Original</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="340"/>
         <source>Sample Rate</source>
-        <translation type="unfinished"></translation>
+        <translation>Abtastrate</translation>
     </message>
     <message>
         <location filename="../src/gui/ExportDialog.cpp" line="346"/>
         <source>Audio &amp; Flags</source>
-        <translation type="unfinished"></translation>
+        <translation>Audio &amp; Flags</translation>
     </message>
 </context>
 <context>
@@ -360,67 +371,73 @@ Fedora: sudo dnf install ffmpeg
 Arch: sudo pacman -S ffmpeg
 macOS (Homebrew): brew install ffmpeg
 Windows: https://ffmpeg.org/download.html</source>
-        <translation type="unfinished"></translation>
+        <translation>%1 wurde auf diesem System nicht gefunden. Es wird für den Export benötigt.
+
+Debian / Ubuntu: sudo apt install ffmpeg
+Fedora: sudo dnf install ffmpeg
+Arch: sudo pacman -S ffmpeg
+macOS (Homebrew): brew install ffmpeg
+Windows: https://ffmpeg.org/download.html</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="130"/>
         <source>Error: could not write the temporary audio graph.</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler: Der temporäre Audiograph konnte nicht geschrieben werden.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="147"/>
         <source>Export cancelled by the user.</source>
-        <translation type="unfinished"></translation>
+        <translation>Export vom Benutzer abgebrochen.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="167"/>
         <source>Export succeeded!</source>
-        <translation type="unfinished"></translation>
+        <translation>Export erfolgreich!</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="176"/>
         <source>Not enough disk space on the destination drive.</source>
-        <translation type="unfinished"></translation>
+        <translation>Nicht genügend Speicherplatz auf dem Ziellaufwerk.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="191"/>
         <source>Unknown FFmpeg error.</source>
-        <translation type="unfinished"></translation>
+        <translation>Unbekannter FFmpeg-Fehler.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="195"/>
         <source>Export failed: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Export fehlgeschlagen: %1</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="208"/>
         <source>FFmpeg could not start. Is it installed?</source>
-        <translation type="unfinished"></translation>
+        <translation>FFmpeg konnte nicht gestartet werden. Ist es installiert?</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="210"/>
         <source>Error while running FFmpeg.</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler bei der Ausführung von FFmpeg.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="292"/>
         <source>Error: the source video file was not found.</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler: Die Quellvideodatei wurde nicht gefunden.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="298"/>
         <source>Error: the audio recording was not found: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler: Die Audioaufnahme wurde nicht gefunden: %1</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="305"/>
         <source>Error: no output path given.</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler: Kein Ausgabepfad angegeben.</translation>
     </message>
     <message>
         <location filename="../src/core/ExportService.cpp" line="314"/>
         <source>Error: critically low disk space (less than 100 MB free) on the destination drive.</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler: Kritisch wenig Speicherplatz (weniger als 100 MB frei) auf dem Ziellaufwerk.</translation>
     </message>
 </context>
 <context>
@@ -428,52 +445,52 @@ Windows: https://ffmpeg.org/download.html</source>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="86"/>
         <source>Could not open the file with FFmpeg: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Die Datei konnte mit FFmpeg nicht geöffnet werden: %1</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="91"/>
         <source>Could not find the stream info</source>
-        <translation type="unfinished"></translation>
+        <translation>Stream-Informationen nicht gefunden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="104"/>
         <source>Could not find a video stream</source>
-        <translation type="unfinished"></translation>
+        <translation>Kein Videostream gefunden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="111"/>
         <source>Unsupported codec</source>
-        <translation type="unfinished"></translation>
+        <translation>Nicht unterstützter Codec</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="117"/>
         <source>Could not allocate the codec context</source>
-        <translation type="unfinished"></translation>
+        <translation>Codec-Kontext konnte nicht zugewiesen werden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="122"/>
         <source>Could not copy the codec parameters</source>
-        <translation type="unfinished"></translation>
+        <translation>Codec-Parameter konnten nicht kopiert werden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="127"/>
         <source>Could not open the codec</source>
-        <translation type="unfinished"></translation>
+        <translation>Codec konnte nicht geöffnet werden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="139"/>
         <source>Could not allocate the frame buffer</source>
-        <translation type="unfinished"></translation>
+        <translation>Frame-Puffer konnte nicht zugewiesen werden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="150"/>
         <source>Could not initialize the video scaler</source>
-        <translation type="unfinished"></translation>
+        <translation>Video-Skalierer konnte nicht initialisiert werden</translation>
     </message>
     <message>
         <location filename="../src/core/FFmpegFrameExtractor.cpp" line="134"/>
         <source>Invalid video dimensions</source>
-        <translation type="unfinished"></translation>
+        <translation>Ungültige Videoabmessungen</translation>
     </message>
 </context>
 <context>
@@ -482,342 +499,344 @@ Windows: https://ffmpeg.org/download.html</source>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="67"/>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="75"/>
         <source>Global Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Allgemeine Einstellungen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="79"/>
         <source>Set your studio preferences (theme, autosave, audio routing).</source>
-        <translation type="unfinished"></translation>
+        <translation>Legen Sie Ihre Studioeinstellungen fest (Design, automatisches Speichern, Audio-Routing).</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="98"/>
         <source>General</source>
-        <translation type="unfinished"></translation>
+        <translation>Allgemein</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="98"/>
         <source>Audio &amp; Microphones</source>
-        <translation type="unfinished"></translation>
+        <translation>Audio &amp; Mikrofone</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="98"/>
         <source>Keyboard Shortcuts</source>
-        <translation type="unfinished"></translation>
+        <translation>Tastenkürzel</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="129"/>
         <source>Visual theme</source>
-        <translation type="unfinished"></translation>
+        <translation>Design</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="132"/>
         <source>Automatic (system)</source>
-        <translation type="unfinished"></translation>
+        <translation>Automatisch (System)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="133"/>
         <source>Light Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>Heller Modus</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="134"/>
         <source>Premium Dark Mode</source>
-        <translation type="unfinished"></translation>
+        <translation>Premium-Dunkelmodus</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="138"/>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="483"/>
         <source>Language</source>
-        <translation type="unfinished"></translation>
+        <translation>Sprache</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="141"/>
         <source>System (%1)</source>
-        <translation type="unfinished"></translation>
+        <translation>System (%1)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="148"/>
         <source>Pre-recording countdown</source>
-        <translation type="unfinished"></translation>
+        <translation>Countdown vor der Aufnahme</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="151"/>
         <source>Off (instant)</source>
-        <translation type="unfinished"></translation>
+        <translation>Aus (sofort)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="156"/>
         <source>Pre-roll before the punch-in</source>
         <extracomment>Pre-roll: playback before the point where recording replaces the old take (punch-in)</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>Pre-Roll vor dem Punch-in</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="158"/>
         <source>Playback starts this many seconds before the playhead; only what follows the playhead replaces the previous take.</source>
-        <translation type="unfinished"></translation>
+        <translation>Die Wiedergabe beginnt so viele Sekunden vor dem Playhead; nur was nach dem Playhead folgt, ersetzt den vorherigen Take.</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="160"/>
         <source>Off</source>
-        <translation type="unfinished"></translation>
+        <translation>Aus</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="167"/>
         <source>Autosave (Cache)</source>
-        <translation type="unfinished"></translation>
+        <translation>Automatisches Speichern (Cache)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="172"/>
         <source>Enable autosave to the cache</source>
-        <translation type="unfinished"></translation>
+        <translation>Automatisches Speichern im Cache aktivieren</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="179"/>
         <source>Save frequency:</source>
-        <translation type="unfinished"></translation>
+        <translation>Speicherintervall:</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="183"/>
         <source>Every %n minute(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Jede Minute</numerusform>
+            <numerusform>Alle %n Minuten</numerusform>
         </translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="209"/>
         <source>Default microphone</source>
-        <translation type="unfinished"></translation>
+        <translation>Standardmikrofon</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="216"/>
         <source>Quick Output Selection (Headphones/Monitors)</source>
-        <translation type="unfinished"></translation>
+        <translation>Schnellauswahl Ausgang (Kopfhörer/Monitore)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="224"/>
         <source>Remove (−)</source>
-        <translation type="unfinished"></translation>
+        <translation>Entfernen (−)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="240"/>
         <source>e.g. My Sony Headphones, Studio Speakers...</source>
-        <translation type="unfinished"></translation>
+        <translation>z. B. Mein Sony-Kopfhörer, Studiolautsprecher...</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="243"/>
         <source>Add to favorites (+)</source>
-        <translation type="unfinished"></translation>
+        <translation>Zu Favoriten hinzufügen (+)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="247"/>
         <source>Custom name:</source>
-        <translation type="unfinished"></translation>
+        <translation>Eigener Name:</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="248"/>
         <source>Device:</source>
-        <translation type="unfinished"></translation>
+        <translation>Gerät:</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="311"/>
         <source>Clear the shortcut</source>
-        <translation type="unfinished"></translation>
+        <translation>Tastenkürzel löschen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="324"/>
         <source>Video Controls</source>
-        <translation type="unfinished"></translation>
+        <translation>Videosteuerung</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="325"/>
         <source>Recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="326"/>
         <source>Audio Controls</source>
-        <translation type="unfinished"></translation>
+        <translation>Audiosteuerung</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="327"/>
         <source>Project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="334"/>
         <source>Restore default shortcuts</source>
-        <translation type="unfinished"></translation>
+        <translation>Standard-Tastenkürzel wiederherstellen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="353"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Abbrechen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="359"/>
         <source>Save</source>
-        <translation type="unfinished"></translation>
+        <translation>Speichern</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="384"/>
         <source>Use the system default microphone</source>
-        <translation type="unfinished"></translation>
+        <translation>Standardmikrofon des Systems verwenden</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="442"/>
         <source>Missing fields</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehlende Angaben</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="442"/>
         <source>Please give this output a name (e.g. Sony Headphones).</source>
-        <translation type="unfinished"></translation>
+        <translation>Bitte geben Sie diesem Ausgang einen Namen (z. B. Sony-Kopfhörer).</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="484"/>
         <source>Restart DubInstante to apply the language.</source>
-        <translation type="unfinished"></translation>
+        <translation>Starten Sie DubInstante neu, um die Sprache zu übernehmen.</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="521"/>
         <source>None</source>
-        <translation type="unfinished"></translation>
+        <translation>Keine</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="544"/>
         <source>Play / Pause</source>
-        <translation type="unfinished"></translation>
+        <translation>Wiedergabe / Pause</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="545"/>
         <source>Back one frame (Previous)</source>
-        <translation type="unfinished"></translation>
+        <translation>Einen Frame zurück (Vorheriger)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="546"/>
         <source>Forward one frame (Next)</source>
-        <translation type="unfinished"></translation>
+        <translation>Einen Frame vor (Nächster)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="547"/>
         <source>Back 5 seconds</source>
-        <translation type="unfinished"></translation>
+        <translation>5 Sekunden zurück</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="548"/>
         <source>Forward 5 seconds</source>
-        <translation type="unfinished"></translation>
+        <translation>5 Sekunden vor</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="549"/>
         <source>Start recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme starten</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="550"/>
         <source>Stop recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme stoppen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="552"/>
         <source>Add a comp cut</source>
         <extracomment>Comp: the assembly of the best parts of several takes; a cut splits it in two regions</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>Comp-Schnitt hinzufügen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="553"/>
         <source>Volume up</source>
-        <translation type="unfinished"></translation>
+        <translation>Lauter</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="554"/>
         <source>Volume down</source>
-        <translation type="unfinished"></translation>
+        <translation>Leiser</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="555"/>
         <source>Mute / Unmute</source>
-        <translation type="unfinished"></translation>
+        <translation>Stumm / Ton an</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="556"/>
         <source>Save the project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt speichern</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="557"/>
         <source>Save as...</source>
-        <translation type="unfinished"></translation>
+        <translation>Speichern unter...</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="558"/>
         <source>Open a project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt öffnen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="559"/>
         <source>Open a video</source>
-        <translation type="unfinished"></translation>
+        <translation>Video öffnen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="560"/>
         <source>Export the dub</source>
-        <translation type="unfinished"></translation>
+        <translation>Synchronfassung exportieren</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="561"/>
         <source>Undo</source>
-        <translation type="unfinished"></translation>
+        <translation>Rückgängig</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="562"/>
         <source>Redo</source>
-        <translation type="unfinished"></translation>
+        <translation>Wiederholen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="563"/>
         <source>Go to start</source>
-        <translation type="unfinished"></translation>
+        <translation>Zum Anfang</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="564"/>
         <source>Fullscreen (window)</source>
-        <translation type="unfinished"></translation>
+        <translation>Vollbild (Fenster)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="593"/>
         <source>Press a key (click to cancel)</source>
-        <translation type="unfinished"></translation>
+        <translation>Taste drücken (Klicken zum Abbrechen)</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="631"/>
         <source>Shortcut conflict</source>
-        <translation type="unfinished"></translation>
+        <translation>Tastenkürzel-Konflikt</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="632"/>
         <source>The shortcut &apos;%1&apos; is already assigned to &apos;%2&apos;.
 
 Reassign it to this action and free the other one?</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Tastenkürzel „%1“ ist bereits „%2“ zugewiesen.
+
+Dieser Aktion zuweisen und die andere freigeben?</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="695"/>
         <source>Restore defaults</source>
-        <translation type="unfinished"></translation>
+        <translation>Standard wiederherstellen</translation>
     </message>
     <message>
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="696"/>
         <source>Restore every shortcut to its default value?</source>
-        <translation type="unfinished"></translation>
+        <translation>Alle Tastenkürzel auf ihren Standardwert zurücksetzen?</translation>
     </message>
     <message numerus="yes">
         <location filename="../src/gui/GlobalSettingsDialog.cpp" line="747"/>
         <source>%n second(s)</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>%n Sekunde</numerusform>
+            <numerusform>%n Sekunden</numerusform>
         </translation>
     </message>
 </context>
@@ -827,530 +846,540 @@ Reassign it to this action and free the other one?</source>
         <location filename="../src/gui/MainWindow.cpp" line="89"/>
         <source>Typing on the band</source>
         <extracomment>Undo step: text typed on a rythmo band</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>Eingabe auf dem Rythmoband</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="391"/>
         <source>Remove a band</source>
-        <translation type="unfinished"></translation>
+        <translation>Band entfernen</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="391"/>
         <source>Add a band</source>
-        <translation type="unfinished"></translation>
+        <translation>Band hinzufügen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="537"/>
+        <location filename="../src/gui/MainWindow.cpp" line="545"/>
         <source>Back (1 frame)</source>
-        <translation type="unfinished"></translation>
+        <translation>Zurück (1 Frame)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="540"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1717"/>
+        <location filename="../src/gui/MainWindow.cpp" line="548"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1725"/>
         <source>PLAY</source>
-        <translation type="unfinished"></translation>
+        <translation>PLAY</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="544"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2710"/>
+        <location filename="../src/gui/MainWindow.cpp" line="552"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2718"/>
         <source>STOP</source>
-        <translation type="unfinished"></translation>
+        <translation>STOP</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="551"/>
+        <location filename="../src/gui/MainWindow.cpp" line="559"/>
         <source>Forward (1 frame)</source>
-        <translation type="unfinished"></translation>
+        <translation>Vor (1 Frame)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="573"/>
+        <location filename="../src/gui/MainWindow.cpp" line="581"/>
         <source>Scroll Speed</source>
-        <translation type="unfinished"></translation>
+        <translation>Laufgeschwindigkeit</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="580"/>
+        <location filename="../src/gui/MainWindow.cpp" line="588"/>
         <source>Slower (-10%)</source>
-        <translation type="unfinished"></translation>
+        <translation>Langsamer (-10 %)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="597"/>
+        <location filename="../src/gui/MainWindow.cpp" line="605"/>
         <source>Faster (+10%)</source>
-        <translation type="unfinished"></translation>
+        <translation>Schneller (+10 %)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="640"/>
+        <location filename="../src/gui/MainWindow.cpp" line="648"/>
         <source>Mute / Unmute</source>
-        <translation type="unfinished"></translation>
+        <translation>Stumm / Ton an</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="647"/>
+        <location filename="../src/gui/MainWindow.cpp" line="655"/>
         <source>Volume down (-5%)</source>
-        <translation type="unfinished"></translation>
+        <translation>Leiser (-5 %)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="661"/>
+        <location filename="../src/gui/MainWindow.cpp" line="669"/>
         <source>Volume up (+5%)</source>
-        <translation type="unfinished"></translation>
+        <translation>Lauter (+5 %)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="679"/>
+        <location filename="../src/gui/MainWindow.cpp" line="687"/>
         <source>Cancel</source>
-        <translation type="unfinished"></translation>
+        <translation>Abbrechen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="698"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1878"/>
+        <location filename="../src/gui/MainWindow.cpp" line="706"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1886"/>
         <source>✅ Recording finished!</source>
-        <translation type="unfinished"></translation>
+        <translation>✅ Aufnahme beendet!</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="703"/>
+        <location filename="../src/gui/MainWindow.cpp" line="711"/>
         <source>▶ Listen</source>
-        <translation type="unfinished"></translation>
+        <translation>▶ Anhören</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="712"/>
+        <location filename="../src/gui/MainWindow.cpp" line="720"/>
         <source>📤 Export</source>
-        <translation type="unfinished"></translation>
+        <translation>📤 Exportieren</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="760"/>
+        <location filename="../src/gui/MainWindow.cpp" line="768"/>
         <source>File</source>
-        <translation type="unfinished"></translation>
+        <translation>Datei</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="762"/>
+        <location filename="../src/gui/MainWindow.cpp" line="770"/>
         <source>Open a video</source>
-        <translation type="unfinished"></translation>
+        <translation>Video öffnen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="766"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1460"/>
+        <location filename="../src/gui/MainWindow.cpp" line="774"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1468"/>
         <source>Open a project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt öffnen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="776"/>
+        <location filename="../src/gui/MainWindow.cpp" line="784"/>
         <source>Export the dub...</source>
-        <translation type="unfinished"></translation>
+        <translation>Synchronfassung exportieren...</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="785"/>
+        <location filename="../src/gui/MainWindow.cpp" line="793"/>
         <source>Edit</source>
-        <translation type="unfinished"></translation>
+        <translation>Bearbeiten</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="788"/>
-        <location filename="../src/gui/MainWindow.cpp" line="797"/>
+        <location filename="../src/gui/MainWindow.cpp" line="796"/>
+        <location filename="../src/gui/MainWindow.cpp" line="805"/>
         <source>Undo</source>
-        <translation type="unfinished"></translation>
+        <translation>Rückgängig</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="792"/>
         <location filename="../src/gui/MainWindow.cpp" line="800"/>
+        <location filename="../src/gui/MainWindow.cpp" line="808"/>
         <source>Redo</source>
-        <translation type="unfinished"></translation>
+        <translation>Wiederholen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="797"/>
+        <location filename="../src/gui/MainWindow.cpp" line="805"/>
         <source>Undo: %1</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/gui/MainWindow.cpp" line="800"/>
-        <source>Redo: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Rückgängig: %1</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="808"/>
-        <source>Fullscreen while recording</source>
-        <translation type="unfinished"></translation>
+        <source>Redo: %1</source>
+        <translation>Wiederholen: %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="812"/>
-        <source>Fullscreen (window)</source>
-        <translation type="unfinished"></translation>
+        <location filename="../src/gui/MainWindow.cpp" line="816"/>
+        <source>Fullscreen while recording</source>
+        <translation>Vollbild während der Aufnahme</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="820"/>
-        <source>Global settings</source>
-        <translation type="unfinished"></translation>
+        <source>Fullscreen (window)</source>
+        <translation>Vollbild (Fenster)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="825"/>
+        <location filename="../src/gui/MainWindow.cpp" line="828"/>
+        <source>Global settings</source>
+        <translation>Allgemeine Einstellungen</translation>
+    </message>
+    <message>
+        <location filename="../src/gui/MainWindow.cpp" line="833"/>
         <source>Rythmo Band</source>
         <extracomment>The scrolling dialogue band of French-style dubbing (&quot;bande rythmo&quot;)</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>Rythmoband</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="829"/>
+        <location filename="../src/gui/MainWindow.cpp" line="837"/>
         <source>Remove a band (−)</source>
-        <translation type="unfinished"></translation>
+        <translation>Band entfernen (−)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="834"/>
+        <location filename="../src/gui/MainWindow.cpp" line="842"/>
         <source>Add a band (+)</source>
-        <translation type="unfinished"></translation>
+        <translation>Band hinzufügen (+)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="841"/>
+        <location filename="../src/gui/MainWindow.cpp" line="849"/>
         <source>Customize</source>
-        <translation type="unfinished"></translation>
+        <translation>Anpassen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="912"/>
+        <location filename="../src/gui/MainWindow.cpp" line="920"/>
         <source>Take editing</source>
         <extracomment>Undo step: choosing which recorded take is heard where</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>Take-Bearbeitung</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1081"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2098"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1089"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2106"/>
         <source>Track %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Spur %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1241"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1249"/>
         <source>Open</source>
-        <translation type="unfinished"></translation>
+        <translation>Öffnen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1242"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1250"/>
         <source>Video files (%1);;All files (*)</source>
-        <translation type="unfinished"></translation>
+        <translation>Videodateien (%1);;Alle Dateien (*)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1290"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1298"/>
         <source>Save</source>
-        <translation type="unfinished"></translation>
+        <translation>Speichern</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1291"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1299"/>
         <source>Include the video in the archive?
 (This creates a .zip file)</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Video in das Archiv aufnehmen?
+(Dadurch wird eine .zip-Datei erstellt)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1303"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1311"/>
         <source>Save the project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt speichern</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1345"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1353"/>
         <source>The project will be saved when the take ends.</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Projekt wird gespeichert, sobald der Take endet.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1369"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1418"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1449"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1500"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1530"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1547"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1557"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2139"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1377"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1426"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1457"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1508"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1538"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1555"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1565"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2147"/>
         <source>Error</source>
-        <translation type="unfinished"></translation>
+        <translation>Fehler</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1370"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1378"/>
         <source>Could not copy recording %1 to:
 %2
 
 Check the disk space or the permissions. The project was not saved.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme %1 konnte nicht kopiert werden nach:
+%2
+
+Prüfen Sie den Speicherplatz oder die Berechtigungen. Das Projekt wurde nicht gespeichert.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1385"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1393"/>
         <source>Save error</source>
-        <translation type="unfinished"></translation>
+        <translation>Speicherfehler</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1392"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1400"/>
         <source>Creating the ZIP archive...
 This can take a few minutes depending on the video size.</source>
-        <translation type="unfinished"></translation>
+        <translation>ZIP-Archiv wird erstellt...
+Dies kann je nach Videogröße einige Minuten dauern.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1415"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1447"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1423"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1455"/>
         <source>Project saved</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt gespeichert</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1420"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1428"/>
         <source>Could not create the ZIP archive.
 Check the disk space or the permissions.</source>
-        <translation type="unfinished"></translation>
+        <translation>Das ZIP-Archiv konnte nicht erstellt werden.
+Prüfen Sie den Speicherplatz oder die Berechtigungen.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1450"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1458"/>
         <source>Could not save the project.</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Projekt konnte nicht gespeichert werden.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1461"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1469"/>
         <source>DubInstante projects (*.dbi *.zip);;Project (*.dbi);;Archive (*.zip)</source>
-        <translation type="unfinished"></translation>
+        <translation>DubInstante-Projekte (*.dbi *.zip);;Projekt (*.dbi);;Archiv (*.zip)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1501"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1509"/>
         <source>Could not create the temporary extraction folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>Der temporäre Entpackordner konnte nicht erstellt werden.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1511"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1519"/>
         <source>Extracting the archive...
 This can take a few minutes depending on the video size.</source>
-        <translation type="unfinished"></translation>
+        <translation>Archiv wird entpackt...
+Dies kann je nach Videogröße einige Minuten dauern.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1548"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1556"/>
         <source>This archive holds several projects and none is named after the archive (%1).</source>
-        <translation type="unfinished"></translation>
+        <translation>Dieses Archiv enthält mehrere Projekte, und keines trägt den Namen des Archivs (%1).</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1558"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1566"/>
         <source>The file is corrupted or from an incompatible version.</source>
-        <translation type="unfinished"></translation>
+        <translation>Die Datei ist beschädigt oder stammt aus einer inkompatiblen Version.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1619"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1627"/>
         <source>The video was not found. Please locate it.</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Video wurde nicht gefunden. Bitte suchen Sie es.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1677"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1684"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1685"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1692"/>
         <source>Project</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1678"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1686"/>
         <source>This project refers to files outside its folder. They were ignored for safety.</source>
-        <translation type="unfinished"></translation>
+        <translation>Dieses Projekt verweist auf Dateien außerhalb seines Ordners. Sie wurden aus Sicherheitsgründen ignoriert.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/MainWindow.cpp" line="1685"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1693"/>
         <source>%n take(s) of this project were not found in its audio folder and were not loaded. Saving now would remove them from the project.</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>%n Take dieses Projekts wurde im Audioordner nicht gefunden und nicht geladen. Wenn Sie jetzt speichern, wird er aus dem Projekt entfernt.</numerusform>
+            <numerusform>%n Takes dieses Projekts wurden im Audioordner nicht gefunden und nicht geladen. Wenn Sie jetzt speichern, werden sie aus dem Projekt entfernt.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1692"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1700"/>
         <source>Project loaded</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt geladen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1753"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1761"/>
         <source>Load a video before recording.</source>
-        <translation type="unfinished"></translation>
+        <translation>Laden Sie vor der Aufnahme ein Video.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1764"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1772"/>
         <source>Finishing the previous take…</source>
-        <translation type="unfinished"></translation>
+        <translation>Vorheriger Take wird abgeschlossen…</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1791"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1799"/>
         <source>CANCEL</source>
-        <translation type="unfinished"></translation>
+        <translation>ABBRUCH</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1868"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2644"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2658"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1876"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2652"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2666"/>
         <source>Recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1886"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1894"/>
         <source>Recording finished, but track %1 produced no audio. Check the selected microphone.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme beendet, aber Spur %1 hat kein Audio geliefert. Prüfen Sie das ausgewählte Mikrofon.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1888"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1896"/>
         <source>Recording finished, but tracks %1 produced no audio. Check the selected microphone.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme beendet, aber die Spuren %1 haben kein Audio geliefert. Prüfen Sie das ausgewählte Mikrofon.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2062"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2734"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2070"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2742"/>
         <source>Export in progress</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2063"/>
-        <source>The export reads the current takes. Wait for it to finish or cancel it before going on.</source>
-        <translation type="unfinished"></translation>
+        <translation>Export läuft</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="2071"/>
+        <source>The export reads the current takes. Wait for it to finish or cancel it before going on.</source>
+        <translation>Der Export liest die aktuellen Takes. Warten Sie, bis er abgeschlossen ist, oder brechen Sie ihn ab, bevor Sie fortfahren.</translation>
+    </message>
+    <message>
+        <location filename="../src/gui/MainWindow.cpp" line="2079"/>
         <source>No video loaded.</source>
-        <translation type="unfinished"></translation>
+        <translation>Kein Video geladen.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2103"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2111"/>
         <source>No audio recording to export.</source>
-        <translation type="unfinished"></translation>
+        <translation>Keine Audioaufnahme zum Exportieren.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2109"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2117"/>
         <source>Takes are missing for: %1.
 Export without them?</source>
-        <translation type="unfinished"></translation>
+        <translation>Es fehlen Takes für: %1.
+Ohne sie exportieren?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2339"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2347"/>
         <source>Settings updated</source>
-        <translation type="unfinished"></translation>
+        <translation>Einstellungen aktualisiert</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2365"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2373"/>
         <source>Recovery</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2366"/>
-        <source>An autosave from %1 was found. DubInstante probably closed unexpectedly.
-Restore this work?</source>
-        <translation type="unfinished"></translation>
+        <translation>Wiederherstellung</translation>
     </message>
     <message>
         <location filename="../src/gui/MainWindow.cpp" line="2374"/>
-        <source>Restore</source>
-        <translation type="unfinished"></translation>
+        <source>An autosave from %1 was found. DubInstante probably closed unexpectedly.
+Restore this work?</source>
+        <translation>Eine automatische Sicherung vom %1 wurde gefunden. DubInstante wurde wahrscheinlich unerwartet beendet.
+Diese Arbeit wiederherstellen?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2376"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2382"/>
+        <source>Restore</source>
+        <translation>Wiederherstellen</translation>
+    </message>
+    <message>
+        <location filename="../src/gui/MainWindow.cpp" line="2384"/>
         <source>Ignore</source>
-        <translation type="unfinished"></translation>
+        <translation>Ignorieren</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/MainWindow.cpp" line="2392"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2400"/>
         <source>Project restored. %n recording(s) not found.</source>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>Projekt wiederhergestellt. %n Aufnahme nicht gefunden.</numerusform>
+            <numerusform>Projekt wiederhergestellt. %n Aufnahmen nicht gefunden.</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2396"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2404"/>
         <source>Project restored</source>
-        <translation type="unfinished"></translation>
+        <translation>Projekt wiederhergestellt</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2445"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2453"/>
         <source>Unsaved changes</source>
-        <translation type="unfinished"></translation>
+        <translation>Nicht gespeicherte Änderungen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2446"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2454"/>
         <source>The project was modified. Save it before going on?</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Projekt wurde geändert. Vor dem Fortfahren speichern?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2526"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2534"/>
         <source>Autosave to cache done</source>
-        <translation type="unfinished"></translation>
+        <translation>Automatisches Speichern im Cache abgeschlossen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2565"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2573"/>
         <source>Audio output: %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Audioausgang: %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2584"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2592"/>
         <source>No profile set up</source>
-        <translation type="unfinished"></translation>
+        <translation>Kein Profil eingerichtet</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2608"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2616"/>
         <source>Manage outputs...</source>
-        <translation type="unfinished"></translation>
+        <translation>Ausgänge verwalten...</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2645"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2653"/>
         <source>No track is armed. Arm at least one track before recording.</source>
-        <translation type="unfinished"></translation>
+        <translation>Keine Spur ist aufnahmebereit. Schalten Sie vor der Aufnahme mindestens eine Spur aufnahmebereit.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2659"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2667"/>
         <source>Track %1 is armed but no microphone is selected.</source>
-        <translation type="unfinished"></translation>
+        <translation>Spur %1 ist aufnahmebereit, aber es ist kein Mikrofon ausgewählt.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2735"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2743"/>
         <source>An export is in progress. Quitting now will stop it and delete the incomplete file.
 Quit anyway?</source>
-        <translation type="unfinished"></translation>
+        <translation>Ein Export läuft. Wenn Sie jetzt beenden, wird er abgebrochen und die unvollständige Datei gelöscht.
+Trotzdem beenden?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="631"/>
+        <location filename="../src/gui/MainWindow.cpp" line="639"/>
         <source>Master Vol</source>
-        <translation type="unfinished"></translation>
+        <translation>Master-Lautst.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="720"/>
+        <location filename="../src/gui/MainWindow.cpp" line="728"/>
         <source>✕</source>
-        <translation type="unfinished"></translation>
+        <translation>✕</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="771"/>
+        <location filename="../src/gui/MainWindow.cpp" line="779"/>
         <source>Save .dbi / .zip</source>
-        <translation type="unfinished"></translation>
+        <translation>.dbi / .zip speichern</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="806"/>
+        <location filename="../src/gui/MainWindow.cpp" line="814"/>
         <source>Application</source>
-        <translation type="unfinished"></translation>
+        <translation>Anwendung</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="845"/>
+        <location filename="../src/gui/MainWindow.cpp" line="853"/>
         <source>Audio</source>
-        <translation type="unfinished"></translation>
+        <translation>Audio</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1298"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1306"/>
         <source>DubInstante Archive (*.zip)</source>
-        <translation type="unfinished"></translation>
+        <translation>DubInstante-Archiv (*.zip)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1299"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1307"/>
         <source>DubInstante Project (*.dbi)</source>
-        <translation type="unfinished"></translation>
+        <translation>DubInstante-Projekt (*.dbi)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1618"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1626"/>
         <source>Relink</source>
-        <translation type="unfinished"></translation>
+        <translation>Neu verknüpfen</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1714"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1722"/>
         <source>PAUSE</source>
-        <translation type="unfinished"></translation>
+        <translation>PAUSE</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1752"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1760"/>
         <source>Dubbing</source>
-        <translation type="unfinished"></translation>
+        <translation>Synchronisation</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2050"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2052"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2071"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2077"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2103"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2108"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2058"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2060"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2079"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2085"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2111"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2116"/>
         <source>Export</source>
-        <translation type="unfinished"></translation>
+        <translation>Export</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2425"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2433"/>
         <source>REC GLOBAL</source>
         <extracomment>Record button: records every armed track at once</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>REC ALLE</translation>
     </message>
 </context>
 <context>
@@ -1361,7 +1390,10 @@ Quit anyway?</source>
 
 Please install it to use this feature.
 Link: https://formulae.brew.sh/formula/zip</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Programm „zip“ wurde nicht gefunden.
+
+Bitte installieren Sie es, um diese Funktion zu nutzen.
+Link: https://formulae.brew.sh/formula/zip</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="130"/>
@@ -1373,7 +1405,14 @@ Fedora: sudo dnf install zip
 Arch: sudo pacman -S zip
 
 Or see: https://command-not-found.com/zip</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Programm „zip“ wurde nicht gefunden.
+
+Bitte installieren Sie es über Ihr Terminal:
+Debian/Ubuntu: sudo apt install zip
+Fedora: sudo dnf install zip
+Arch: sudo pacman -S zip
+
+Oder siehe: https://command-not-found.com/zip</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="175"/>
@@ -1381,7 +1420,10 @@ Or see: https://command-not-found.com/zip</source>
 
 &apos;tar&apos; ships with Windows 10 (version 1803) and later.
 Update Windows or install &apos;unzip&apos;.</source>
-        <translation type="unfinished"></translation>
+        <translation>Es ist kein Entpackprogramm verfügbar.
+
+„tar“ ist ab Windows 10 (Version 1803) enthalten.
+Aktualisieren Sie Windows oder installieren Sie „unzip“.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="180"/>
@@ -1389,7 +1431,10 @@ Update Windows or install &apos;unzip&apos;.</source>
 
 Please install it to use this feature.
 Link: https://formulae.brew.sh/formula/unzip</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Programm „unzip“ wurde nicht gefunden.
+
+Bitte installieren Sie es, um diese Funktion zu nutzen.
+Link: https://formulae.brew.sh/formula/unzip</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="186"/>
@@ -1401,34 +1446,43 @@ Fedora: sudo dnf install unzip
 Arch: sudo pacman -S unzip
 
 Or see: https://command-not-found.com/unzip</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Programm „unzip“ wurde nicht gefunden.
+
+Bitte installieren Sie es über Ihr Terminal:
+Debian/Ubuntu: sudo apt install unzip
+Fedora: sudo dnf install unzip
+Arch: sudo pacman -S unzip
+
+Oder siehe: https://command-not-found.com/unzip</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="208"/>
         <source>Could not read the archive:
 %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Archiv konnte nicht gelesen werden:
+%1</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="212"/>
         <source>Could not create the extraction folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>Der Entpackordner konnte nicht erstellt werden.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="219"/>
         <source>Not enough disk space to extract the archive.
 About %1 MB must be free.</source>
-        <translation type="unfinished"></translation>
+        <translation>Nicht genügend Speicherplatz zum Entpacken des Archivs.
+Etwa %1 MB müssen frei sein.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="241"/>
         <source>Could not start &apos;%1&apos;.</source>
-        <translation type="unfinished"></translation>
+        <translation>„%1“ konnte nicht gestartet werden.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="248"/>
         <source>Extraction failed (timeout or internal error).</source>
-        <translation type="unfinished"></translation>
+        <translation>Entpacken fehlgeschlagen (Zeitüberschreitung oder interner Fehler).</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="255"/>
@@ -1436,124 +1490,130 @@ About %1 MB must be free.</source>
 The archive may be corrupted or incomplete.
 
 %2</source>
-        <translation type="unfinished"></translation>
+        <translation>Entpacken fehlgeschlagen (Code %1).
+Das Archiv ist möglicherweise beschädigt oder unvollständig.
+
+%2</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="263"/>
         <source>This archive does not contain a DubInstante project.</source>
-        <translation type="unfinished"></translation>
+        <translation>Dieses Archiv enthält kein DubInstante-Projekt.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="283"/>
         <source>Not enough disk space on the destination drive.
 The archive needs about %1 MB free.</source>
-        <translation type="unfinished"></translation>
+        <translation>Nicht genügend Speicherplatz auf dem Ziellaufwerk.
+Das Archiv benötigt etwa %1 MB freien Speicher.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="296"/>
         <source>Could not create the temporary folder.</source>
-        <translation type="unfinished"></translation>
+        <translation>Der temporäre Ordner konnte nicht erstellt werden.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="312"/>
         <source>Could not save the .dbi file</source>
-        <translation type="unfinished"></translation>
+        <translation>Die .dbi-Datei konnte nicht gespeichert werden</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="323"/>
         <source>Could not copy the video into the archive.</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Video konnte nicht in das Archiv kopiert werden.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="336"/>
         <source>Could not copy recording %1 into the archive.</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahme %1 konnte nicht in das Archiv kopiert werden.</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="390"/>
         <source>The compression process failed (timeout or internal error).</source>
-        <translation type="unfinished"></translation>
+        <translation>Die Komprimierung ist fehlgeschlagen (Zeitüberschreitung oder interner Fehler).</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="400"/>
         <source>Compression error (code: %1)</source>
-        <translation type="unfinished"></translation>
+        <translation>Komprimierungsfehler (Code: %1)</translation>
     </message>
     <message>
         <location filename="../src/core/SaveManager.cpp" line="410"/>
         <source>Could not write the archive:
 %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Das Archiv konnte nicht geschrieben werden:
+%1</translation>
     </message>
 </context>
 <context>
     <name>TakeTimeline</name>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="254"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="259"/>
         <source>Track %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Spur %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/TakeTimeline.cpp" line="260"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="264"/>
         <source>%n take(s)</source>
         <extracomment>A take is one recording pass of a track (audio, not a film shot)</extracomment>
-        <translation type="unfinished">
-            <numerusform></numerusform>
-            <numerusform></numerusform>
+        <translation>
+            <numerusform>%n Take</numerusform>
+            <numerusform>%n Takes</numerusform>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="271"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="275"/>
         <source>No take: arm the track and start recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Kein Take: Spur aufnahmebereit schalten und Aufnahme starten</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="285"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="289"/>
         <source>T%1</source>
         <extracomment>Very short &quot;Take %1&quot;, drawn inside small timeline blocks</extracomment>
-        <translation type="unfinished"></translation>
+        <translation>T%1</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="301"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="305"/>
         <source>Take %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Take %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="418"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="422"/>
         <source>Remove the cut</source>
-        <translation type="unfinished"></translation>
+        <translation>Schnitt entfernen</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="424"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="428"/>
         <source>Cut here</source>
-        <translation type="unfinished"></translation>
+        <translation>Hier schneiden</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="432"/>
-        <location filename="../src/gui/TakeTimeline.cpp" line="449"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="436"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="453"/>
         <source>Delete take %1…</source>
-        <translation type="unfinished"></translation>
+        <translation>Take %1 löschen…</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="438"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="442"/>
         <source>Use this take here</source>
-        <translation type="unfinished"></translation>
+        <translation>Diesen Take hier verwenden</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="444"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="448"/>
         <source>Listen from the start of the take</source>
-        <translation type="unfinished"></translation>
+        <translation>Ab Anfang des Takes anhören</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="457"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="461"/>
         <source>Delete the take</source>
-        <translation type="unfinished"></translation>
+        <translation>Take löschen</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="458"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="462"/>
         <source>Delete take %1 from track %2?
 The regions where it was heard go back to the previous take.</source>
-        <translation type="unfinished"></translation>
+        <translation>Take %1 von Spur %2 löschen?
+Die Bereiche, in denen er zu hören war, fallen auf den vorherigen Take zurück.</translation>
     </message>
 </context>
 <context>
@@ -1561,117 +1621,117 @@ The regions where it was heard go back to the previous take.</source>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="43"/>
         <source>Rythmo Band Customization</source>
-        <translation type="unfinished"></translation>
+        <translation>Rythmoband anpassen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="50"/>
         <source>Customize the Rythmo Band</source>
-        <translation type="unfinished"></translation>
+        <translation>Rythmoband anpassen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="55"/>
         <source>Live visual settings, without interrupting the flow.</source>
-        <translation type="unfinished"></translation>
+        <translation>Visuelle Einstellungen live, ohne den Arbeitsfluss zu unterbrechen.</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="68"/>
         <source>Track to edit</source>
-        <translation type="unfinished"></translation>
+        <translation>Zu bearbeitende Spur</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="77"/>
         <source>Track %1</source>
-        <translation type="unfinished"></translation>
+        <translation>Spur %1</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="95"/>
         <source>Live preview</source>
-        <translation type="unfinished"></translation>
+        <translation>Live-Vorschau</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="107"/>
         <source>Hello, here is a preview of the rythmo band...</source>
-        <translation type="unfinished"></translation>
+        <translation>Hallo, hier ist eine Vorschau des Rythmobands...</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="126"/>
         <source>Presets</source>
-        <translation type="unfinished"></translation>
+        <translation>Vorlagen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="132"/>
         <source>Classic</source>
-        <translation type="unfinished"></translation>
+        <translation>Klassisch</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="133"/>
         <source>Dark</source>
-        <translation type="unfinished"></translation>
+        <translation>Dunkel</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="134"/>
         <source>Blue</source>
-        <translation type="unfinished"></translation>
+        <translation>Blau</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="135"/>
         <source>Red</source>
-        <translation type="unfinished"></translation>
+        <translation>Rot</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="136"/>
         <source>Green</source>
-        <translation type="unfinished"></translation>
+        <translation>Grün</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="137"/>
         <source>Yellow</source>
-        <translation type="unfinished"></translation>
+        <translation>Gelb</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="170"/>
         <source>Fine Settings</source>
-        <translation type="unfinished"></translation>
+        <translation>Feineinstellungen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="177"/>
         <source>Font</source>
-        <translation type="unfinished"></translation>
+        <translation>Schriftart</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="194"/>
         <source>Overall size</source>
-        <translation type="unfinished"></translation>
+        <translation>Gesamtgröße</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="205"/>
         <source>Text color</source>
-        <translation type="unfinished"></translation>
+        <translation>Textfarbe</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="217"/>
         <source>Background color</source>
-        <translation type="unfinished"></translation>
+        <translation>Hintergrundfarbe</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="235"/>
         <source>Close</source>
-        <translation type="unfinished"></translation>
+        <translation>Schließen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="265"/>
         <source>Transparent</source>
-        <translation type="unfinished"></translation>
+        <translation>Transparent</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="342"/>
         <source>Choose the text color</source>
-        <translation type="unfinished"></translation>
+        <translation>Textfarbe wählen</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackSettingsDialog.cpp" line="355"/>
         <source>Choose the background color</source>
-        <translation type="unfinished"></translation>
+        <translation>Hintergrundfarbe wählen</translation>
     </message>
 </context>
 <context>
@@ -1679,33 +1739,33 @@ The regions where it was heard go back to the previous take.</source>
     <message>
         <location filename="../src/gui/TrackWidget.cpp" line="69"/>
         <source>IN:</source>
-        <translation type="unfinished"></translation>
+        <translation>IN:</translation>
     </message>
     <message>
         <location filename="../src/gui/TrackWidget.cpp" line="54"/>
         <source>Arm/Disarm recording</source>
-        <translation type="unfinished"></translation>
+        <translation>Aufnahmebereitschaft ein/aus</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="75"/>
-        <location filename="../src/gui/TrackWidget.cpp" line="160"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="74"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="162"/>
         <source>No input</source>
-        <translation type="unfinished"></translation>
+        <translation>Kein Eingang</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="86"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="85"/>
         <source>VOL:</source>
-        <translation type="unfinished"></translation>
+        <translation>VOL:</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="170"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="172"/>
         <source>REC</source>
-        <translation type="unfinished"></translation>
+        <translation>REC</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="176"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="178"/>
         <source>PLAYBACK</source>
-        <translation type="unfinished"></translation>
+        <translation>PLAYBACK</translation>
     </message>
 </context>
 </TS>

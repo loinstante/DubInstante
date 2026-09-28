@@ -278,6 +278,12 @@ target_include_directories(test_rythmowidget PRIVATE
 target_link_libraries(test_rythmowidget PRIVATE Qt6::Widgets)
 add_test(NAME test_rythmowidget COMMAND test_rythmowidget)
 
+add_executable(test_translations tests/test_translations.cpp)
+target_compile_definitions(test_translations PRIVATE
+    TRANSLATIONS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/translations")
+target_link_libraries(test_translations PRIVATE Qt6::Core)
+add_test(NAME test_translations COMMAND test_translations)
+
 # Les tests construisent un QGuiApplication : sans plugin de plateforme, ils
 # meurent sur une machine sans écran (CI comprise).
 set_tests_properties(

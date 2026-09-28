@@ -859,220 +859,220 @@ Voulez-vous le réattribuer à cette action et libérer l&apos;autre ?</translat
         <translation>Ajouter une bande</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="537"/>
+        <location filename="../src/gui/MainWindow.cpp" line="545"/>
         <source>Back (1 frame)</source>
         <translation>Reculer (1 frame)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="540"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1717"/>
+        <location filename="../src/gui/MainWindow.cpp" line="548"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1725"/>
         <source>PLAY</source>
         <translation>LECTURE</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="544"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2710"/>
+        <location filename="../src/gui/MainWindow.cpp" line="552"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2718"/>
         <source>STOP</source>
         <translation>STOP</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="551"/>
+        <location filename="../src/gui/MainWindow.cpp" line="559"/>
         <source>Forward (1 frame)</source>
         <translation>Avancer (1 frame)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="573"/>
+        <location filename="../src/gui/MainWindow.cpp" line="581"/>
         <source>Scroll Speed</source>
         <translation>Vitesse Défilement</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="580"/>
+        <location filename="../src/gui/MainWindow.cpp" line="588"/>
         <source>Slower (-10%)</source>
         <translation>Ralentir (-10%)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="597"/>
+        <location filename="../src/gui/MainWindow.cpp" line="605"/>
         <source>Faster (+10%)</source>
         <translation>Accélérer (+10%)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="640"/>
+        <location filename="../src/gui/MainWindow.cpp" line="648"/>
         <source>Mute / Unmute</source>
         <translation>Activer/Désactiver le son</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="647"/>
+        <location filename="../src/gui/MainWindow.cpp" line="655"/>
         <source>Volume down (-5%)</source>
         <translation>Baisser le volume (-5%)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="661"/>
+        <location filename="../src/gui/MainWindow.cpp" line="669"/>
         <source>Volume up (+5%)</source>
         <translation>Monter le volume (+5%)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="679"/>
+        <location filename="../src/gui/MainWindow.cpp" line="687"/>
         <source>Cancel</source>
         <translation>Annuler</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="698"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1878"/>
+        <location filename="../src/gui/MainWindow.cpp" line="706"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1886"/>
         <source>✅ Recording finished!</source>
         <translation>✅ Enregistrement terminé !</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="703"/>
+        <location filename="../src/gui/MainWindow.cpp" line="711"/>
         <source>▶ Listen</source>
         <translation>▶ Écouter</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="712"/>
+        <location filename="../src/gui/MainWindow.cpp" line="720"/>
         <source>📤 Export</source>
         <translation>📤 Exporter</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="760"/>
+        <location filename="../src/gui/MainWindow.cpp" line="768"/>
         <source>File</source>
         <translation>Fichier</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="762"/>
+        <location filename="../src/gui/MainWindow.cpp" line="770"/>
         <source>Open a video</source>
         <translation>Ouvrir une vidéo</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="766"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1460"/>
+        <location filename="../src/gui/MainWindow.cpp" line="774"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1468"/>
         <source>Open a project</source>
         <translation>Ouvrir un projet</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="776"/>
+        <location filename="../src/gui/MainWindow.cpp" line="784"/>
         <source>Export the dub...</source>
         <translation>Exporter le doublage...</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="785"/>
+        <location filename="../src/gui/MainWindow.cpp" line="793"/>
         <source>Edit</source>
         <translation>Édition</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="788"/>
-        <location filename="../src/gui/MainWindow.cpp" line="797"/>
+        <location filename="../src/gui/MainWindow.cpp" line="796"/>
+        <location filename="../src/gui/MainWindow.cpp" line="805"/>
         <source>Undo</source>
         <translation>Annuler</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="792"/>
         <location filename="../src/gui/MainWindow.cpp" line="800"/>
+        <location filename="../src/gui/MainWindow.cpp" line="808"/>
         <source>Redo</source>
         <translation>Rétablir</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="797"/>
+        <location filename="../src/gui/MainWindow.cpp" line="805"/>
         <source>Undo: %1</source>
         <translation>Annuler : %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="800"/>
+        <location filename="../src/gui/MainWindow.cpp" line="808"/>
         <source>Redo: %1</source>
         <translation>Rétablir : %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="808"/>
+        <location filename="../src/gui/MainWindow.cpp" line="816"/>
         <source>Fullscreen while recording</source>
         <translation>Plein écran pendant l&apos;enregistrement</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="812"/>
+        <location filename="../src/gui/MainWindow.cpp" line="820"/>
         <source>Fullscreen (window)</source>
         <translation>Plein écran (fenêtre)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="820"/>
+        <location filename="../src/gui/MainWindow.cpp" line="828"/>
         <source>Global settings</source>
         <translation>Paramètre global</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="825"/>
+        <location filename="../src/gui/MainWindow.cpp" line="833"/>
         <source>Rythmo Band</source>
         <extracomment>The scrolling dialogue band of French-style dubbing (&quot;bande rythmo&quot;)</extracomment>
         <translation>Bande Rythmo</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="829"/>
+        <location filename="../src/gui/MainWindow.cpp" line="837"/>
         <source>Remove a band (−)</source>
         <translation>Retirer une bande (−)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="834"/>
+        <location filename="../src/gui/MainWindow.cpp" line="842"/>
         <source>Add a band (+)</source>
         <translation>Ajouter une bande (+)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="841"/>
+        <location filename="../src/gui/MainWindow.cpp" line="849"/>
         <source>Customize</source>
         <translation>Personnaliser</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="912"/>
+        <location filename="../src/gui/MainWindow.cpp" line="920"/>
         <source>Take editing</source>
         <extracomment>Undo step: choosing which recorded take is heard where</extracomment>
         <translation>Montage des prises</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1081"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2098"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1089"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2106"/>
         <source>Track %1</source>
         <translation>Piste %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1241"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1249"/>
         <source>Open</source>
         <translation>Ouvrir</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1242"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1250"/>
         <source>Video files (%1);;All files (*)</source>
         <translation>Fichiers vidéo (%1);;Tous les fichiers (*)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1290"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1298"/>
         <source>Save</source>
         <translation>Sauvegarder</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1291"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1299"/>
         <source>Include the video in the archive?
 (This creates a .zip file)</source>
         <translation>Voulez-vous inclure la vidéo dans l&apos;archive ?
 (Cela créera un fichier .zip)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1303"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1311"/>
         <source>Save the project</source>
         <translation>Sauvegarder le projet</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1345"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1353"/>
         <source>The project will be saved when the take ends.</source>
         <translation>Le projet sera enregistré à la fin de la prise.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1369"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1418"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1449"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1500"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1530"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1547"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1557"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2139"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1377"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1426"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1457"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1508"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1538"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1555"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1565"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2147"/>
         <source>Error</source>
         <translation>Erreur</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1370"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1378"/>
         <source>Could not copy recording %1 to:
 %2
 
@@ -1083,80 +1083,80 @@ Check the disk space or the permissions. The project was not saved.</source>
 Vérifiez l&apos;espace disque ou les permissions. Le projet n&apos;a pas été sauvegardé.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1385"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1393"/>
         <source>Save error</source>
         <translation>Erreur de sauvegarde</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1392"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1400"/>
         <source>Creating the ZIP archive...
 This can take a few minutes depending on the video size.</source>
         <translation>Création de l&apos;archive ZIP en cours...
 Cela peut prendre quelques minutes selon la taille de la vidéo.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1415"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1447"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1423"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1455"/>
         <source>Project saved</source>
         <translation>Projet sauvegardé</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1420"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1428"/>
         <source>Could not create the ZIP archive.
 Check the disk space or the permissions.</source>
         <translation>Impossible de créer l&apos;archive ZIP.
 Vérifiez l&apos;espace disque ou les permissions.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1450"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1458"/>
         <source>Could not save the project.</source>
         <translation>Impossible de sauvegarder le projet.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1461"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1469"/>
         <source>DubInstante projects (*.dbi *.zip);;Project (*.dbi);;Archive (*.zip)</source>
         <translation>Projets DubInstante (*.dbi *.zip);;Projet (*.dbi);;Archive (*.zip)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1501"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1509"/>
         <source>Could not create the temporary extraction folder.</source>
         <translation>Impossible de créer le dossier temporaire d&apos;extraction.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1511"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1519"/>
         <source>Extracting the archive...
 This can take a few minutes depending on the video size.</source>
         <translation>Extraction de l&apos;archive en cours...
 Cela peut prendre quelques minutes selon la taille de la vidéo.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1548"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1556"/>
         <source>This archive holds several projects and none is named after the archive (%1).</source>
         <translation>Cette archive contient plusieurs projets et aucun ne porte le nom de l&apos;archive (%1).</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1558"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1566"/>
         <source>The file is corrupted or from an incompatible version.</source>
         <translation>Le fichier est corrompu ou d&apos;une version incompatible.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1619"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1627"/>
         <source>The video was not found. Please locate it.</source>
         <translation>La vidéo est introuvable. Veuillez la localiser.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1677"/>
-        <location filename="../src/gui/MainWindow.cpp" line="1684"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1685"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1692"/>
         <source>Project</source>
         <translation>Projet</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1678"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1686"/>
         <source>This project refers to files outside its folder. They were ignored for safety.</source>
         <translation>Ce projet référence des fichiers situés hors de son dossier. Ils ont été ignorés par sécurité.</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/MainWindow.cpp" line="1685"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1693"/>
         <source>%n take(s) of this project were not found in its audio folder and were not loaded. Saving now would remove them from the project.</source>
         <translation>
             <numerusform>%n prise de ce projet est introuvable dans son dossier audio et n&apos;a pas été chargée. Enregistrer maintenant la retirerait du projet.</numerusform>
@@ -1164,99 +1164,99 @@ Cela peut prendre quelques minutes selon la taille de la vidéo.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1692"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1700"/>
         <source>Project loaded</source>
         <translation>Projet chargé</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1753"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1761"/>
         <source>Load a video before recording.</source>
         <translation>Chargez une vidéo avant d&apos;enregistrer.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1764"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1772"/>
         <source>Finishing the previous take…</source>
         <translation>Finalisation de la prise précédente…</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1791"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1799"/>
         <source>CANCEL</source>
         <translation>ANNULER</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1868"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2644"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2658"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1876"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2652"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2666"/>
         <source>Recording</source>
         <translation>Enregistrement</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1886"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1894"/>
         <source>Recording finished, but track %1 produced no audio. Check the selected microphone.</source>
         <translation>Enregistrement terminé, mais la piste %1 n&apos;a produit aucun audio. Vérifiez le microphone sélectionné.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1888"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1896"/>
         <source>Recording finished, but tracks %1 produced no audio. Check the selected microphone.</source>
         <translation>Enregistrement terminé, mais les pistes %1 n&apos;ont produit aucun audio. Vérifiez le microphone sélectionné.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2062"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2734"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2070"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2742"/>
         <source>Export in progress</source>
         <translation>Export en cours</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2063"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2071"/>
         <source>The export reads the current takes. Wait for it to finish or cancel it before going on.</source>
         <translation>L&apos;export lit les prises actuelles. Attendez sa fin ou annulez-le avant de continuer.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2071"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2079"/>
         <source>No video loaded.</source>
         <translation>Aucune vidéo chargée.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2103"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2111"/>
         <source>No audio recording to export.</source>
         <translation>Aucun enregistrement audio trouvé à exporter.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2109"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2117"/>
         <source>Takes are missing for: %1.
 Export without them?</source>
         <translation>Des prises sont introuvables pour : %1.
 Exporter sans elles ?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2339"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2347"/>
         <source>Settings updated</source>
         <translation>Paramètres mis à jour</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2365"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2373"/>
         <source>Recovery</source>
         <translation>Récupération</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2366"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2374"/>
         <source>An autosave from %1 was found. DubInstante probably closed unexpectedly.
 Restore this work?</source>
         <translation>Une sauvegarde automatique du %1 a été trouvée. DubInstante s&apos;est probablement fermé de façon inattendue.
 Voulez-vous restaurer ce travail ?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2374"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2382"/>
         <source>Restore</source>
         <translation>Restaurer</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2376"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2384"/>
         <source>Ignore</source>
         <translation>Ignorer</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/MainWindow.cpp" line="2392"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2400"/>
         <source>Project restored. %n recording(s) not found.</source>
         <translation>
             <numerusform>Projet restauré. %n enregistrement introuvable.</numerusform>
@@ -1264,119 +1264,119 @@ Voulez-vous restaurer ce travail ?</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2396"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2404"/>
         <source>Project restored</source>
         <translation>Projet restauré</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2445"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2453"/>
         <source>Unsaved changes</source>
         <translation>Modifications non enregistrées</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2446"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2454"/>
         <source>The project was modified. Save it before going on?</source>
         <translation>Le projet a été modifié. Voulez-vous enregistrer avant de continuer ?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2526"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2534"/>
         <source>Autosave to cache done</source>
         <translation>Sauvegarde automatique cache effectuée</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2565"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2573"/>
         <source>Audio output: %1</source>
         <translation>Sortie audio : %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2584"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2592"/>
         <source>No profile set up</source>
         <translation>Aucun profil configuré</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2608"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2616"/>
         <source>Manage outputs...</source>
         <translation>Gérer les sorties...</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2645"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2653"/>
         <source>No track is armed. Arm at least one track before recording.</source>
         <translation>Aucune piste n&apos;est armée. Armez au moins une piste avant de lancer l&apos;enregistrement.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2659"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2667"/>
         <source>Track %1 is armed but no microphone is selected.</source>
         <translation>La piste %1 est armée mais aucun microphone n&apos;est sélectionné.</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2735"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2743"/>
         <source>An export is in progress. Quitting now will stop it and delete the incomplete file.
 Quit anyway?</source>
         <translation>Un export est en cours. Quitter maintenant l&apos;interrompra et supprimera le fichier incomplet.
 Quitter quand même ?</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="631"/>
+        <location filename="../src/gui/MainWindow.cpp" line="639"/>
         <source>Master Vol</source>
         <translation>Volume général</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="720"/>
+        <location filename="../src/gui/MainWindow.cpp" line="728"/>
         <source>✕</source>
         <translation>✕</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="771"/>
+        <location filename="../src/gui/MainWindow.cpp" line="779"/>
         <source>Save .dbi / .zip</source>
         <translation>Enregistrer .dbi / .zip</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="806"/>
+        <location filename="../src/gui/MainWindow.cpp" line="814"/>
         <source>Application</source>
         <translation>Application</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="845"/>
+        <location filename="../src/gui/MainWindow.cpp" line="853"/>
         <source>Audio</source>
         <translation>Audio</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1298"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1306"/>
         <source>DubInstante Archive (*.zip)</source>
         <translation>Archive DubInstante (*.zip)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1299"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1307"/>
         <source>DubInstante Project (*.dbi)</source>
         <translation>Projet DubInstante (*.dbi)</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1618"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1626"/>
         <source>Relink</source>
         <translation>Relier</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1714"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1722"/>
         <source>PAUSE</source>
         <translation>PAUSE</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="1752"/>
+        <location filename="../src/gui/MainWindow.cpp" line="1760"/>
         <source>Dubbing</source>
         <translation>Doublage</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2050"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2052"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2071"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2077"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2103"/>
-        <location filename="../src/gui/MainWindow.cpp" line="2108"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2058"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2060"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2079"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2085"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2111"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2116"/>
         <source>Export</source>
         <translation>Export</translation>
     </message>
     <message>
-        <location filename="../src/gui/MainWindow.cpp" line="2425"/>
+        <location filename="../src/gui/MainWindow.cpp" line="2433"/>
         <source>REC GLOBAL</source>
         <extracomment>Record button: records every armed track at once</extracomment>
         <translation>REC GLOBAL</translation>
@@ -1548,12 +1548,12 @@ L&apos;archive nécessite environ %1 Mo libres.</translation>
 <context>
     <name>TakeTimeline</name>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="254"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="259"/>
         <source>Track %1</source>
         <translation>Piste %1</translation>
     </message>
     <message numerus="yes">
-        <location filename="../src/gui/TakeTimeline.cpp" line="260"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="264"/>
         <source>%n take(s)</source>
         <extracomment>A take is one recording pass of a track (audio, not a film shot)</extracomment>
         <translation>
@@ -1562,54 +1562,54 @@ L&apos;archive nécessite environ %1 Mo libres.</translation>
         </translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="271"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="275"/>
         <source>No take: arm the track and start recording</source>
         <translation>Aucune prise : armez la piste et lancez l&apos;enregistrement</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="285"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="289"/>
         <source>T%1</source>
         <extracomment>Very short &quot;Take %1&quot;, drawn inside small timeline blocks</extracomment>
         <translation>P%1</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="301"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="305"/>
         <source>Take %1</source>
         <translation>Prise %1</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="418"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="422"/>
         <source>Remove the cut</source>
         <translation>Supprimer la coupe</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="424"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="428"/>
         <source>Cut here</source>
         <translation>Couper ici</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="432"/>
-        <location filename="../src/gui/TakeTimeline.cpp" line="449"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="436"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="453"/>
         <source>Delete take %1…</source>
         <translation>Supprimer la prise %1…</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="438"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="442"/>
         <source>Use this take here</source>
         <translation>Utiliser cette prise ici</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="444"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="448"/>
         <source>Listen from the start of the take</source>
         <translation>Écouter depuis le début de la prise</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="457"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="461"/>
         <source>Delete the take</source>
         <translation>Supprimer la prise</translation>
     </message>
     <message>
-        <location filename="../src/gui/TakeTimeline.cpp" line="458"/>
+        <location filename="../src/gui/TakeTimeline.cpp" line="462"/>
         <source>Delete take %1 from track %2?
 The regions where it was heard go back to the previous take.</source>
         <translation>Supprimer la prise %1 de la piste %2 ?
@@ -1747,23 +1747,23 @@ Les zones où elle était entendue reprennent la prise précédente.</translatio
         <translation>Armer/Désarmer l&apos;enregistrement</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="75"/>
-        <location filename="../src/gui/TrackWidget.cpp" line="160"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="74"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="162"/>
         <source>No input</source>
         <translation>Aucune entrée</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="86"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="85"/>
         <source>VOL:</source>
         <translation>VOL :</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="170"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="172"/>
         <source>REC</source>
         <translation>REC</translation>
     </message>
     <message>
-        <location filename="../src/gui/TrackWidget.cpp" line="176"/>
+        <location filename="../src/gui/TrackWidget.cpp" line="178"/>
         <source>PLAYBACK</source>
         <translation>LECTURE</translation>
     </message>

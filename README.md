@@ -76,6 +76,21 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 
 ---
 
+## 🌍 Langues / Languages
+
+* **FR :** DubInstante suit la langue de votre système, ou celle choisie dans *Application → Paramètre global → Général → Langue* (redémarrage requis). Les langues non traduites s'affichent en anglais.
+* **EN :** DubInstante follows your system language, or the one chosen in *Application → Global settings → General → Language* (restart required). Untranslated languages fall back to English.
+
+| Langue / Language | État / Status |
+|:---|:---|
+| English, Français | Relu / Reviewed |
+| Español, Português (Brasil), Deutsch, Italiano, 日本語, 简体中文, Русский, العربية | Traduction automatique, à relire / Machine translation, needs review |
+
+Les traductions sont dans [`translations/`](translations/) (fichiers Qt Linguist `.ts`). Une correction ? Ouvrez le fichier de votre langue avec Qt Linguist ou un éditeur de texte et proposez une PR.
+Translations live in [`translations/`](translations/) (Qt Linguist `.ts` files). Spotted a mistake? Open your language's file in Qt Linguist or a text editor and send a PR.
+
+---
+
 ## 🛠️ Piliers de Fonctionnalités / Feature Pillars
 
 ### 🚀 Performance & Robustesse

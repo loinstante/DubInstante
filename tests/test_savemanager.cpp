@@ -3,8 +3,11 @@
 
 #include "SaveManager.h"
 
+#include <QCryptographicHash>
 #include <QDir>
 #include <QFile>
+#include <QJsonDocument>
+#include <QJsonObject>
 #include <QGuiApplication>
 #include <QProcess>
 #include <QTemporaryDir>
@@ -37,11 +40,13 @@ SaveData makeSampleData() {
   TrackAudioSaveData audio;
   audio.audioInput = "Micro test";
   audio.audioGain = 0.5f;
-  audio.audioFilePath = "/tmp/track_1.wav";
-  audio.recordStartMs = 1500;
-  audio.recordDurationMs = 42000;
-  audio.hasRecording = true;
+  // Take 1 over 1.5-43.5 s, take 2 punched in at 10 s after 2 s of pre-roll,
+  // then a user cut at 20 s inside take 1
+  audio.takes.addRecording(Take{1, "/tmp/track_1_take_1.wav", 1500, 0, 42000}, 1500, 43500);
+  audio.takes.addRecording(Take{2, "/tmp/track_1_take_2.wav", 8000, 2000, 6000}, 10000, 14000);
+  audio.takes.split(20000);
   data.audioTracks.append(audio);
+  data.nextTakeId = 3;
 
   return data;
 }
@@ -55,6 +60,83 @@ bool corruptByteAt(const QString &path, qint64 offset) {
     return false;
   b = static_cast<char>(b ^ 0xFF);
   return f.write(&b, 1) == 1;
+}
+
+bool sameComp(const TakeTrack &a, const TakeTrack &b) {
+  if (a.regions().size() != b.regions().size() || a.takes().size() != b.takes().size())
+    return false;
+  for (int i = 0; i < a.regions().size(); ++i) {
+    if (a.regions()[i].startMs != b.regions()[i].startMs ||
+        a.regions()[i].takeId != b.regions()[i].takeId)
+      return false;
+  }
+  for (int i = 0; i < a.takes().size(); ++i) {
+    const Take &x = a.takes()[i];
+    const Take &y = b.takes()[i];
+    if (x.id != y.id || x.file != y.file || x.startMs != y.startMs || x.inMs != y.inMs ||
+        x.durationMs != y.durationMs)
+      return false;
+  }
+  return true;
+}
+
+// Writes a .dbi by hand, as an older (or newer) build would.
+bool writeRawDbi(const QString &path, const QJsonObject &root, quint8 version) {
+  const QByteArray json = QJsonDocument(root).toJson(QJsonDocument::Compact);
+  QByteArray masked = json;
+  for (char &c : masked)
+    c = static_cast<char>(c ^ 0x5A);
+  const quint32 size = static_cast<quint32>(masked.size());
+  QByteArray out("DubInstanteFile");
+  out.append(static_cast<char>(version));
+  out.append('\0');
+  for (int i = 0; i < 4; ++i)
+    out.append(static_cast<char>((size >> (8 * i)) & 0xFF));
+  out.append(masked);
+  out.append(QCryptographicHash::hash(json, QCryptographicHash::Sha256));
+  QFile f(path);
+  return f.open(QIODevice::WriteOnly) && f.write(out) == out.size();
+}
+
+// A 0.12 project (version 1, one take per track) opens as one take heard
+// over its whole length; a take without stored duration stays open-ended.
+int checkLegacyProject(SaveManager &manager, const QString &dir) {
+  const QJsonObject legacy{
+      {"track_count", 2},
+      {"audio_tracks",
+       QJsonArray{QJsonObject{{"audioFilePath", "p_audio/track_1.wav"},
+                              {"recordStartMs", 1500},
+                              {"recordDurationMs", 42000},
+                              {"hasRecording", true}},
+                  QJsonObject{{"audioFilePath", "p_audio/track_2.wav"},
+                              {"recordStartMs", 3000},
+                              {"hasRecording", true}},
+                  QJsonObject{{"hasRecording", false}}}}};
+  const QString path = dir + "/legacy.dbi";
+  CHECK(writeRawDbi(path, legacy, 1));
+
+  SaveData data;
+  CHECK(manager.load(path, data));
+  CHECK(data.audioTracks.size() == 3);
+  const TakeTrack &first = data.audioTracks[0].takes;
+  CHECK(first.takes().size() == 1);
+  CHECK(first.takes()[0].file == "p_audio/track_1.wav");
+  const QList<Segment> segs = first.segments();
+  CHECK(segs.size() == 1);
+  CHECK(segs[0].timelineStartMs == 1500 && segs[0].durationMs == 42000);
+
+  // Take ids stay unique across tracks
+  const TakeTrack &second = data.audioTracks[1].takes;
+  CHECK(second.takes().size() == 1);
+  CHECK(second.takes()[0].id != first.takes()[0].id);
+  CHECK(second.takes()[0].durationMs == kOpenEndedTakeMs);
+  CHECK(data.audioTracks[2].takes.isEmpty());
+
+  // A file from a newer build is refused rather than half-read
+  CHECK(writeRawDbi(dir + "/future.dbi", legacy, 3));
+  SaveData future;
+  CHECK(!manager.load(dir + "/future.dbi", future));
+  return 0;
 }
 
 } // namespace
@@ -89,14 +171,11 @@ int main(int argc, char *argv[]) {
          "#80445566");
   CHECK(loaded.audioTracks.size() == 1);
   CHECK(loaded.audioTracks[0].audioInput == "Micro test");
-  CHECK(loaded.audioTracks[0].recordStartMs == 1500);
-  CHECK(loaded.audioTracks[0].recordDurationMs == 42000);
-  CHECK(loaded.audioTracks[0].hasRecording == true);
+  CHECK(sameComp(loaded.audioTracks[0].takes, original.audioTracks[0].takes));
+  CHECK(loaded.nextTakeId == 3);
 
-  // --- 2. Missing font fields fall back to Classic defaults (old files) ---
-  // Old files simply lack font_family/font_bold; simulated by checking that
-  // load keeps defaults when styleObj is absent (legacy string-format track).
-  // Covered implicitly by SaveManager's default RythmoTrackStyle.
+  // --- 2. Files written by 0.12 and older ---
+  CHECK(checkLegacyProject(manager, dir.path()) == 0);
 
   // --- 3. Truncated file is rejected ---
   const QString truncPath = dir.filePath("truncated.dbi");
@@ -195,15 +274,27 @@ int main(int argc, char *argv[]) {
       f.write("fake wav payload");
     }
 
-    // Project without video must succeed and skip the video entry (S8).
-    SaveData noVideo = makeSampleData();
-    noVideo.videoUrl = "";
-    noVideo.audioTracks[0].hasRecording = true;
+    // The caller rewrites take files relative to the project and lists the copies
+    const auto withMedia = [&](SaveData data, const QString &base,
+                               QList<ProjectMedia> *media) {
+      TakeTrack &takes = data.audioTracks[0].takes;
+      for (const Take &take : QList<Take>(takes.takes())) {
+        const QString rel = QString("%1_audio/track_1_take_%2.wav").arg(base).arg(take.id);
+        takes.setTakeMedia(take.id, rel, 0);
+        media->append(ProjectMedia{audioSrc, rel});
+      }
+      return data;
+    };
 
+    // Project without video must succeed and skip the video entry (S8).
     // Dotted project name to check .dbi/_audio naming consistency (S13).
+    QList<ProjectMedia> media;
+    SaveData noVideo = withMedia(makeSampleData(), "mon.projet.v2", &media);
+    noVideo.videoUrl = "";
+
     const QString zipPath = dir.filePath("mon.projet.v2.zip");
     QString err;
-    CHECK(manager.saveWithMedia(zipPath, noVideo, {audioSrc}, &err));
+    CHECK(manager.saveWithMedia(zipPath, noVideo, media, &err));
     CHECK(err.isEmpty());
     CHECK(QFile::exists(zipPath));
 
@@ -212,20 +303,19 @@ int main(int argc, char *argv[]) {
     CHECK(list.waitForFinished());
     const QString listing = QString::fromUtf8(list.readAllStandardOutput());
     CHECK(listing.contains("mon.projet.v2.dbi"));
-    CHECK(listing.contains("mon.projet.v2_audio/"));
+    CHECK(listing.contains("mon.projet.v2_audio/track_1_take_1.wav"));
+    CHECK(listing.contains("mon.projet.v2_audio/track_1_take_2.wav"));
     CHECK(!listing.contains(".mp4"));
 
-    // A track whose WAV vanished must abort the archive, naming the track (S6).
-    SaveData failData = makeSampleData();
-    failData.videoUrl = "";
-    failData.audioTracks[0].hasRecording = true;
-
+    // A take whose WAV vanished must abort the archive, naming the take (S6).
     const QString failZipPath = dir.filePath("shouldfail.zip");
     QString failErr;
-    CHECK(!manager.saveWithMedia(failZipPath, failData,
-                                  {dir.filePath("deleted.wav")}, &failErr));
+    CHECK(!manager.saveWithMedia(
+        failZipPath, noVideo,
+        {ProjectMedia{dir.filePath("deleted.wav"), "shouldfail_audio/track_1_take_1.wav"}},
+        &failErr));
     CHECK(failErr.contains("Impossible de copier l'enregistrement"));
-    CHECK(failErr.contains("piste 1"));
+    CHECK(failErr.contains("track_1_take_1.wav"));
     CHECK(!QFile::exists(failZipPath));
 
     // --- 8. extractArchive: round trip of the archive written above ---
@@ -235,16 +325,15 @@ int main(int argc, char *argv[]) {
       QString extractErr;
       CHECK(manager.extractArchive(zipPath, extractDir, &extractErr));
 
-      // audioFilePath must have been rewritten relative to the archive root
-      // (the caller passed "/tmp/track_1.wav"), and resolve strictly
+      // Take files are relative to the archive root and resolve strictly
       SaveData restored;
       CHECK(manager.load(extractDir + "/mon.projet.v2.dbi", restored));
       CHECK(restored.audioTracks.size() == 1);
-      CHECK(restored.audioTracks[0].audioFilePath ==
-             "mon.projet.v2_audio/track_1.wav");
-      const QString wav = SaveManager::resolveProjectPath(
-          extractDir, restored.audioTracks[0].audioFilePath, true);
-      CHECK(!wav.isEmpty() && QFile::exists(wav));
+      CHECK(sameComp(restored.audioTracks[0].takes, noVideo.audioTracks[0].takes));
+      for (const Take &take : restored.audioTracks[0].takes.takes()) {
+        const QString wav = SaveManager::resolveProjectPath(extractDir, take.file, true);
+        CHECK(!wav.isEmpty() && QFile::exists(wav));
+      }
 
       // Video: relative name in the .dbi, resolves strictly inside the archive
       // (the flags loadProjectFrom uses for an archive), and re-saving over an
@@ -255,18 +344,19 @@ int main(int argc, char *argv[]) {
         CHECK(f.open(QIODevice::WriteOnly));
         f.write("fake video");
       }
-      SaveData withVideo = makeSampleData();
+      QList<ProjectMedia> videoMedia;
+      SaveData withVideo = withMedia(makeSampleData(), "avec_video", &videoMedia);
       withVideo.videoUrl = videoSrc;
       const QString zipVideo = dir.filePath("avec_video.zip");
-      CHECK(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      CHECK(manager.saveWithMedia(zipVideo, withVideo, videoMedia, &extractErr));
       withVideo.videoUrl = dir.filePath("other.mp4");
       {
         QFile f(withVideo.videoUrl);
         CHECK(f.open(QIODevice::WriteOnly));
         f.write("another fake video");
       }
-      withVideo.audioTracks[0].hasRecording = false;
-      CHECK(manager.saveWithMedia(zipVideo, withVideo, {audioSrc}, &extractErr));
+      withVideo.audioTracks[0].takes = TakeTrack();
+      CHECK(manager.saveWithMedia(zipVideo, withVideo, {}, &extractErr));
       CHECK(QDir(dir.path()).entryList({".dbi_tmp_*"}, QDir::AllEntries | QDir::Hidden |
                                                       QDir::NoDotAndDotDot).isEmpty());
 

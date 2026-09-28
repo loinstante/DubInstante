@@ -19,6 +19,21 @@
 #include <QString>
 #include <QStringList>
 #include <QVector>
+#include <memory>
+
+class QTemporaryFile;
+
+/**
+ * @struct ExportSegment
+ * @brief A piece of take heard in the mix: file range placed on the timeline.
+ */
+struct ExportSegment {
+    QString path;                   ///< Recorded WAV
+    qint64 timelineStartMs = 0;     ///< Where it plays, in source video time
+    qint64 sourceOffsetMs = 0;      ///< Where it starts inside the file
+    qint64 durationMs = 0;
+    float volume = 1.0f;            ///< Track volume (0 = muted)
+};
 
 /**
  * @struct ExportConfig
@@ -28,14 +43,11 @@
  */
 struct ExportConfig {
     QString videoPath;              ///< Absolute path to source video
-    QString audioPath;              ///< Absolute path to primary recorded audio
-    QStringList extraAudioPaths;    ///< Optional: paths to additional audio tracks
+    QList<ExportSegment> segments;  ///< Every take piece heard, all tracks together
     QString outputPath;             ///< Absolute path for output file
     qint64 durationMs;              ///< Recording duration in milliseconds (-1 for full)
     qint64 rangeStartMs;            ///< Start of the exported range, in source video time (0 = from the beginning)
-    QVector<qint64> trackOffsetsMs; ///< Start time offsets for each audio track
     float originalVolume;           ///< Volume of original video audio (0.0 to 1.0)
-    QVector<float> trackVolumes;    ///< Volumes for primary and extra tracks (0.0 to 2.0)
     QString scaleResolution;        ///< Resolution scale: e.g., "1920:-2", "1280:-2", or empty
     QString speedPreset;            ///< FFmpeg speed preset: e.g., "ultrafast", "medium", "slow"
     int crf;                        ///< CRF value: 0 to 51 (default 21)
@@ -71,7 +83,7 @@ struct ExportConfig {
  * @brief Manages FFmpeg-based video export operations.
  * 
  * Features:
- * - Merges video with one or two audio tracks
+ * - Mixes every take segment of every track over the video
  * - Supports audio mixing with volume control
  * - Reports progress via signals
  * - High-quality H.264 encoding (CRF 18)
@@ -87,7 +99,7 @@ struct ExportConfig {
  * 
  * ExportConfig config;
  * config.videoPath = "/path/to/video.mp4";
- * config.audioPath = "/path/to/audio.wav";
+ * config.segments = {{"/path/to/take.wav", 1500, 0, 30000}};
  * config.outputPath = "/path/to/output.mp4";
  * config.durationMs = 30000;
  * 
@@ -141,6 +153,35 @@ public:
      */
     bool isExporting() const;
 
+    /**
+     * @brief Keeps the parts of @p segments inside the exported range, with
+     *        timelineStartMs made relative to the range start.
+     * @param durationMs Range length, <= 0 for "until the end".
+     */
+    static QList<ExportSegment> clipSegments(const QList<ExportSegment> &segments,
+                                             qint64 rangeStartMs, qint64 durationMs);
+
+    /**
+     * @brief Builds the -filter_complex graph producing [aout].
+     * @param audioInputs Output: the distinct take files, inputs 1..N in order.
+     */
+    static QString buildAudioGraph(const ExportConfig &config, QStringList *audioInputs);
+
+    /**
+     * @brief Builds the FFmpeg command arguments.
+     * @param filterScriptPath File holding buildAudioGraph(): a comped project
+     *        easily exceeds the 32767-character Windows command line.
+     * @param ffmpegMajor Major version: 7 and later read the file through
+     *        "-/filter_complex", older ones through "-filter_complex_script".
+     */
+    static QStringList buildFFmpegArgs(const ExportConfig &config,
+                                       const QString &filterScriptPath, int ffmpegMajor);
+
+    /**
+     * @brief Major version of @p program, 99 for a git build, 0 if unknown.
+     */
+    static int ffmpegMajorVersion(const QString &program);
+
 signals:
     /**
      * @brief Emitted periodically during export with progress percentage.
@@ -161,13 +202,6 @@ private slots:
     void parseProgressOutput();
 
 private:
-    /**
-     * @brief Builds the FFmpeg command arguments.
-     * @param config Export configuration.
-     * @return List of command-line arguments.
-     */
-    QStringList buildFFmpegArgs(const ExportConfig &config) const;
-    
     /**
      * @brief Validates the export configuration.
      * @param config Configuration to validate.
@@ -193,6 +227,7 @@ private:
     bool m_exportFinishedEmitted;
     bool m_outputExistedBefore;
     QDateTime m_outputMTimeBefore;
+    std::unique_ptr<QTemporaryFile> m_filterScript;
 };
 
 #endif // EXPORTSERVICE_H

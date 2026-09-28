@@ -24,12 +24,17 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
         "video_frame_back",
         "video_frame_forward",
         "video_seek_back_5s",
-        "video_seek_forward_5s"
+        "video_seek_forward_5s",
+        "video_go_start",
+        "view_fullscreen"
     };
 
     m_recordActions = {
         "record_start",
-        "record_stop"
+        "record_stop",
+        "take_split",
+        "edit_undo",
+        "edit_redo"
     };
 
     m_audioActions = {
@@ -39,8 +44,11 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
     };
 
     m_projectActions = {
+        "project_open",
+        "video_open",
         "project_save",
-        "project_save_as"
+        "project_save_as",
+        "project_export"
     };
 
     setupUi();
@@ -129,34 +137,16 @@ void GlobalSettingsDialog::setupUi() {
     QLabel *countdownLabel = new QLabel(tr("Décompte pré-enregistrement"), generalPage);
     countdownLabel->setProperty("cssClass", "fineLabel");
 
-    QWidget *countdownStepperWidget = new QWidget(generalPage);
-    QHBoxLayout *stepperLayout = new QHBoxLayout(countdownStepperWidget);
-    stepperLayout->setContentsMargins(0, 0, 0, 0);
-    stepperLayout->setSpacing(6);
+    m_countdown.zeroText = tr("Désactivé (Instantané)");
+    genForm->addRow(countdownLabel, createStepper(generalPage, m_countdown));
 
-    m_countdownDownBtn = new QPushButton("−", countdownStepperWidget);
-    m_countdownDownBtn->setProperty("cssClass", "stepButton");
-    m_countdownDownBtn->setFixedSize(28, 28);
-    m_countdownDownBtn->setCursor(Qt::PointingHandCursor);
-
-    m_countdownValueLabel = new QLabel(countdownStepperWidget);
-    m_countdownValueLabel->setObjectName("countdownValueLabel");
-    m_countdownValueLabel->setAlignment(Qt::AlignCenter);
-
-    m_countdownUpBtn = new QPushButton("+", countdownStepperWidget);
-    m_countdownUpBtn->setProperty("cssClass", "stepButton");
-    m_countdownUpBtn->setFixedSize(28, 28);
-    m_countdownUpBtn->setCursor(Qt::PointingHandCursor);
-
-    stepperLayout->addWidget(m_countdownDownBtn);
-    stepperLayout->addWidget(m_countdownValueLabel);
-    stepperLayout->addWidget(m_countdownUpBtn);
-    stepperLayout->addStretch();
-
-    genForm->addRow(countdownLabel, countdownStepperWidget);
-
-    connect(m_countdownDownBtn, &QPushButton::clicked, this, &GlobalSettingsDialog::decrementCountdown);
-    connect(m_countdownUpBtn, &QPushButton::clicked, this, &GlobalSettingsDialog::incrementCountdown);
+    // Pre-roll: playback starts earlier so the actor hears the lead-in
+    QLabel *preRollLabel = new QLabel(tr("Pré-roll avant le point d'entrée"), generalPage);
+    preRollLabel->setProperty("cssClass", "fineLabel");
+    preRollLabel->setToolTip(tr("La lecture démarre ces secondes avant la tête de lecture ; "
+                                "seul ce qui suit la tête de lecture remplace l'ancienne prise."));
+    m_preRoll.zeroText = tr("Désactivé");
+    genForm->addRow(preRollLabel, createStepper(generalPage, m_preRoll));
 
 
     genLayout->addLayout(genForm);
@@ -400,8 +390,10 @@ void GlobalSettingsDialog::loadSettings() {
     int themeIdx = m_themeCombo->findData(sm.theme());
     if (themeIdx >= 0) m_themeCombo->setCurrentIndex(themeIdx);
 
-    m_tempCountdownDuration = sm.countdownDuration();
-    updateCountdownLabel();
+    m_countdown.seconds = sm.countdownDuration();
+    updateStepper(m_countdown);
+    m_preRoll.seconds = sm.preRollSeconds();
+    updateStepper(m_preRoll);
 
     m_autoSaveCheck->setChecked(sm.autoSaveEnabled());
     int intervalIdx = m_autoSaveIntervalCombo->findData(sm.autoSaveInterval());
@@ -473,7 +465,8 @@ void GlobalSettingsDialog::saveSettings() {
 
     // General settings
     sm.setTheme(m_themeCombo->currentData().toString());
-    sm.setCountdownDuration(m_tempCountdownDuration);
+    sm.setCountdownDuration(m_countdown.seconds);
+    sm.setPreRollSeconds(m_preRoll.seconds);
     sm.setAutoSaveEnabled(m_autoSaveCheck->isChecked());
     sm.setAutoSaveInterval(m_autoSaveIntervalCombo->currentData().toInt());
 
@@ -525,11 +518,19 @@ QString GlobalSettingsDialog::getActionName(const QString &actionId) const {
     if (actionId == "video_seek_forward_5s") return tr("Avancer de 5 secondes");
     if (actionId == "record_start") return tr("Démarrer l'enregistrement");
     if (actionId == "record_stop") return tr("Arrêter l'enregistrement");
+    if (actionId == "take_split") return tr("Ajouter une coupe au montage");
     if (actionId == "audio_volume_up") return tr("Augmenter le volume");
     if (actionId == "audio_volume_down") return tr("Diminuer le volume");
     if (actionId == "audio_volume_mute") return tr("Couper / Activer le son (Mute)");
     if (actionId == "project_save") return tr("Enregistrer le projet");
     if (actionId == "project_save_as") return tr("Enregistrer sous...");
+    if (actionId == "project_open") return tr("Ouvrir un projet");
+    if (actionId == "video_open") return tr("Ouvrir une vidéo");
+    if (actionId == "project_export") return tr("Exporter le doublage");
+    if (actionId == "edit_undo") return tr("Annuler");
+    if (actionId == "edit_redo") return tr("Rétablir");
+    if (actionId == "video_go_start") return tr("Aller au début");
+    if (actionId == "view_fullscreen") return tr("Plein écran (fenêtre)");
     return actionId;
 }
 
@@ -591,7 +592,8 @@ bool GlobalSettingsDialog::checkConflict(const QKeySequence &seq, const QString 
     if (seq.isEmpty()) return false;
 
     for (auto it = m_tempShortcuts.begin(); it != m_tempShortcuts.end(); ++it) {
-        if (it.key() != currentActionId && it.value() == seq) {
+        if (it.key() != currentActionId && it.value() == seq &&
+            !SettingsManager::sharesKeyByDesign(it.key(), currentActionId)) {
             QString otherActionName = getActionName(it.key());
             QMessageBox::StandardButton reply = QMessageBox::question(
                 this,
@@ -672,31 +674,50 @@ void GlobalSettingsDialog::onResetShortcutsToDefaults() {
     }
 }
 
-void GlobalSettingsDialog::decrementCountdown() {
-    if (m_tempCountdownDuration > 0) {
-        m_tempCountdownDuration--;
-        updateCountdownLabel();
-    }
+QWidget *GlobalSettingsDialog::createStepper(QWidget *parent, SecondsStepper &stepper) {
+    QWidget *widget = new QWidget(parent);
+    QHBoxLayout *layout = new QHBoxLayout(widget);
+    layout->setContentsMargins(0, 0, 0, 0);
+    layout->setSpacing(6);
+
+    const auto makeButton = [widget](const QString &text) {
+        QPushButton *button = new QPushButton(text, widget);
+        button->setProperty("cssClass", "stepButton");
+        button->setFixedSize(28, 28);
+        button->setCursor(Qt::PointingHandCursor);
+        return button;
+    };
+    stepper.down = makeButton("−");
+    stepper.value = new QLabel(widget);
+    stepper.value->setObjectName("countdownValueLabel");
+    stepper.value->setAlignment(Qt::AlignCenter);
+    stepper.up = makeButton("+");
+
+    layout->addWidget(stepper.down);
+    layout->addWidget(stepper.value);
+    layout->addWidget(stepper.up);
+    layout->addStretch();
+
+    connect(stepper.down, &QPushButton::clicked, this, [this, &stepper]() {
+        stepper.seconds = qMax(0, stepper.seconds - 1);
+        updateStepper(stepper);
+    });
+    connect(stepper.up, &QPushButton::clicked, this, [this, &stepper]() {
+        stepper.seconds = qMin(stepper.max, stepper.seconds + 1);
+        updateStepper(stepper);
+    });
+    return widget;
 }
 
-void GlobalSettingsDialog::incrementCountdown() {
-    if (m_tempCountdownDuration < 10) {
-        m_tempCountdownDuration++;
-        updateCountdownLabel();
-    }
-}
-
-void GlobalSettingsDialog::updateCountdownLabel() {
-    if (m_tempCountdownDuration == 0) {
-        m_countdownValueLabel->setText(tr("Désactivé (Instantané)"));
-        m_countdownDownBtn->setEnabled(false);
-    } else if (m_tempCountdownDuration == 1) {
-        m_countdownValueLabel->setText(tr("1 seconde"));
-        m_countdownDownBtn->setEnabled(true);
+void GlobalSettingsDialog::updateStepper(SecondsStepper &stepper) {
+    if (stepper.seconds == 0) {
+        stepper.value->setText(stepper.zeroText);
+    } else if (stepper.seconds == 1) {
+        stepper.value->setText(tr("1 seconde"));
     } else {
-        m_countdownValueLabel->setText(tr("%1 secondes").arg(m_tempCountdownDuration));
-        m_countdownDownBtn->setEnabled(true);
+        stepper.value->setText(tr("%1 secondes").arg(stepper.seconds));
     }
-    m_countdownUpBtn->setEnabled(m_tempCountdownDuration < 10);
+    stepper.down->setEnabled(stepper.seconds > 0);
+    stepper.up->setEnabled(stepper.seconds < stepper.max);
 }
 

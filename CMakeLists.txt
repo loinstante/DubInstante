@@ -72,6 +72,10 @@ set(CORE_SOURCES
     src/core/Constants.h
     src/core/SaveManager.h
     src/core/SaveManager.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
+    src/core/TrackPlayer.h
+    src/core/TrackPlayer.cpp
     src/core/SettingsManager.h
     src/core/SettingsManager.cpp
 )
@@ -96,6 +100,8 @@ set(GUI_SOURCES
     src/gui/GlobalSettingsDialog.cpp
     src/gui/ExportDialog.h
     src/gui/ExportDialog.cpp
+    src/gui/TakeTimeline.h
+    src/gui/TakeTimeline.cpp
     src/gui/ClickableSlider.h
     src/gui/Palette.h
 )
@@ -185,6 +191,8 @@ add_executable(test_savemanager
     tests/test_savemanager.cpp
     src/core/SaveManager.h
     src/core/SaveManager.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
     src/core/RythmoManager.h
     src/core/RythmoManager.cpp
 )
@@ -193,6 +201,14 @@ target_include_directories(test_savemanager PRIVATE
 )
 target_link_libraries(test_savemanager PRIVATE Qt6::Gui)
 add_test(NAME test_savemanager COMMAND test_savemanager)
+
+add_executable(test_taketrack
+    tests/test_taketrack.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
+)
+target_link_libraries(test_taketrack PRIVATE Qt6::Core)
+add_test(NAME test_taketrack COMMAND test_taketrack)
 
 add_executable(test_settingsmanager
     tests/test_settingsmanager.cpp

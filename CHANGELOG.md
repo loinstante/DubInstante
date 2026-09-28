@@ -5,6 +5,26 @@ All notable changes to **DubInstante** will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+- **Multiple Takes per Track**: Recording no longer replaces the previous take. Every take is kept, and a new take is heard over its own range only (punch-in).
+- **Comping**: A take timeline under the video shows each track's takes. Unfold a track and click a take to hear it in that region; add a comp cut at the playhead with `S` (configurable) or with a right-click, remove cuts and takes from the context menu.
+- **Pre-roll**: Playback starts a configurable number of seconds (default 2) before the punch-in point; the armed track keeps playing its previous take until then.
+- **Undo / Redo** (`Ctrl+Z` / `Ctrl+Shift+Z`, Edit menu): typing on a band (merged until a pause), recordings, comp edits and adding or removing a band. Undoing a recording brings the previous take back.
+- **Shortcuts**: Open project (`Ctrl+O`), open video (`Ctrl+Shift+O`), export (`Ctrl+E`), go to start (`Home`) and window fullscreen (`F11`), all configurable. A new default never takes a key the user already assigned.
+
+- **Stop Recording with Space**: `Space` now ends the take (default was `Escape`, which the rythmo band uses to push text); `Escape` still leaves the fullscreen recording.
+
+### Fixed
+- **Busy Recording**: Opening a video or project and exporting are disabled while a take is being recorded.
+- **Pause During a Take**: Play/pause (button or shortcut) during a recording used to pause the video while the microphone kept recording, putting the take out of sync. It now stops the recording.
+
+### Changed
+- **Project Format**: `.dbi` files are now version 2 (takes and comp per track). Projects from 0.12 and earlier open with their take as the only one; older builds refuse version 2 files instead of losing takes.
+- **Timeline**: The take timeline replaces the thin seek bar under the video; the splitter between them is resizable.
+- **Export**: The mix follows the comp exactly, with every take trimmed to its region. The filter graph is passed to ffmpeg through a file, so heavily comped projects stay under the Windows command-line limit.
+
 ## [0.12.0] - 2026-07-04
 
 ### Fixed

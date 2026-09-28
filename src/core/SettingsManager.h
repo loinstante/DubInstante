@@ -32,6 +32,10 @@ public:
     int countdownDuration() const;
     void setCountdownDuration(int seconds);
 
+    // Playback starts this long before the punch-in point when recording
+    int preRollSeconds() const;
+    void setPreRollSeconds(int seconds);
+
     // Default global microphone
     QString defaultMicrophone() const;
     void setDefaultMicrophone(const QString &micName);
@@ -56,6 +60,8 @@ public:
     QKeySequence shortcut(const QString &actionId) const;
     void setShortcut(const QString &actionId, const QKeySequence &sequence);
     QKeySequence defaultShortcut(const QString &actionId) const;
+    /// Two actions allowed on the same key: the settings do not report it as a conflict
+    static bool sharesKeyByDesign(const QString &a, const QString &b);
 
 private:
     explicit SettingsManager(QObject *parent = nullptr);

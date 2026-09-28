@@ -39,8 +39,6 @@ private slots:
     void onShortcutButtonClicked(const QString &actionId);
     void onClearShortcut(const QString &actionId);
     void onResetShortcutsToDefaults();
-    void decrementCountdown();
-    void incrementCountdown();
 
 private:
     void setupUi();
@@ -51,7 +49,17 @@ private:
     bool checkConflict(const QKeySequence &seq, const QString &currentActionId);
     QString getActionName(const QString &actionId) const;
     void updateShortcutButtons();
-    void updateCountdownLabel();
+    // A "− value +" row counting seconds, 0 shown as zeroText
+    struct SecondsStepper {
+        QLabel *value = nullptr;
+        QPushButton *down = nullptr;
+        QPushButton *up = nullptr;
+        int seconds = 0;
+        int max = 10;
+        QString zeroText;
+    };
+    QWidget *createStepper(QWidget *parent, SecondsStepper &stepper);
+    void updateStepper(SecondsStepper &stepper);
 
     // Tab control
     QButtonGroup *m_tabGroup;
@@ -60,10 +68,8 @@ private:
 
     // General Controls
     QComboBox *m_themeCombo;
-    QLabel *m_countdownValueLabel;
-    QPushButton *m_countdownDownBtn;
-    QPushButton *m_countdownUpBtn;
-    int m_tempCountdownDuration;
+    SecondsStepper m_countdown;
+    SecondsStepper m_preRoll;
 
     QCheckBox *m_autoSaveCheck;
     QComboBox *m_autoSaveIntervalCombo;

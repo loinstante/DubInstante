@@ -193,8 +193,17 @@ QColor TakeTimeline::trackColor(int track) const {
 // Painting
 // =============================================================================
 
+// Translated labels run longer than the English the header was sized for
+static void drawFitted(QPainter &p, const QRect &rect, const QString &text) {
+  p.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter,
+             p.fontMetrics().elidedText(text, Qt::ElideRight, rect.width()));
+}
+
 void TakeTimeline::paintEvent(QPaintEvent *) {
   QPainter p(this);
+  // A painter takes the application direction, not the widget's: Arabic would
+  // right-align every label against the time axis
+  p.setLayoutDirection(layoutDirection());
   const QPalette pal = palette();
   const QColor base = pal.color(QPalette::Base);
   const QColor headerBg = pal.color(QPalette::AlternateBase);
@@ -248,16 +257,14 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       if (row.track == m_selectedTrack)
         p.fillRect(QRect(0, row.y, 3, row.height), color);
       p.setPen(text);
-      p.drawText(header.adjusted(10, 3, -6, -row.height / 2),
-                 Qt::AlignLeft | Qt::AlignVCenter,
+      drawFitted(p, header.adjusted(10, 3, -6, -row.height / 2),
                  QString("%1  %2").arg(m_expanded.value(row.track) ? "▾" : "▸",
-                                       tr("Piste %1").arg(row.track + 1)));
+                                       tr("Track %1").arg(row.track + 1)));
       p.setPen(muted);
       p.setFont(small);
-      p.drawText(header.adjusted(24, row.height / 2, -6, -3),
-                 Qt::AlignLeft | Qt::AlignVCenter,
-                 track.takes().size() == 1 ? tr("1 prise")
-                                           : tr("%1 prises").arg(track.takes().size()));
+      drawFitted(p, header.adjusted(24, row.height / 2, -6, -3),
+                 //: A take is one recording pass of a track (audio, not a film shot)
+                 tr("%n take(s)", nullptr, int(track.takes().size())));
       p.setFont(font());
 
       p.save();
@@ -267,8 +274,8 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       p.fillRect(lane, laneBg);
       if (track.isEmpty()) {
         p.setPen(muted);
-        p.drawText(lane.adjusted(10, 0, 0, 0), Qt::AlignLeft | Qt::AlignVCenter,
-                   tr("Aucune prise : armez la piste et lancez l'enregistrement"));
+        drawFitted(p, lane.adjusted(10, 0, -10, 0),
+                   tr("No take: arm the track and start recording"));
       }
       for (const Segment &segment : segments) {
         const QRect block(QPoint(xAt(segment.timelineStartMs), lane.top()),
@@ -281,7 +288,8 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
         if (block.width() > 28) {
           p.setPen(Qt::white);
           p.drawText(block.adjusted(6, 0, -2, 0), Qt::AlignLeft | Qt::AlignVCenter,
-                     tr("P%1").arg(takeNumber(row.track, segment.takeId)));
+                     //: Very short "Take %1", drawn inside small timeline blocks
+                     tr("T%1").arg(takeNumber(row.track, segment.takeId)));
         }
       }
       // Comp cuts
@@ -296,8 +304,8 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       if (!take)
         continue;
       p.setPen(muted);
-      p.drawText(header.adjusted(24, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter,
-                 tr("Prise %1").arg(takeNumber(row.track, row.takeId)));
+      drawFitted(p, header.adjusted(24, 0, -6, 0),
+                 tr("Take %1").arg(takeNumber(row.track, row.takeId)));
 
       p.save();
       p.setClipRect(lanes);
@@ -414,13 +422,13 @@ void TakeTimeline::contextMenuEvent(QContextMenuEvent *event) {
   if (row.takeId == 0) {
     const qint64 cut = cutNear(row.track, event->pos().x());
     if (cut > 0) {
-      menu.addAction(tr("Supprimer la coupe"), this, [this, row, cut]() {
+      menu.addAction(tr("Remove the cut"), this, [this, row, cut]() {
         TakeTrack edited = m_tracks[row.track];
         edited.removeCut(cut);
         emit trackEdited(row.track, edited);
       });
     }
-    menu.addAction(tr("Couper ici"), this, [this, row, t]() {
+    menu.addAction(tr("Cut here"), this, [this, row, t]() {
       TakeTrack edited = m_tracks[row.track];
       edited.split(t);
       emit trackEdited(row.track, edited);
@@ -428,24 +436,24 @@ void TakeTimeline::contextMenuEvent(QContextMenuEvent *event) {
     const int heard = track.regions()[track.regionIndexAt(t)].takeId;
     if (heard != 0 && track.take(heard)) {
       menu.addSeparator();
-      menu.addAction(tr("Supprimer la prise %1…").arg(takeNumber(row.track, heard)), this,
+      menu.addAction(tr("Delete take %1…").arg(takeNumber(row.track, heard)), this,
                      [this, row, heard]() { confirmRemoveTake(row.track, heard); });
     }
   } else if (const Take *take = track.take(row.takeId)) {
     const qint64 start = take->audibleStartMs();
     if (t >= start && t < take->audibleEndMs()) {
-      menu.addAction(tr("Utiliser cette prise ici"), this, [this, row, t]() {
+      menu.addAction(tr("Use this take here"), this, [this, row, t]() {
         TakeTrack edited = m_tracks[row.track];
         edited.choose(t, row.takeId);
         emit trackEdited(row.track, edited);
       });
     }
-    menu.addAction(tr("Écouter depuis le début de la prise"), this, [this, start]() {
+    menu.addAction(tr("Listen from the start of the take"), this, [this, start]() {
       emit seekRequested(start);
       emit playRequested();
     });
     menu.addSeparator();
-    menu.addAction(tr("Supprimer la prise %1…").arg(takeNumber(row.track, row.takeId)),
+    menu.addAction(tr("Delete take %1…").arg(takeNumber(row.track, row.takeId)),
                    this, [this, row]() { confirmRemoveTake(row.track, row.takeId); });
   }
   menu.exec(event->globalPos());
@@ -453,9 +461,9 @@ void TakeTimeline::contextMenuEvent(QContextMenuEvent *event) {
 
 void TakeTimeline::confirmRemoveTake(int track, int takeId) {
   const auto reply = QMessageBox::question(
-      this, tr("Supprimer la prise"),
-      tr("Supprimer la prise %1 de la piste %2 ?\nLes zones où elle était entendue "
-         "reprennent la prise précédente.")
+      this, tr("Delete the take"),
+      tr("Delete take %1 from track %2?\n"
+         "The regions where it was heard go back to the previous take.")
           .arg(takeNumber(track, takeId))
           .arg(track + 1),
       QMessageBox::Yes | QMessageBox::No, QMessageBox::No);

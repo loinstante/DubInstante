@@ -25,6 +25,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     OpenGLWidgets
     OpenGL
     Concurrent
+    LinguistTools
 )
 
 # =============================================================================
@@ -182,6 +183,21 @@ target_link_libraries(DubInstante PRIVATE
 )
 
 # =============================================================================
+# Translations (compiled into the resources under :/i18n)
+# =============================================================================
+
+# Update the .ts files from the sources: target DubInstante_lupdate (Qt 6.5)
+# or update_translations (Qt 6.7+)
+set(DUBINSTANTE_LANGUAGES en fr es pt_BR de it ja zh_CN ru ar)
+list(TRANSFORM DUBINSTANTE_LANGUAGES
+     REPLACE "(.+)" "translations/dubinstante_\\1.ts" OUTPUT_VARIABLE DUBINSTANTE_TS_FILES)
+qt_add_translations(DubInstante
+    TS_FILES ${DUBINSTANTE_TS_FILES}
+    RESOURCE_PREFIX "/i18n"
+    LUPDATE_OPTIONS -no-obsolete
+)
+
+# =============================================================================
 # Tests (ctest)
 # =============================================================================
 
@@ -261,6 +277,12 @@ target_include_directories(test_rythmowidget PRIVATE
 )
 target_link_libraries(test_rythmowidget PRIVATE Qt6::Widgets)
 add_test(NAME test_rythmowidget COMMAND test_rythmowidget)
+
+add_executable(test_translations tests/test_translations.cpp)
+target_compile_definitions(test_translations PRIVATE
+    TRANSLATIONS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/translations")
+target_link_libraries(test_translations PRIVATE Qt6::Core)
+add_test(NAME test_translations COMMAND test_translations)
 
 # Les tests construisent un QGuiApplication : sans plugin de plateforme, ils
 # meurent sur une machine sans écran (CI comprise).

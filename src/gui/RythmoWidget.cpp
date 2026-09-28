@@ -226,6 +226,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
 
   QPainter painter(this);
+  painter.setLayoutDirection(layoutDirection()); // LTR time axis, see MainWindow
   painter.setRenderHint(QPainter::Antialiasing);
 
   // 1. Calculate layout dimensions

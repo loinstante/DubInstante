@@ -73,13 +73,13 @@ bool ExportService::isFFmpegAvailable(QString *errorMessage)
 
     if (errorMessage) {
         const QString toolName = !ffmpegFound ? "FFmpeg" : "FFprobe";
-        *errorMessage = QObject::tr(
-            "%1 est introuvable sur ce système. Il est nécessaire pour exporter.\n\n"
-            "Debian / Ubuntu : sudo apt install ffmpeg\n"
-            "Fedora : sudo dnf install ffmpeg\n"
-            "Arch : sudo pacman -S ffmpeg\n"
-            "macOS (Homebrew) : brew install ffmpeg\n"
-            "Windows : https://ffmpeg.org/download.html").arg(toolName);
+        *errorMessage = ExportService::tr(
+            "%1 was not found on this system. It is required to export.\n\n"
+            "Debian / Ubuntu: sudo apt install ffmpeg\n"
+            "Fedora: sudo dnf install ffmpeg\n"
+            "Arch: sudo pacman -S ffmpeg\n"
+            "macOS (Homebrew): brew install ffmpeg\n"
+            "Windows: https://ffmpeg.org/download.html").arg(toolName);
     }
 
     return false;
@@ -127,7 +127,7 @@ void ExportService::startExport(const ExportConfig &config)
     if (!m_filterScript->open() ||
         m_filterScript->write(buildAudioGraph(config, &unused).toUtf8()) < 0 ||
         !m_filterScript->flush()) {
-        emit exportFinished(false, "Erreur: Impossible d'écrire le graphe audio temporaire.");
+        emit exportFinished(false, tr("Error: could not write the temporary audio graph."));
         return;
     }
     m_filterScript->close();
@@ -144,7 +144,7 @@ void ExportService::cancelExport()
     if (isExporting()) {
         m_exportFinishedEmitted = true;
         m_process->kill();
-        emit exportFinished(false, "Export annulé par l'utilisateur.");
+        emit exportFinished(false, tr("Export cancelled by the user."));
     }
 }
 
@@ -164,7 +164,7 @@ void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
     if (exitStatus == QProcess::NormalExit && exitCode == 0) {
         resetOutputTracking();
         emit progressChanged(100);
-        emit exportFinished(true, "Export réussi !");
+        emit exportFinished(true, tr("Export succeeded!"));
     } else {
         QString remaining = m_process->readAllStandardError();
         m_errorAccumulator.append(remaining);
@@ -173,7 +173,7 @@ void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
         if (m_errorAccumulator.contains("No space left on device", Qt::CaseInsensitive) ||
             m_errorAccumulator.contains("disk full", Qt::CaseInsensitive) ||
             m_errorAccumulator.contains("no space", Qt::CaseInsensitive)) {
-            detailedError = "Espace disque insuffisant sur le périphérique de destination.";
+            detailedError = tr("Not enough disk space on the destination drive.");
         } else {
             QStringList lines = m_errorAccumulator.split('\n', Qt::SkipEmptyParts);
             QStringList lastLines;
@@ -188,11 +188,11 @@ void ExportService::handleProcessFinished(int exitCode, QProcess::ExitStatus exi
             if (!lastLines.isEmpty()) {
                 detailedError = lastLines.join("\n");
             } else {
-                detailedError = "Erreur inconnue de FFmpeg.";
+                detailedError = tr("Unknown FFmpeg error.");
             }
         }
         removePartialOutput();
-        emit exportFinished(false, "Échec de l'export: " + detailedError);
+        emit exportFinished(false, tr("Export failed: %1").arg(detailedError));
     }
 }
 
@@ -205,9 +205,9 @@ void ExportService::handleProcessError(QProcess::ProcessError error)
 
     removePartialOutput();
     if (error == QProcess::FailedToStart) {
-        emit exportFinished(false, "FFmpeg n'a pas pu démarrer. Est-il installé ?");
+        emit exportFinished(false, tr("FFmpeg could not start. Is it installed?"));
     } else {
-        emit exportFinished(false, "Erreur lors de l'exécution de FFmpeg.");
+        emit exportFinished(false, tr("Error while running FFmpeg."));
     }
 }
 
@@ -289,20 +289,20 @@ void ExportService::parseProgressOutput()
 bool ExportService::validateConfig(const ExportConfig &config, QString &errorMessage) const
 {
     if (!QFile::exists(config.videoPath)) {
-        errorMessage = "Erreur: Le fichier vidéo source est introuvable.";
+        errorMessage = tr("Error: the source video file was not found.");
         return false;
     }
     
     for (const ExportSegment &segment : config.segments) {
         if (!QFile::exists(segment.path)) {
-            errorMessage = QString("Erreur: L'enregistrement audio est introuvable : %1")
+            errorMessage = tr("Error: the audio recording was not found: %1")
                                .arg(segment.path);
             return false;
         }
     }
     
     if (config.outputPath.isEmpty()) {
-        errorMessage = "Erreur: Chemin de sortie non spécifié.";
+        errorMessage = tr("Error: no output path given.");
         return false;
     }
 
@@ -311,7 +311,7 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
     if (storage.isValid() && storage.isReady()) {
         qint64 freeBytes = storage.bytesAvailable();
         if (freeBytes < 100LL * 1024 * 1024) { // Less than 100 MB
-            errorMessage = "Erreur: Espace disque critique (moins de 100 Mo disponibles) sur le périphérique de destination.";
+            errorMessage = tr("Error: critically low disk space (less than 100 MB free) on the destination drive.");
             return false;
         }
     }

@@ -9,6 +9,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QLocale>
 #include <QMessageBox>
 #include <QFrame>
 #include <QScrollArea>
@@ -63,7 +64,7 @@ GlobalSettingsDialog::GlobalSettingsDialog(QWidget *parent, int initialTab)
 
 void GlobalSettingsDialog::setupUi() {
     setObjectName("globalSettingsDialog");
-    setWindowTitle(tr("Paramètres Globaux"));
+    setWindowTitle(tr("Global Settings"));
     setMinimumSize(660, 520);
 
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
@@ -71,11 +72,11 @@ void GlobalSettingsDialog::setupUi() {
     mainLayout->setSpacing(14);
 
     // Title & Subtitle
-    QLabel *titleLabel = new QLabel(tr("Paramètres Globaux"), this);
+    QLabel *titleLabel = new QLabel(tr("Global Settings"), this);
     titleLabel->setObjectName("settingsDialogTitle");
     mainLayout->addWidget(titleLabel);
 
-    QLabel *subtitleLabel = new QLabel(tr("Configurez les préférences de votre studio (thème, sauvegarde automatique, routages audio)."), this);
+    QLabel *subtitleLabel = new QLabel(tr("Set your studio preferences (theme, autosave, audio routing)."), this);
     subtitleLabel->setObjectName("settingsDialogSubtitle");
     mainLayout->addWidget(subtitleLabel);
 
@@ -86,7 +87,7 @@ void GlobalSettingsDialog::setupUi() {
     // Sidebar
     QFrame *sidebar = new QFrame(this);
     sidebar->setObjectName("settingsSidebarCard");
-    sidebar->setFixedWidth(160);
+    sidebar->setMinimumWidth(160);
     QVBoxLayout *sidebarLayout = new QVBoxLayout(sidebar);
     sidebarLayout->setContentsMargins(8, 8, 8, 8);
     sidebarLayout->setSpacing(6);
@@ -94,7 +95,7 @@ void GlobalSettingsDialog::setupUi() {
     m_tabGroup = new QButtonGroup(this);
     m_tabGroup->setExclusive(true);
 
-    QStringList tabLabels = { tr("Général"), tr("Audio & Micros"), tr("Raccourcis Clavier") };
+    QStringList tabLabels = { tr("General"), tr("Audio & Microphones"), tr("Keyboard Shortcuts") };
     for (int i = 0; i < tabLabels.size(); ++i) {
         QPushButton *btn = new QPushButton(tabLabels[i], sidebar);
         btn->setCheckable(true);
@@ -125,53 +126,61 @@ void GlobalSettingsDialog::setupUi() {
     genForm->setHorizontalSpacing(10);
 
     // Theme Selector
-    QLabel *themeLabel = new QLabel(tr("Thème visuel"), generalPage);
+    QLabel *themeLabel = new QLabel(tr("Visual theme"), generalPage);
     themeLabel->setProperty("cssClass", "fineLabel");
     m_themeCombo = new QComboBox(generalPage);
-    m_themeCombo->addItem(tr("Automatique (Système)"), "system");
-    m_themeCombo->addItem(tr("Mode Clair"), "light");
-    m_themeCombo->addItem(tr("Mode Sombre Premium"), "dark");
+    m_themeCombo->addItem(tr("Automatic (system)"), "system");
+    m_themeCombo->addItem(tr("Light Mode"), "light");
+    m_themeCombo->addItem(tr("Premium Dark Mode"), "dark");
     genForm->addRow(themeLabel, m_themeCombo);
 
+    // Language: every name in its own language, whatever the current one
+    QLabel *languageLabel = new QLabel(tr("Language"), generalPage);
+    languageLabel->setProperty("cssClass", "fineLabel");
+    m_languageCombo = new QComboBox(generalPage);
+    m_languageCombo->addItem(tr("System (%1)").arg(languageName(
+        SettingsManager::shippedLanguage(QLocale::system()))), "system");
+    for (const QString &code : SettingsManager::shippedLanguages())
+        m_languageCombo->addItem(languageName(code), code);
+    genForm->addRow(languageLabel, m_languageCombo);
+
     // Countdown Selector (Stepper layout)
-    QLabel *countdownLabel = new QLabel(tr("Décompte pré-enregistrement"), generalPage);
+    QLabel *countdownLabel = new QLabel(tr("Pre-recording countdown"), generalPage);
     countdownLabel->setProperty("cssClass", "fineLabel");
 
-    m_countdown.zeroText = tr("Désactivé (Instantané)");
+    m_countdown.zeroText = tr("Off (instant)");
     genForm->addRow(countdownLabel, createStepper(generalPage, m_countdown));
 
     // Pre-roll: playback starts earlier so the actor hears the lead-in
-    QLabel *preRollLabel = new QLabel(tr("Pré-roll avant le point d'entrée"), generalPage);
+    //: Pre-roll: playback before the point where recording replaces the old take (punch-in)
+    QLabel *preRollLabel = new QLabel(tr("Pre-roll before the punch-in"), generalPage);
     preRollLabel->setProperty("cssClass", "fineLabel");
-    preRollLabel->setToolTip(tr("La lecture démarre ces secondes avant la tête de lecture ; "
-                                "seul ce qui suit la tête de lecture remplace l'ancienne prise."));
-    m_preRoll.zeroText = tr("Désactivé");
+    preRollLabel->setToolTip(tr("Playback starts this many seconds before the playhead; only what "
+                                "follows the playhead replaces the previous take."));
+    m_preRoll.zeroText = tr("Off");
     genForm->addRow(preRollLabel, createStepper(generalPage, m_preRoll));
 
 
     genLayout->addLayout(genForm);
 
     // Auto-save Group
-    QGroupBox *autoSaveGroup = new QGroupBox(tr("Sauvegarde Automatique (Cache)"), generalPage);
+    QGroupBox *autoSaveGroup = new QGroupBox(tr("Autosave (Cache)"), generalPage);
     QVBoxLayout *autoSaveLayout = new QVBoxLayout(autoSaveGroup);
     autoSaveLayout->setContentsMargins(14, 20, 14, 14);
     autoSaveLayout->setSpacing(10);
 
-    m_autoSaveCheck = new QCheckBox(tr("Activer la sauvegarde automatique en cache"), autoSaveGroup);
+    m_autoSaveCheck = new QCheckBox(tr("Enable autosave to the cache"), autoSaveGroup);
     autoSaveLayout->addWidget(m_autoSaveCheck);
 
     QWidget *intervalWidget = new QWidget(autoSaveGroup);
     QHBoxLayout *intervalLayout = new QHBoxLayout(intervalWidget);
     intervalLayout->setContentsMargins(0, 0, 0, 0);
     intervalLayout->setSpacing(8);
-    QLabel *intervalLabel = new QLabel(tr("Fréquence de sauvegarde :"), intervalWidget);
+    QLabel *intervalLabel = new QLabel(tr("Save frequency:"), intervalWidget);
     intervalLabel->setProperty("cssClass", "fineLabel");
     m_autoSaveIntervalCombo = new QComboBox(intervalWidget);
-    m_autoSaveIntervalCombo->addItem(tr("Chaque 1 minute"), 1);
-    m_autoSaveIntervalCombo->addItem(tr("Chaque 3 minutes"), 3);
-    m_autoSaveIntervalCombo->addItem(tr("Chaque 5 minutes"), 5);
-    m_autoSaveIntervalCombo->addItem(tr("Chaque 10 minutes"), 10);
-    m_autoSaveIntervalCombo->addItem(tr("Chaque 15 minutes"), 15);
+    for (int minutes : {1, 3, 5, 10, 15})
+        m_autoSaveIntervalCombo->addItem(tr("Every %n minute(s)", nullptr, minutes), minutes);
     intervalLayout->addWidget(intervalLabel);
     intervalLayout->addWidget(m_autoSaveIntervalCombo);
     intervalLayout->addStretch();
@@ -197,14 +206,14 @@ void GlobalSettingsDialog::setupUi() {
     audForm->setHorizontalSpacing(10);
 
     // Default Microphone
-    QLabel *micLabel = new QLabel(tr("Microphone par défaut"), audioPage);
+    QLabel *micLabel = new QLabel(tr("Default microphone"), audioPage);
     micLabel->setProperty("cssClass", "fineLabel");
     m_defaultMicCombo = new QComboBox(audioPage);
     audForm->addRow(micLabel, m_defaultMicCombo);
     audLayout->addLayout(audForm);
 
     // Preferred Outputs Group
-    QGroupBox *outputsGroup = new QGroupBox(tr("Sélection rapide des Sorties (Casques/Moniteurs)"), audioPage);
+    QGroupBox *outputsGroup = new QGroupBox(tr("Quick Output Selection (Headphones/Monitors)"), audioPage);
     QVBoxLayout *outputsLayout = new QVBoxLayout(outputsGroup);
     outputsLayout->setContentsMargins(14, 20, 14, 14);
     outputsLayout->setSpacing(10);
@@ -212,7 +221,7 @@ void GlobalSettingsDialog::setupUi() {
     QHBoxLayout *listActionsLayout = new QHBoxLayout();
     m_outputsList = new QListWidget(outputsGroup);
     m_outputsList->setMinimumHeight(100);
-    m_removeOutputBtn = new QPushButton(tr("Retirer (−)"), outputsGroup);
+    m_removeOutputBtn = new QPushButton(tr("Remove (−)"), outputsGroup);
     m_removeOutputBtn->setObjectName("settingsCancelButton");
     m_removeOutputBtn->setMinimumHeight(30);
 
@@ -228,15 +237,15 @@ void GlobalSettingsDialog::setupUi() {
     addForm->setSpacing(6);
 
     m_newOutputNameEdit = new QLineEdit(addFrame);
-    m_newOutputNameEdit->setPlaceholderText(tr("ex. Mon Casque Sony, Enceintes Studio..."));
+    m_newOutputNameEdit->setPlaceholderText(tr("e.g. My Sony Headphones, Studio Speakers..."));
     m_newOutputDeviceCombo = new QComboBox(addFrame);
 
-    m_addOutputBtn = new QPushButton(tr("Ajouter aux favoris (+)"), addFrame);
+    m_addOutputBtn = new QPushButton(tr("Add to favorites (+)"), addFrame);
     m_addOutputBtn->setProperty("cssClass", "presetButton");
     m_addOutputBtn->setMinimumHeight(30);
 
-    addForm->addRow(tr("Nom personnalisé :"), m_newOutputNameEdit);
-    addForm->addRow(tr("Périphérique :"), m_newOutputDeviceCombo);
+    addForm->addRow(tr("Custom name:"), m_newOutputNameEdit);
+    addForm->addRow(tr("Device:"), m_newOutputDeviceCombo);
     addForm->addRow(m_addOutputBtn);
 
     outputsLayout->addWidget(addFrame);
@@ -299,7 +308,7 @@ void GlobalSettingsDialog::setupUi() {
             clearBtn->setProperty("cssClass", "shortcutClearButton");
             clearBtn->setFixedSize(30, 30);
             clearBtn->setCursor(Qt::PointingHandCursor);
-            clearBtn->setToolTip(tr("Supprimer le raccourci"));
+            clearBtn->setToolTip(tr("Clear the shortcut"));
             connect(clearBtn, &QPushButton::clicked, this, [this, actionId]() {
                 onClearShortcut(actionId);
             });
@@ -312,17 +321,17 @@ void GlobalSettingsDialog::setupUi() {
         parentLayout->addWidget(group);
     };
 
-    createCategoryGroup(tr("Contrôles Vidéo"), m_videoActions, scrollLayout);
-    createCategoryGroup(tr("Enregistrement"), m_recordActions, scrollLayout);
-    createCategoryGroup(tr("Contrôles Audio"), m_audioActions, scrollLayout);
-    createCategoryGroup(tr("Projet"), m_projectActions, scrollLayout);
+    createCategoryGroup(tr("Video Controls"), m_videoActions, scrollLayout);
+    createCategoryGroup(tr("Recording"), m_recordActions, scrollLayout);
+    createCategoryGroup(tr("Audio Controls"), m_audioActions, scrollLayout);
+    createCategoryGroup(tr("Project"), m_projectActions, scrollLayout);
 
     scrollArea->setWidget(scrollContent);
     shortcutsLayout->addWidget(scrollArea, 1);
 
     // Reset Defaults Row in shortcuts tab
     QHBoxLayout *resetRow = new QHBoxLayout();
-    QPushButton *resetBtn = new QPushButton(tr("Rétablir raccourcis par défaut"), shortcutsPage);
+    QPushButton *resetBtn = new QPushButton(tr("Restore default shortcuts"), shortcutsPage);
     resetBtn->setObjectName("settingsCancelButton");
     resetBtn->setMinimumHeight(32);
     resetBtn->setMinimumWidth(200);
@@ -341,13 +350,13 @@ void GlobalSettingsDialog::setupUi() {
     QHBoxLayout *bottomLayout = new QHBoxLayout();
     bottomLayout->addStretch();
 
-    QPushButton *cancelBtn = new QPushButton(tr("Annuler"), this);
+    QPushButton *cancelBtn = new QPushButton(tr("Cancel"), this);
     cancelBtn->setObjectName("settingsCancelButton");
     cancelBtn->setMinimumHeight(34);
     cancelBtn->setMinimumWidth(100);
     connect(cancelBtn, &QPushButton::clicked, this, &QDialog::reject);
 
-    QPushButton *saveBtn = new QPushButton(tr("Enregistrer"), this);
+    QPushButton *saveBtn = new QPushButton(tr("Save"), this);
     saveBtn->setObjectName("settingsSaveButton");
     saveBtn->setMinimumHeight(34);
     saveBtn->setMinimumWidth(120);
@@ -372,7 +381,7 @@ void GlobalSettingsDialog::populateAudioDevices() {
     m_outputDevices = QMediaDevices::audioOutputs();
 
     m_defaultMicCombo->clear();
-    m_defaultMicCombo->addItem(tr("Utiliser le micro système par défaut"), "");
+    m_defaultMicCombo->addItem(tr("Use the system default microphone"), "");
     for (const QAudioDevice &device : m_inputDevices) {
         m_defaultMicCombo->addItem(device.description(), device.description());
     }
@@ -389,6 +398,8 @@ void GlobalSettingsDialog::loadSettings() {
     // General tab
     int themeIdx = m_themeCombo->findData(sm.theme());
     if (themeIdx >= 0) m_themeCombo->setCurrentIndex(themeIdx);
+    const int languageIdx = m_languageCombo->findData(sm.language());
+    m_languageCombo->setCurrentIndex(qMax(0, languageIdx));
 
     m_countdown.seconds = sm.countdownDuration();
     updateStepper(m_countdown);
@@ -428,7 +439,7 @@ void GlobalSettingsDialog::addPreferredOutput() {
     QString devDesc = m_newOutputDeviceCombo->currentData().toString();
 
     if (label.isEmpty()) {
-        QMessageBox::warning(this, tr("Champs manquants"), tr("Veuillez donner un nom à cette sortie (ex. Casque Sony)."));
+        QMessageBox::warning(this, tr("Missing fields"), tr("Please give this output a name (e.g. Sony Headphones)."));
         return;
     }
 
@@ -465,6 +476,13 @@ void GlobalSettingsDialog::saveSettings() {
 
     // General settings
     sm.setTheme(m_themeCombo->currentData().toString());
+    const QString language = m_languageCombo->currentData().toString();
+    if (language != sm.language()) {
+        sm.setLanguage(language);
+        // Every label is built once: a restart is how they all change
+        QMessageBox::information(this, tr("Language"),
+                                 tr("Restart DubInstante to apply the language."));
+    }
     sm.setCountdownDuration(m_countdown.seconds);
     sm.setPreRollSeconds(m_preRoll.seconds);
     sm.setAutoSaveEnabled(m_autoSaveCheck->isChecked());
@@ -500,7 +518,7 @@ void GlobalSettingsDialog::updateShortcutButtons() {
         QPushButton *btn = m_shortcutButtons.value(actionId, nullptr);
         if (btn) {
             if (seq.isEmpty()) {
-                btn->setText(tr("Aucun"));
+                btn->setText(tr("None"));
                 btn->setStyleSheet(QStringLiteral("color: %1; font-style: italic;").arg(QLatin1String(Brand::TextMuted)));
             } else {
                 btn->setText(seq.toString(QKeySequence::NativeText));
@@ -510,27 +528,40 @@ void GlobalSettingsDialog::updateShortcutButtons() {
     }
 }
 
+// Empty code: no shipped translation matches, the English source is shown
+QString GlobalSettingsDialog::languageName(const QString &code) {
+    if (code.isEmpty() || code == "en")
+        return QStringLiteral("English");
+    const QLocale locale(code);
+    QString name = locale.nativeLanguageName();
+    // pt_BR reads "Português (Brasil)"; zh_CN already names its variant
+    if (code.contains('_') && name == QLocale(locale.language()).nativeLanguageName())
+        name += " (" + locale.nativeTerritoryName() + ")";
+    return name.left(1).toUpper() + name.mid(1);
+}
+
 QString GlobalSettingsDialog::getActionName(const QString &actionId) const {
-    if (actionId == "video_play_pause") return tr("Lecture / Pause");
-    if (actionId == "video_frame_back") return tr("Reculer d'une image (Précédent)");
-    if (actionId == "video_frame_forward") return tr("Avancer d'une image (Suivant)");
-    if (actionId == "video_seek_back_5s") return tr("Reculer de 5 secondes");
-    if (actionId == "video_seek_forward_5s") return tr("Avancer de 5 secondes");
-    if (actionId == "record_start") return tr("Démarrer l'enregistrement");
-    if (actionId == "record_stop") return tr("Arrêter l'enregistrement");
-    if (actionId == "take_split") return tr("Ajouter une coupe au montage");
-    if (actionId == "audio_volume_up") return tr("Augmenter le volume");
-    if (actionId == "audio_volume_down") return tr("Diminuer le volume");
-    if (actionId == "audio_volume_mute") return tr("Couper / Activer le son (Mute)");
-    if (actionId == "project_save") return tr("Enregistrer le projet");
-    if (actionId == "project_save_as") return tr("Enregistrer sous...");
-    if (actionId == "project_open") return tr("Ouvrir un projet");
-    if (actionId == "video_open") return tr("Ouvrir une vidéo");
-    if (actionId == "project_export") return tr("Exporter le doublage");
-    if (actionId == "edit_undo") return tr("Annuler");
-    if (actionId == "edit_redo") return tr("Rétablir");
-    if (actionId == "video_go_start") return tr("Aller au début");
-    if (actionId == "view_fullscreen") return tr("Plein écran (fenêtre)");
+    if (actionId == "video_play_pause") return tr("Play / Pause");
+    if (actionId == "video_frame_back") return tr("Back one frame (Previous)");
+    if (actionId == "video_frame_forward") return tr("Forward one frame (Next)");
+    if (actionId == "video_seek_back_5s") return tr("Back 5 seconds");
+    if (actionId == "video_seek_forward_5s") return tr("Forward 5 seconds");
+    if (actionId == "record_start") return tr("Start recording");
+    if (actionId == "record_stop") return tr("Stop recording");
+    //: Comp: the assembly of the best parts of several takes; a cut splits it in two regions
+    if (actionId == "take_split") return tr("Add a comp cut");
+    if (actionId == "audio_volume_up") return tr("Volume up");
+    if (actionId == "audio_volume_down") return tr("Volume down");
+    if (actionId == "audio_volume_mute") return tr("Mute / Unmute");
+    if (actionId == "project_save") return tr("Save the project");
+    if (actionId == "project_save_as") return tr("Save as...");
+    if (actionId == "project_open") return tr("Open a project");
+    if (actionId == "video_open") return tr("Open a video");
+    if (actionId == "project_export") return tr("Export the dub");
+    if (actionId == "edit_undo") return tr("Undo");
+    if (actionId == "edit_redo") return tr("Redo");
+    if (actionId == "video_go_start") return tr("Go to start");
+    if (actionId == "view_fullscreen") return tr("Fullscreen (window)");
     return actionId;
 }
 
@@ -559,7 +590,7 @@ void GlobalSettingsDialog::startCapture(const QString &actionId) {
     m_activeButton = m_shortcutButtons.value(actionId, nullptr);
     
     if (m_activeButton) {
-        m_activeButton->setText(tr("Appuyez sur une touche (clic pour annuler)"));
+        m_activeButton->setText(tr("Press a key (click to cancel)"));
         m_activeButton->setProperty("capturing", true);
         m_activeButton->style()->unpolish(m_activeButton);
         m_activeButton->style()->polish(m_activeButton);
@@ -597,8 +628,8 @@ bool GlobalSettingsDialog::checkConflict(const QKeySequence &seq, const QString 
             QString otherActionName = getActionName(it.key());
             QMessageBox::StandardButton reply = QMessageBox::question(
                 this,
-                tr("Conflit de raccourci"),
-                tr("Le raccourci '%1' est déjà attribué à '%2'.\n\nVoulez-vous le réattribuer à cette action et libérer l'autre ?")
+                tr("Shortcut conflict"),
+                tr("The shortcut '%1' is already assigned to '%2'.\n\nReassign it to this action and free the other one?")
                     .arg(seq.toString(QKeySequence::NativeText), otherActionName),
                 QMessageBox::Yes | QMessageBox::No
             );
@@ -661,8 +692,8 @@ void GlobalSettingsDialog::onResetShortcutsToDefaults() {
     
     QMessageBox::StandardButton reply = QMessageBox::question(
         this,
-        tr("Rétablir par défaut"),
-        tr("Voulez-vous rétablir tous les raccourcis à leurs valeurs par défaut ?"),
+        tr("Restore defaults"),
+        tr("Restore every shortcut to its default value?"),
         QMessageBox::Yes | QMessageBox::No
     );
     
@@ -712,10 +743,8 @@ QWidget *GlobalSettingsDialog::createStepper(QWidget *parent, SecondsStepper &st
 void GlobalSettingsDialog::updateStepper(SecondsStepper &stepper) {
     if (stepper.seconds == 0) {
         stepper.value->setText(stepper.zeroText);
-    } else if (stepper.seconds == 1) {
-        stepper.value->setText(tr("1 seconde"));
     } else {
-        stepper.value->setText(tr("%1 secondes").arg(stepper.seconds));
+        stepper.value->setText(tr("%n second(s)", nullptr, stepper.seconds));
     }
     stepper.down->setEnabled(stepper.seconds > 0);
     stepper.up->setEnabled(stepper.seconds < stepper.max);

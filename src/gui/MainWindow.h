@@ -162,6 +162,7 @@ private:
   void saveProjectTo(const QString &fileName, bool saveWithVideo);
   bool deferSaveDuringTake(PendingSave save);
   QString autosaveFilePath() const;
+  QString recordIdleText() const;
   void discardAutosave();
   void checkForAutosaveRecovery();
   // strictRelative: project extracted from a .zip, see SaveManager::resolveProjectPath

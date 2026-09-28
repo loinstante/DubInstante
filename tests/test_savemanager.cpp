@@ -314,7 +314,7 @@ int main(int argc, char *argv[]) {
         failZipPath, noVideo,
         {ProjectMedia{dir.filePath("deleted.wav"), "shouldfail_audio/track_1_take_1.wav"}},
         &failErr));
-    CHECK(failErr.contains("Impossible de copier l'enregistrement"));
+    CHECK(failErr.contains("Could not copy recording"));
     CHECK(failErr.contains("track_1_take_1.wav"));
     CHECK(!QFile::exists(failZipPath));
 
@@ -380,13 +380,13 @@ int main(int argc, char *argv[]) {
       }
       QString badErr;
       CHECK(!manager.extractArchive(garbage, dir.filePath("out1"), &badErr));
-      CHECK(badErr.contains("L'extraction a échoué"));
+      CHECK(badErr.contains("Extraction failed"));
 
       // Missing archive
       badErr.clear();
       CHECK(!manager.extractArchive(dir.filePath("absent.zip"),
                                      dir.filePath("out2"), &badErr));
-      CHECK(badErr.contains("Impossible de lire"));
+      CHECK(badErr.contains("Could not read"));
 
       // Valid zip without any .dbi
       const QString srcDir = dir.filePath("no_project");
@@ -404,7 +404,7 @@ int main(int argc, char *argv[]) {
       badErr.clear();
       CHECK(!manager.extractArchive(dir.filePath("no_project.zip"),
                                      dir.filePath("out3"), &badErr));
-      CHECK(badErr.contains("ne contient pas de projet"));
+      CHECK(badErr.contains("does not contain a DubInstante project"));
     } else {
       std::puts("test_savemanager: 'unzip' unavailable, skipping extractArchive checks");
     }

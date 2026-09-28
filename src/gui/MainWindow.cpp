@@ -85,7 +85,9 @@ public:
   using Apply = std::function<void(int, const QString &)>;
 
   TypingCommand(int track, const QString &before, const QString &after, Apply apply)
-      : QUndoCommand(QObject::tr("Saisie sur la bande")), m_track(track),
+      //: Undo step: text typed on a rythmo band
+      : QUndoCommand(QCoreApplication::translate("MainWindow", "Typing on the band")),
+        m_track(track),
         m_before(before), m_after(after), m_apply(std::move(apply)) {
     m_lastKey.start();
   }
@@ -386,7 +388,7 @@ void MainWindow::changeTrackCount(int count) {
     takes << m_takeTracks[i];
   }
   m_undoStack->push(new EditCommand(
-      count < before ? tr("Retirer une bande") : tr("Ajouter une bande"),
+      count < before ? tr("Remove a band") : tr("Add a band"),
       [this, count, before, texts, takes]() {
         setTrackCount(before);
         for (int i = 0; i < texts.size(); ++i) {
@@ -532,21 +534,21 @@ void MainWindow::setupUi() {
   m_stepBackButton = new QPushButton(QIcon(":/resources/icons/arrow_left.svg"), "", controlBar);
   m_stepBackButton->setObjectName("btnStepBack");
   m_stepBackButton->setProperty("cssClass", "iconButton");
-  m_stepBackButton->setToolTip("Reculer (1 frame)");
+  m_stepBackButton->setToolTip(tr("Back (1 frame)"));
   m_stepBackButton->setMinimumSize(32, 32);
 
-  m_playPauseButton = new QPushButton(QIcon(":/resources/icons/play.svg"), " PLAY", controlBar);
+  m_playPauseButton = new QPushButton(QIcon(":/resources/icons/play.svg"), " " + tr("PLAY"), controlBar);
   m_playPauseButton->setObjectName("btnPlayPause");
   m_playPauseButton->setProperty("class", "btn");
 
-  m_stopButton = new QPushButton("⏹ STOP", controlBar);
+  m_stopButton = new QPushButton("⏹ " + tr("STOP"), controlBar);
   m_stopButton->setObjectName("btnStop");
   m_stopButton->setProperty("class", "btn");
 
   m_stepForwardButton = new QPushButton(QIcon(":/resources/icons/arrow_right.svg"), "", controlBar);
   m_stepForwardButton->setObjectName("btnStepForward");
   m_stepForwardButton->setProperty("cssClass", "iconButton");
-  m_stepForwardButton->setToolTip("Avancer (1 frame)");
+  m_stepForwardButton->setToolTip(tr("Forward (1 frame)"));
   m_stepForwardButton->setMinimumSize(32, 32);
 
   m_timeLabel = new QLabel("00:00 / 00:00", controlBar);
@@ -568,14 +570,14 @@ void MainWindow::setupUi() {
   group2Layout->setContentsMargins(0, 0, 0, 0);
   group2Layout->setSpacing(8);
 
-  QLabel *speedLabel = new QLabel("Vitesse Défilement", controlBar);
+  QLabel *speedLabel = new QLabel(tr("Scroll Speed"), controlBar);
   speedLabel->setProperty("cssClass", "control-label");
   group2Layout->addWidget(speedLabel);
 
   m_speedDownButton = new QPushButton("−", controlBar);
   m_speedDownButton->setObjectName("speedDownButton");
   m_speedDownButton->setProperty("cssClass", "stepButton");
-  m_speedDownButton->setToolTip(tr("Ralentir (-10%)"));
+  m_speedDownButton->setToolTip(tr("Slower (-10%)"));
   m_speedDownButton->setMinimumSize(28, 28);
   group2Layout->addWidget(m_speedDownButton);
 
@@ -592,12 +594,12 @@ void MainWindow::setupUi() {
   m_speedUpButton = new QPushButton("+", controlBar);
   m_speedUpButton->setObjectName("speedUpButton");
   m_speedUpButton->setProperty("cssClass", "stepButton");
-  m_speedUpButton->setToolTip(tr("Accélérer (+10%)"));
+  m_speedUpButton->setToolTip(tr("Faster (+10%)"));
   m_speedUpButton->setMinimumSize(28, 28);
   group2Layout->addWidget(m_speedUpButton);
 
 
-  m_recordButton = new QPushButton("● REC GLOBAL", controlBar);
+  m_recordButton = new QPushButton(recordIdleText(), controlBar);
   m_recordButton->setObjectName("recordButton");
   m_recordButton->setCheckable(true);
   m_recordButton->setMinimumHeight(34);
@@ -626,7 +628,7 @@ void MainWindow::setupUi() {
   group3Layout->setContentsMargins(0, 0, 0, 0);
   group3Layout->setSpacing(8);
 
-  QLabel *masterLabel = new QLabel("Master Vol", controlBar);
+  QLabel *masterLabel = new QLabel(tr("Master Vol"), controlBar);
   masterLabel->setProperty("cssClass", "control-label");
   group3Layout->addWidget(masterLabel);
 
@@ -635,14 +637,14 @@ void MainWindow::setupUi() {
   m_volumeMuteButton->setObjectName("volumeMuteButton");
   m_volumeMuteButton->setProperty("cssClass", "iconButton");
   m_volumeMuteButton->setCheckable(true);
-  m_volumeMuteButton->setToolTip(tr("Activer/Désactiver le son"));
+  m_volumeMuteButton->setToolTip(tr("Mute / Unmute"));
   m_volumeMuteButton->setMinimumSize(30, 30);
   group3Layout->addWidget(m_volumeMuteButton);
 
   m_volumeDownButton = new QPushButton("−", controlBar);
   m_volumeDownButton->setObjectName("volumeDownButton");
   m_volumeDownButton->setProperty("cssClass", "stepButton");
-  m_volumeDownButton->setToolTip(tr("Baisser le volume (-5%)"));
+  m_volumeDownButton->setToolTip(tr("Volume down (-5%)"));
   m_volumeDownButton->setMinimumSize(28, 28);
   group3Layout->addWidget(m_volumeDownButton);
 
@@ -656,7 +658,7 @@ void MainWindow::setupUi() {
   m_volumeUpButton = new QPushButton("+", controlBar);
   m_volumeUpButton->setObjectName("volumeUpButton");
   m_volumeUpButton->setProperty("cssClass", "stepButton");
-  m_volumeUpButton->setToolTip(tr("Monter le volume (+5%)"));
+  m_volumeUpButton->setToolTip(tr("Volume up (+5%)"));
   m_volumeUpButton->setMinimumSize(28, 28);
   group3Layout->addWidget(m_volumeUpButton);
 
@@ -674,7 +676,7 @@ void MainWindow::setupUi() {
   m_exportProgressBar->setFixedWidth(132);
   group3Layout->addWidget(m_exportProgressBar);
 
-  m_exportCancelBtn = new QPushButton(tr("Annuler"), controlBar);
+  m_exportCancelBtn = new QPushButton(tr("Cancel"), controlBar);
   m_exportCancelBtn->setVisible(false);
   group3Layout->addWidget(m_exportCancelBtn);
 
@@ -693,12 +695,12 @@ void MainWindow::setupUi() {
   QHBoxLayout *prLayout = new QHBoxLayout(m_postRecordBar);
   prLayout->setContentsMargins(12, 6, 12, 6);
 
-  m_postRecordLabel = new QLabel(tr("✅ Enregistrement terminé !"), m_postRecordBar);
+  m_postRecordLabel = new QLabel(tr("✅ Recording finished!"), m_postRecordBar);
   m_postRecordLabel->setProperty("cssClass", "settingsLabel");
   prLayout->addWidget(m_postRecordLabel);
   prLayout->addStretch();
 
-  QPushButton *listenBtn = new QPushButton(tr("▶ Écouter"), m_postRecordBar);
+  QPushButton *listenBtn = new QPushButton(tr("▶ Listen"), m_postRecordBar);
   listenBtn->setProperty("cssClass", "presetButton");
   connect(listenBtn, &QPushButton::clicked, this, [this]() {
       m_playbackEngine->seek(m_lastRecordedStartMs);
@@ -707,7 +709,7 @@ void MainWindow::setupUi() {
   });
   prLayout->addWidget(listenBtn);
 
-  QPushButton *exportBtn = new QPushButton(tr("📤 Exporter"), m_postRecordBar);
+  QPushButton *exportBtn = new QPushButton(tr("📤 Export"), m_postRecordBar);
   exportBtn->setProperty("cssClass", "presetButton");
   connect(exportBtn, &QPushButton::clicked, this, [this]() {
       hidePostRecordBar();
@@ -755,13 +757,13 @@ void MainWindow::createMenus() {
   QMenuBar *mb = menuBar();
 
   // === Files Menu ===
-  QMenu *filesMenu = mb->addMenu(tr("Files"));
+  QMenu *filesMenu = mb->addMenu(tr("File"));
 
-  m_actionOpenMp4 = new QAction(tr("Open MP4"), this);
+  m_actionOpenMp4 = new QAction(tr("Open a video"), this);
   connect(m_actionOpenMp4, &QAction::triggered, this, &MainWindow::onOpenFile);
   filesMenu->addAction(m_actionOpenMp4);
 
-  m_actionLoadProject = new QAction(tr("Open save file"), this);
+  m_actionLoadProject = new QAction(tr("Open a project"), this);
   connect(m_actionLoadProject, &QAction::triggered, this,
           &MainWindow::onLoadProject);
   filesMenu->addAction(m_actionLoadProject);
@@ -771,7 +773,7 @@ void MainWindow::createMenus() {
           &MainWindow::onSaveProject);
   filesMenu->addAction(m_actionSaveProject);
 
-  m_actionManualExport = new QAction(tr("Exporter le doublage..."), this);
+  m_actionManualExport = new QAction(tr("Export the dub..."), this);
   connect(m_actionManualExport, &QAction::triggered, this,
           &MainWindow::showExportDialog);
   filesMenu->addAction(m_actionManualExport);
@@ -780,22 +782,22 @@ void MainWindow::createMenus() {
     action->setAutoRepeat(false);
 
   // === Edit Menu ===
-  QMenu *editMenu = mb->addMenu(tr("Édition"));
+  QMenu *editMenu = mb->addMenu(tr("Edit"));
   m_undoStack = new QUndoStack(this);
 
-  m_actionUndo = new QAction(tr("Annuler"), this);
+  m_actionUndo = new QAction(tr("Undo"), this);
   connect(m_actionUndo, &QAction::triggered, m_undoStack, &QUndoStack::undo);
   editMenu->addAction(m_actionUndo);
 
-  m_actionRedo = new QAction(tr("Rétablir"), this);
+  m_actionRedo = new QAction(tr("Redo"), this);
   connect(m_actionRedo, &QAction::triggered, m_undoStack, &QUndoStack::redo);
   editMenu->addAction(m_actionRedo);
 
   connect(m_undoStack, &QUndoStack::undoTextChanged, this, [this](const QString &text) {
-    m_actionUndo->setText(text.isEmpty() ? tr("Annuler") : tr("Annuler : %1").arg(text));
+    m_actionUndo->setText(text.isEmpty() ? tr("Undo") : tr("Undo: %1").arg(text));
   });
   connect(m_undoStack, &QUndoStack::redoTextChanged, this, [this](const QString &text) {
-    m_actionRedo->setText(text.isEmpty() ? tr("Rétablir") : tr("Rétablir : %1").arg(text));
+    m_actionRedo->setText(text.isEmpty() ? tr("Redo") : tr("Redo: %1").arg(text));
   });
   connect(m_undoStack, &QUndoStack::indexChanged, this, &MainWindow::updateEditActions);
   updateEditActions();
@@ -803,11 +805,11 @@ void MainWindow::createMenus() {
   // === Application Menu ===
   QMenu *appMenu = mb->addMenu(tr("Application"));
 
-  m_actionFullscreen = new QAction(tr("Fullscreen mode"), this);
+  m_actionFullscreen = new QAction(tr("Fullscreen while recording"), this);
   m_actionFullscreen->setCheckable(true);
   appMenu->addAction(m_actionFullscreen);
 
-  m_actionWindowFullScreen = new QAction(tr("Plein écran (fenêtre)"), this);
+  m_actionWindowFullScreen = new QAction(tr("Fullscreen (window)"), this);
   m_actionWindowFullScreen->setAutoRepeat(false);
   connect(m_actionWindowFullScreen, &QAction::triggered, this,
           &MainWindow::toggleWindowFullScreen);
@@ -815,27 +817,28 @@ void MainWindow::createMenus() {
 
 
 
-  m_actionGlobalSettings = new QAction(tr("Paramètre global"), this);
+  m_actionGlobalSettings = new QAction(tr("Global settings"), this);
   appMenu->addAction(m_actionGlobalSettings);
 
   // === Bande Rythmo Menu ===
-  QMenu *rythmoMenu = mb->addMenu(tr("Bande Rythmo"));
+  //: The scrolling dialogue band of French-style dubbing ("bande rythmo")
+  QMenu *rythmoMenu = mb->addMenu(tr("Rythmo Band"));
 
   // Track count selector using plain QActions (QWidgetAction with embedded
   // widgets doesn't work on macOS native menu bars).
-  QAction *actionRemoveTrack = new QAction(tr("Retirer une bande (−)"), this);
+  QAction *actionRemoveTrack = new QAction(tr("Remove a band (−)"), this);
   connect(actionRemoveTrack, &QAction::triggered, this,
           [this]() { changeTrackCount(m_trackCount - 1); });
   rythmoMenu->addAction(actionRemoveTrack);
 
-  QAction *actionAddTrack = new QAction(tr("Ajouter une bande (+)"), this);
+  QAction *actionAddTrack = new QAction(tr("Add a band (+)"), this);
   connect(actionAddTrack, &QAction::triggered, this,
           [this]() { changeTrackCount(m_trackCount + 1); });
   rythmoMenu->addAction(actionAddTrack);
 
   rythmoMenu->addSeparator();
 
-  m_actionPersonalizeRythmo = new QAction(tr("Personnaliser"), this);
+  m_actionPersonalizeRythmo = new QAction(tr("Customize"), this);
   rythmoMenu->addAction(m_actionPersonalizeRythmo);
 
   // === Audio Menu ===
@@ -905,7 +908,8 @@ void MainWindow::setupConnections() {
           &PlaybackEngine::play);
   connect(m_takeTimeline, &TakeTimeline::trackEdited, this,
           [this](int index, const TakeTrack &takes) {
-            editTakes(index, takes, tr("Montage des prises"));
+            //: Undo step: choosing which recorded take is heard where
+            editTakes(index, takes, tr("Take editing"));
           });
   connect(m_playbackEngine, &PlaybackEngine::playbackStateChanged, this,
           [this](QMediaPlayer::PlaybackState state) {
@@ -1074,7 +1078,7 @@ void MainWindow::setTrackCount(int count) {
 
     // Create TrackWidget
     TrackWidget *panel = new TrackWidget(
-        idx + 1, QString("Piste %1").arg(idx + 1), this);
+        idx + 1, tr("Track %1").arg(idx + 1), this);
     m_trackPanels.append(panel);
     m_tracksLayout->addWidget(panel);
 
@@ -1118,7 +1122,7 @@ void MainWindow::setTrackCount(int count) {
                 QList<QAudioDevice> devs = rec->availableDevices();
                 
                 if (deviceIndex < 0 || deviceIndex >= devs.size()) {
-                    // "Aucune entrée" selected → stop monitoring
+                    // "No input" selected → stop monitoring
                     rec->stopMonitoring();
                     SettingsManager::instance().setTrackMicrophone(idx, "");
                     return;
@@ -1234,8 +1238,8 @@ void MainWindow::openVideoDialog() {
     globs << QLatin1String("*.") + suffix;
 
   QString fileName = QFileDialog::getOpenFileName(
-      this, tr("Ouvrir"), "",
-      tr("Fichiers vidéo (%1);;Tous les fichiers (*)")
+      this, tr("Open"), "",
+      tr("Video files (%1);;All files (*)")
           .arg(globs.join(QLatin1Char(' '))));
 
   if (!fileName.isEmpty()) {
@@ -1283,9 +1287,8 @@ void MainWindow::onSaveProject() {
 
   QMessageBox::StandardButton reply;
   reply = QMessageBox::question(
-      this, tr("Sauvegarder"),
-      tr("Voulez-vous inclure la vidéo dans l'archive ?\n(Cela créera un "
-         "fichier .zip)"),
+      this, tr("Save"),
+      tr("Include the video in the archive?\n(This creates a .zip file)"),
       QMessageBox::Yes | QMessageBox::No | QMessageBox::Cancel);
 
   if (reply == QMessageBox::Cancel)
@@ -1297,7 +1300,7 @@ void MainWindow::onSaveProject() {
   QString suffix = saveWithVideo ? ".zip" : ".dbi";
 
   QString fileName = QFileDialog::getSaveFileName(
-      this, tr("Sauvegarder le projet"), "", filter);
+      this, tr("Save the project"), "", filter);
 
   if (fileName.isEmpty())
     return;
@@ -1339,7 +1342,7 @@ bool MainWindow::deferSaveDuringTake(PendingSave save) {
 
   m_pendingSave = save;
   statusBar()->showMessage(
-      tr("Le projet sera enregistré à la fin de la prise."), 5000);
+      tr("The project will be saved when the take ends."), 5000);
   return true;
 }
 
@@ -1363,10 +1366,10 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
       // saving a heavily comped project gets slow.
       if (!dir.mkpath(audioDirName) || !QFile::copy(file.sourcePath, destPath)) {
         QMessageBox::critical(
-            this, tr("Erreur"),
-            tr("Impossible de copier l'enregistrement %1 vers :\n%2\n\n"
-               "Vérifiez l'espace disque ou les permissions. Le projet n'a pas "
-               "été sauvegardé.")
+            this, tr("Error"),
+            tr("Could not copy recording %1 to:\n"
+               "%2\n\n"
+               "Check the disk space or the permissions. The project was not saved.")
                 .arg(QFileInfo(file.relativePath).fileName())
                 .arg(QDir::toNativeSeparators(destPath)));
         return;
@@ -1379,15 +1382,15 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
     // messages)
     QString zipError;
     if (!SaveManager::isZipAvailable(&zipError)) {
-      QMessageBox::critical(this, tr("Erreur de sauvegarde"), zipError);
+      QMessageBox::critical(this, tr("Save error"), zipError);
       return;
     }
 
     // Show progress dialog
     QProgressDialog *progressDialog = new QProgressDialog(this);
     progressDialog->setLabelText(
-        tr("Création de l'archive ZIP en cours...\nCela peut prendre quelques "
-           "minutes selon la taille de la vidéo."));
+        tr("Creating the ZIP archive...\n"
+           "This can take a few minutes depending on the video size."));
     progressDialog->setRange(0, 0); // Indeterminate
     progressDialog->setCancelButton(
         nullptr); // Disable cancel for safety during zip
@@ -1409,13 +1412,13 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
                 m_currentProjectPath = fileName;
                 setDirty(false);
                 updateWindowTitle();
-                statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
+                statusBar()->showMessage(tr("Project saved"), 3000);
               } else {
                 QMessageBox::critical(
-                    this, tr("Erreur"),
+                    this, tr("Error"),
                     errorMessage->isEmpty()
-                        ? tr("Impossible de créer l'archive ZIP.\nVérifiez "
-                             "l'espace disque ou les permissions.")
+                        ? tr("Could not create the ZIP archive.\n"
+                             "Check the disk space or the permissions.")
                         : *errorMessage);
               }
             });
@@ -1441,10 +1444,10 @@ void MainWindow::saveProjectTo(const QString &fileName, bool saveWithVideo) {
       m_currentProjectPath = fileName;
       setDirty(false);
       updateWindowTitle();
-      statusBar()->showMessage(tr("Projet sauvegardé"), 3000);
+      statusBar()->showMessage(tr("Project saved"), 3000);
     } else {
-      QMessageBox::critical(this, tr("Erreur"),
-                            tr("Impossible de sauvegarder le projet."));
+      QMessageBox::critical(this, tr("Error"),
+                            tr("Could not save the project."));
     }
   }
 }
@@ -1454,8 +1457,8 @@ void MainWindow::onLoadProject() {
     return;
 
   QString fileName = QFileDialog::getOpenFileName(
-      this, tr("Charger un projet"), "",
-      tr("Projets DubInstante (*.dbi *.zip);;Projet (*.dbi);;Archive (*.zip)"));
+      this, tr("Open a project"), "",
+      tr("DubInstante projects (*.dbi *.zip);;Project (*.dbi);;Archive (*.zip)"));
 
   if (fileName.isEmpty())
     return;
@@ -1494,8 +1497,8 @@ QString MainWindow::extractProjectArchive(
   if (!workDir->isValid()) {
     workDir.reset();
     QMessageBox::critical(
-        this, tr("Erreur"),
-        tr("Impossible de créer le dossier temporaire d'extraction."));
+        this, tr("Error"),
+        tr("Could not create the temporary extraction folder."));
     return QString();
   }
 
@@ -1505,8 +1508,8 @@ QString MainWindow::extractProjectArchive(
   // this function sequential while the window stays responsive.
   QProgressDialog progress(this);
   progress.setLabelText(
-      tr("Extraction de l'archive en cours...\nCela peut prendre quelques "
-         "minutes selon la taille de la vidéo."));
+      tr("Extracting the archive...\n"
+         "This can take a few minutes depending on the video size."));
   progress.setRange(0, 0);
   progress.setCancelButton(nullptr);
   progress.setWindowModality(Qt::WindowModal);
@@ -1524,7 +1527,7 @@ QString MainWindow::extractProjectArchive(
 
   if (!watcher.result()) {
     workDir.reset();
-    QMessageBox::critical(this, tr("Erreur"), error);
+    QMessageBox::critical(this, tr("Error"), error);
     return QString();
   }
 
@@ -1541,9 +1544,9 @@ QString MainWindow::extractProjectArchive(
   }
 
   workDir.reset();
-  QMessageBox::critical(this, tr("Erreur"),
-                        tr("Cette archive contient plusieurs projets et aucun "
-                           "ne porte le nom de l'archive (%1).").arg(expected));
+  QMessageBox::critical(this, tr("Error"),
+                        tr("This archive holds several projects and none is named after the "
+                           "archive (%1).").arg(expected));
   return QString();
 }
 
@@ -1551,8 +1554,8 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
   SaveData saveData;
   if (!m_saveManager->load(path, saveData)) {
     QMessageBox::critical(
-        this, tr("Erreur"),
-        tr("Le fichier est corrompu ou d'une version incompatible."));
+        this, tr("Error"),
+        tr("The file is corrupted or from an incompatible version."));
     return false;
   }
 
@@ -1613,7 +1616,7 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
     } else if (!QFile::exists(localPath)) {
       QMessageBox::warning(
           this, tr("Relink"),
-          tr("La vidéo est introuvable. Veuillez la localiser."));
+          tr("The video was not found. Please locate it."));
       openVideoDialog(); // Simple relink via open file dialog
     } else {
       m_playbackEngine->openFile(QUrl::fromLocalFile(localPath));
@@ -1671,22 +1674,22 @@ bool MainWindow::loadProjectFrom(const QString &path, bool strictRelative) {
 
   if (refusedPaths > 0) {
     QMessageBox::warning(
-        this, tr("Projet"),
-        tr("Ce projet référence des fichiers situés hors de son dossier. "
-           "Ils ont été ignorés par sécurité."));
+        this, tr("Project"),
+        tr("This project refers to files outside its folder. They were ignored "
+           "for safety."));
   }
   // The autosave recovery reports its own losses in the status bar
   if (m_lastLoadLostTracksCount > 0 && path != autosaveFilePath()) {
     QMessageBox::warning(
-        this, tr("Projet"),
-        tr("%1 prise(s) de ce projet sont introuvables dans son dossier audio et "
-           "n'ont pas été chargées. Enregistrer maintenant les retirerait du projet.")
-            .arg(m_lastLoadLostTracksCount));
+        this, tr("Project"),
+        tr("%n take(s) of this project were not found in its audio folder and "
+           "were not loaded. Saving now would remove them from the project.",
+           nullptr, m_lastLoadLostTracksCount));
   }
 
   // Loading pushed its own text edits; nothing before it can be undone into this project
   m_undoStack->clear();
-  statusBar()->showMessage(tr("Projet chargé"), 3000);
+  statusBar()->showMessage(tr("Project loaded"), 3000);
   return true;
 }
 
@@ -1708,10 +1711,10 @@ void MainWindow::onDurationChanged(qint64 duration) {
 void MainWindow::onPlaybackStateChanged(QMediaPlayer::PlaybackState state) {
   if (state == QMediaPlayer::PlayingState) {
     m_playPauseButton->setIcon(QIcon(":/resources/icons/pause.svg"));
-    m_playPauseButton->setText(" PAUSE");
+    m_playPauseButton->setText(" " + tr("PAUSE"));
   } else {
     m_playPauseButton->setIcon(QIcon(":/resources/icons/play.svg"));
-    m_playPauseButton->setText(" PLAY");
+    m_playPauseButton->setText(" " + tr("PLAY"));
   }
 }
 
@@ -1739,7 +1742,7 @@ void MainWindow::toggleRecording() {
     }
     m_recordButton->setEnabled(true);
     m_recordButton->setChecked(false);
-    m_recordButton->setText("● REC GLOBAL");
+    m_recordButton->setText(recordIdleText());
     return;
   }
 
@@ -1747,7 +1750,7 @@ void MainWindow::toggleRecording() {
     QString currentVideo = m_currentVideoPath;
     if (currentVideo.isEmpty()) {
       QMessageBox::warning(this, tr("Dubbing"),
-                           tr("Chargez une vidéo avant d'enregistrer."));
+                           tr("Load a video before recording."));
       m_recordButton->setChecked(false);
       return;
     }
@@ -1758,7 +1761,7 @@ void MainWindow::toggleRecording() {
     if (!m_pendingTakeChecks.isEmpty()) {
       // The previous WAVs are still being finalized: a new take would reuse
       // their recorders before they are validated.
-      statusBar()->showMessage(tr("Finalisation de la prise précédente…"), 2000);
+      statusBar()->showMessage(tr("Finishing the previous take…"), 2000);
       m_recordButton->setChecked(false);
       return;
     }
@@ -1785,7 +1788,7 @@ void MainWindow::toggleRecording() {
       m_countdownLabel->show();
       m_countdownLabel->raise();
       
-      m_recordButton->setText("ANNULER");
+      m_recordButton->setText(tr("CANCEL"));
       m_recordButton->setChecked(true);
       
       m_countdownTimer->start(1000);
@@ -1832,7 +1835,7 @@ void MainWindow::toggleRecording() {
     m_recordDurationTimer->stop();
     m_recordDurationLabel->setVisible(false);
     m_recordButton->setChecked(false);
-    m_recordButton->setText("REC GLOBAL");
+    m_recordButton->setText(recordIdleText());
     updateEditActions();
 
     // A recorder that already stopped (failed to start, device lost mid-take)
@@ -1862,7 +1865,7 @@ void MainWindow::checkRecordedTake(int trackIndex) {
       take.durationMs > take.inMs) {
     TakeTrack takes = m_takeTracks[trackIndex];
     takes.addRecording(take, take.audibleStartMs(), take.audibleEndMs());
-    editTakes(trackIndex, takes, tr("Enregistrement"));
+    editTakes(trackIndex, takes, tr("Recording"));
   } else {
     QFile::remove(take.file);
     m_failedTakeTracks.append(trackIndex);
@@ -1872,7 +1875,7 @@ void MainWindow::checkRecordedTake(int trackIndex) {
   }
 
   // Show post-recording notification bar (replaces showExportDialog)
-  QString message = tr("✅ Enregistrement terminé !");
+  QString message = tr("✅ Recording finished!");
   if (!m_failedTakeTracks.isEmpty()) {
     std::sort(m_failedTakeTracks.begin(), m_failedTakeTracks.end());
     QStringList trackNumbers;
@@ -1880,10 +1883,10 @@ void MainWindow::checkRecordedTake(int trackIndex) {
       trackNumbers << QString::number(track + 1);
     }
     message = m_failedTakeTracks.size() == 1
-        ? tr("Enregistrement terminé, mais la piste %1 n'a produit aucun audio. "
-             "Vérifiez le microphone sélectionné.").arg(trackNumbers.first())
-        : tr("Enregistrement terminé, mais les pistes %1 n'ont produit aucun audio. "
-             "Vérifiez le microphone sélectionné.").arg(trackNumbers.join(", "));
+        ? tr("Recording finished, but track %1 produced no audio. Check the "
+             "selected microphone.").arg(trackNumbers.first())
+        : tr("Recording finished, but tracks %1 produced no audio. Check the "
+             "selected microphone.").arg(QLocale().createSeparatedList(trackNumbers));
     m_failedTakeTracks.clear();
   }
   showPostRecordBar(message);
@@ -2056,16 +2059,16 @@ bool MainWindow::exportLocksTakes() {
   if (!m_exportService->isExporting())
     return false;
   QMessageBox::warning(
-      this, tr("Export en cours"),
-      tr("L'export lit les prises actuelles. Attendez sa fin ou annulez-le "
-         "avant de continuer."));
+      this, tr("Export in progress"),
+      tr("The export reads the current takes. Wait for it to finish or cancel "
+         "it before going on."));
   return true;
 }
 
 void MainWindow::showExportDialog() {
   QString currentVideo = m_currentVideoPath;
   if (currentVideo.isEmpty()) {
-    QMessageBox::warning(this, tr("Export"), tr("Aucune vidéo chargée."));
+    QMessageBox::warning(this, tr("Export"), tr("No video loaded."));
     return;
   }
 
@@ -2092,19 +2095,18 @@ void MainWindow::showExportDialog() {
                                           segment.sourceOffsetMs, segment.durationMs});
     }
     if (missing)
-      missingTracks.append(tr("Piste %1").arg(i + 1));
+      missingTracks.append(tr("Track %1").arg(i + 1));
     if (!track.segments.isEmpty())
       tracks.append(track);
   }
   if (tracks.isEmpty()) {
-    QMessageBox::warning(this, tr("Export"), tr("Aucun enregistrement audio trouvé à exporter."));
+    QMessageBox::warning(this, tr("Export"), tr("No audio recording to export."));
     return;
   }
   if (!missingTracks.isEmpty()) {
     QMessageBox::StandardButton reply = QMessageBox::question(
         this, tr("Export"),
-        tr("Des prises sont introuvables pour : %1.\n"
-           "Exporter sans elles ?").arg(missingTracks.join(", ")),
+        tr("Takes are missing for: %1.\nExport without them?").arg(QLocale().createSeparatedList(missingTracks)),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (reply != QMessageBox::Yes) {
       return;
@@ -2134,7 +2136,7 @@ void MainWindow::showExportDialog() {
 // =============================================================================
 
 void MainWindow::onError(const QString &errorMessage) {
-  QMessageBox::critical(this, tr("Erreur"), errorMessage);
+  QMessageBox::critical(this, tr("Error"), errorMessage);
 }
 
 // =============================================================================
@@ -2325,7 +2327,7 @@ void MainWindow::onOpenGlobalSettings() {
     QString defaultMic = sm.defaultMicrophone();
     if (!defaultMic.isEmpty()) {
       for (int i = 0; i < m_trackCount; ++i) {
-        if (m_trackPanels[i]->currentInputDevice() == "Aucune entrée" || m_trackPanels[i]->currentInputDevice().isEmpty()) {
+        if (m_trackPanels[i]->currentInputDevice().isEmpty()) {
           m_trackPanels[i]->setInputDevice(defaultMic);
         }
       }
@@ -2334,7 +2336,7 @@ void MainWindow::onOpenGlobalSettings() {
     // Apply shortcuts
     applyShortcuts();
     
-    statusBar()->showMessage(tr("Paramètres mis à jour"), 3000);
+    statusBar()->showMessage(tr("Settings updated"), 3000);
   }
 }
 
@@ -2357,21 +2359,21 @@ void MainWindow::checkForAutosaveRecovery() {
 
   QFileInfo fi(autosaveFile);
   QDateTime dt = fi.lastModified();
-  QString dateStr = QLocale::system().toString(dt, QLocale::ShortFormat);
+  QString dateStr = QLocale().toString(dt, QLocale::ShortFormat);
 
   QMessageBox msgBox(QMessageBox::Question,
-                     tr("Récupération"),
-                     tr("Une sauvegarde automatique du %1 a été trouvée. "
-                        "DubInstante s'est probablement fermé de façon inattendue.\n"
-                        "Voulez-vous restaurer ce travail ?")
+                     tr("Recovery"),
+                     tr("An autosave from %1 was found. DubInstante probably closed "
+                        "unexpectedly.\n"
+                        "Restore this work?")
                          .arg(dateStr),
                      QMessageBox::NoButton,
                      this);
 
   QPushButton *restoreBtn =
-      msgBox.addButton(tr("Restaurer"), QMessageBox::AcceptRole);
+      msgBox.addButton(tr("Restore"), QMessageBox::AcceptRole);
   QPushButton *ignoreBtn =
-      msgBox.addButton(tr("Ignorer"), QMessageBox::DestructiveRole);
+      msgBox.addButton(tr("Ignore"), QMessageBox::DestructiveRole);
   msgBox.setDefaultButton(restoreBtn);
 
   bool timerWasActive = m_autoSaveTimer->isActive();
@@ -2387,11 +2389,11 @@ void MainWindow::checkForAutosaveRecovery() {
       setDirty(true);
       if (m_lastLoadLostTracksCount > 0) {
         statusBar()->showMessage(
-            tr("Projet restauré. %1 enregistrement(s) introuvable(s).")
-                .arg(m_lastLoadLostTracksCount),
+            tr("Project restored. %n recording(s) not found.", nullptr,
+               m_lastLoadLostTracksCount),
             8000);
       } else {
-        statusBar()->showMessage(tr("Projet restauré"), 3000);
+        statusBar()->showMessage(tr("Project restored"), 3000);
       }
     } else {
       // Illisible : écartée du chemin de démarrage pour ne pas reproposer le
@@ -2418,6 +2420,11 @@ void MainWindow::setDirty(bool dirty) {
   updateWindowTitle();
 }
 
+QString MainWindow::recordIdleText() const {
+  //: Record button: records every armed track at once
+  return "● " + tr("REC GLOBAL");
+}
+
 void MainWindow::updateWindowTitle() {
   QString title = m_currentProjectPath.isEmpty()
                       ? QStringLiteral("DubInstante - Studio")
@@ -2435,8 +2442,8 @@ bool MainWindow::maybeSaveChanges() {
   }
 
   QMessageBox::StandardButton reply = QMessageBox::warning(
-      this, tr("Modifications non enregistrées"),
-      tr("Le projet a été modifié. Voulez-vous enregistrer avant de continuer ?"),
+      this, tr("Unsaved changes"),
+      tr("The project was modified. Save it before going on?"),
       QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
       QMessageBox::Save);
 
@@ -2516,7 +2523,7 @@ void MainWindow::onAutoSaveTriggered() {
   SaveData saveData = collectSaveData();
 
   if (m_saveManager->save(autosaveFile, saveData)) {
-    statusBar()->showMessage(tr("Sauvegarde automatique cache effectuée"), 2000);
+    statusBar()->showMessage(tr("Autosave to cache done"), 2000);
   }
 }
 
@@ -2555,7 +2562,7 @@ void MainWindow::onOutputDeviceTriggered(QAction *action) {
     }
   }
 
-  statusBar()->showMessage(tr("Sortie audio : %1").arg(action->text()), 3000);
+  statusBar()->showMessage(tr("Audio output: %1").arg(action->text()), 3000);
 }
 
 void MainWindow::updateAudioMenu() {
@@ -2574,7 +2581,7 @@ void MainWindow::updateAudioMenu() {
   QString activeProfile = sm.activeOutputProfile();
 
   if (preferred.isEmpty()) {
-    QAction *emptyAction = m_audioMenu->addAction(tr("Aucun profil configuré"));
+    QAction *emptyAction = m_audioMenu->addAction(tr("No profile set up"));
     emptyAction->setEnabled(false);
   } else {
     for (const QString &pref : preferred) {
@@ -2598,7 +2605,7 @@ void MainWindow::updateAudioMenu() {
   }
 
   m_audioMenu->addSeparator();
-  QAction *configAction = m_audioMenu->addAction(tr("Gérer les sorties..."));
+  QAction *configAction = m_audioMenu->addAction(tr("Manage outputs..."));
   connect(configAction, &QAction::triggered, this, &MainWindow::onOpenGlobalSettings);
 }
 
@@ -2633,24 +2640,23 @@ void MainWindow::startRecordingProcess() {
       m_countdownLabel->hide();
     }
     m_recordButton->setChecked(false);
-    m_recordButton->setText("● REC GLOBAL");
-    QMessageBox::warning(this, tr("Enregistrement"),
-                         tr("Aucune piste n'est armée. Armez au moins une piste avant "
-                            "de lancer l'enregistrement."));
+    m_recordButton->setText(recordIdleText());
+    QMessageBox::warning(this, tr("Recording"),
+                         tr("No track is armed. Arm at least one track before recording."));
     return;
   }
 
   for (int i = 0; i < m_trackCount; ++i) {
     if (m_trackPanels[i]->isArmed()) {
       QString dev = m_trackPanels[i]->currentInputDevice();
-      if (dev.isEmpty() || dev == "Aucune entrée" || dev == tr("Aucune entrée")) {
+      if (dev.isEmpty()) {
         if (m_countdownLabel) {
           m_countdownLabel->hide();
         }
         m_recordButton->setChecked(false);
-        m_recordButton->setText("● REC GLOBAL");
-        QMessageBox::warning(this, tr("Enregistrement"),
-                             tr("La piste %1 est armée mais aucun microphone n'est sélectionné.")
+        m_recordButton->setText(recordIdleText());
+        QMessageBox::warning(this, tr("Recording"),
+                             tr("Track %1 is armed but no microphone is selected.")
                                  .arg(i + 1));
         return;
       }
@@ -2701,7 +2707,7 @@ void MainWindow::startRecordingProcess() {
   m_isRecording = true;
   m_recordButton->setEnabled(true);
   m_recordButton->setChecked(true);
-  m_recordButton->setText("STOP");
+  m_recordButton->setText(tr("STOP"));
   m_exportProgressBar->setVisible(false);
   updateEditActions();
 }
@@ -2725,9 +2731,10 @@ void MainWindow::closeEvent(QCloseEvent *event) {
 
   if (m_exportService->isExporting()) {
     QMessageBox::StandardButton reply = QMessageBox::question(
-        this, tr("Export en cours"),
-        tr("Un export est en cours. Quitter maintenant l'interrompra et "
-           "supprimera le fichier incomplet.\nQuitter quand même ?"),
+        this, tr("Export in progress"),
+        tr("An export is in progress. Quitting now will stop it and delete the "
+           "incomplete file.\n"
+           "Quit anyway?"),
         QMessageBox::Yes | QMessageBox::No, QMessageBox::No);
     if (reply != QMessageBox::Yes) {
       event->ignore();

@@ -194,6 +194,7 @@ list(TRANSFORM DUBINSTANTE_LANGUAGES
 qt_add_translations(DubInstante
     TS_FILES ${DUBINSTANTE_TS_FILES}
     RESOURCE_PREFIX "/i18n"
+    LUPDATE_OPTIONS -no-obsolete
 )
 
 # =============================================================================

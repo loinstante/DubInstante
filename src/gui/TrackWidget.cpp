@@ -51,7 +51,7 @@ void TrackWidget::setupUi(const QString& title)
     m_recordArmButton->setCheckable(true);
     m_recordArmButton->setChecked(true);
     m_recordArmButton->setFixedSize(28, 28);
-    m_recordArmButton->setToolTip(tr("Armer/Désarmer l'enregistrement"));
+    m_recordArmButton->setToolTip(tr("Arm/Disarm recording"));
     headerLayout->addWidget(m_recordArmButton);
 
     QFrame *headerLine = new QFrame(this);
@@ -66,13 +66,13 @@ void TrackWidget::setupUi(const QString& title)
     QHBoxLayout *inLayout = new QHBoxLayout();
     inLayout->setSpacing(10);
     
-    QLabel *inLabel = new QLabel("IN:", this);
+    QLabel *inLabel = new QLabel(tr("IN:"), this);
     inLabel->setProperty("cssClass", "track-control-label");
     inLabel->setFixedWidth(30);
 
     m_inputCombo = new QComboBox(this);
     m_inputCombo->setProperty("cssClass", "track-control-select");
-    m_inputCombo->addItem("Aucune entrée");
+    m_inputCombo->addItem(tr("No input"));
 
     inLayout->addWidget(inLabel);
     inLayout->addWidget(m_inputCombo, 1);
@@ -83,7 +83,7 @@ void TrackWidget::setupUi(const QString& title)
     QHBoxLayout *volLayout = new QHBoxLayout();
     volLayout->setSpacing(10);
 
-    QLabel *volLabel = new QLabel("VOL:", this);
+    QLabel *volLabel = new QLabel(tr("VOL:"), this);
     volLabel->setProperty("cssClass", "track-control-label");
     volLabel->setFixedWidth(30);
 
@@ -116,10 +116,10 @@ void TrackWidget::setupConnections()
     connect(m_volumeSlider, &QSlider::valueChanged, this, &TrackWidget::onVolumeSliderChanged);
     connect(m_optionsButton, &QPushButton::clicked, this, &TrackWidget::optionsClicked);
     
-    // Emit device index when selection changes (index 0 = "Aucune entrée", real devices start at 1)
+    // Emit device index when selection changes (index 0 = no input, real devices start at 1)
     connect(m_inputCombo, QOverload<int>::of(&QComboBox::currentIndexChanged), this,
             [this](int index) {
-                // deviceIndex = index - 1 (to skip "Aucune entrée" at pos 0)
+                // deviceIndex = index - 1 (to skip "no input" at pos 0)
                 emit inputDeviceIndexChanged(index - 1);
             });
 }
@@ -138,7 +138,10 @@ void TrackWidget::setVuLevel(int percentage)
 
 void TrackWidget::setInputDevice(const QString& device)
 {
-    int index = m_inputCombo->findText(device);
+    // Projects before 1.0 saved the French "no input" label itself
+    int index = device.isEmpty() || device == QLatin1String("Aucune entrée")
+                    ? 0
+                    : m_inputCombo->findText(device);
     if (index >= 0) {
         m_inputCombo->setCurrentIndex(index);
     }
@@ -154,7 +157,7 @@ void TrackWidget::populateInputDevices(const QList<QAudioDevice> &devices)
 {
     m_inputCombo->blockSignals(true);
     m_inputCombo->clear();
-    m_inputCombo->addItem("Aucune entrée");
+    m_inputCombo->addItem(tr("No input"));
     for (const QAudioDevice &dev : devices) {
         m_inputCombo->addItem(dev.description());
     }
@@ -164,13 +167,13 @@ void TrackWidget::populateInputDevices(const QList<QAudioDevice> &devices)
 void TrackWidget::setRecordingState(const QString &state)
 {
     if (state == "recording") {
-        m_recordingStateLabel->setText("● REC");
+        m_recordingStateLabel->setText("● " + tr("REC"));
         m_recordingStateLabel->setProperty("state", "recording");
         m_recordingStateLabel->style()->unpolish(m_recordingStateLabel);
         m_recordingStateLabel->style()->polish(m_recordingStateLabel);
         m_recordingStateLabel->setVisible(true);
     } else if (state == "playing") {
-        m_recordingStateLabel->setText("▶ PLAYBACK");
+        m_recordingStateLabel->setText("▶ " + tr("PLAYBACK"));
         m_recordingStateLabel->setProperty("state", "playing");
         m_recordingStateLabel->style()->unpolish(m_recordingStateLabel);
         m_recordingStateLabel->style()->polish(m_recordingStateLabel);

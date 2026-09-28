@@ -40,19 +40,19 @@ TrackSettingsDialog::TrackSettingsDialog(RythmoManager *rythmoManager,
 
 void TrackSettingsDialog::setupUi() {
   setObjectName("trackSettingsDialog");
-  setWindowTitle(tr("Personnalisation de la Bande Rythmo"));
+  setWindowTitle(tr("Rythmo Band Customization"));
   setMinimumSize(680, 560);
 
   QVBoxLayout *mainLayout = new QVBoxLayout(this);
   mainLayout->setContentsMargins(20, 20, 20, 20);
   mainLayout->setSpacing(14);
 
-  QLabel *titleLabel = new QLabel(tr("Personnaliser la Bande Rythmo"), this);
+  QLabel *titleLabel = new QLabel(tr("Customize the Rythmo Band"), this);
   titleLabel->setObjectName("settingsDialogTitle");
   mainLayout->addWidget(titleLabel);
 
   QLabel *subtitleLabel =
-      new QLabel(tr("Réglages visuels en direct, sans interrompre le flux."),
+      new QLabel(tr("Live visual settings, without interrupting the flow."),
                  this);
   subtitleLabel->setObjectName("settingsDialogSubtitle");
   mainLayout->addWidget(subtitleLabel);
@@ -65,7 +65,7 @@ void TrackSettingsDialog::setupUi() {
   topLayout->setSpacing(8);
 
   QLabel *trackSelectorLabel =
-      new QLabel(tr("Piste à modifier"), trackSelectorCard);
+      new QLabel(tr("Track to edit"), trackSelectorCard);
   trackSelectorLabel->setProperty("cssClass", "settingsLabel");
   topLayout->addWidget(trackSelectorLabel);
 
@@ -74,7 +74,7 @@ void TrackSettingsDialog::setupUi() {
 
   for (int i = 0; i < m_trackCount; ++i) {
     QPushButton *btn =
-        new QPushButton(tr("Piste %1").arg(i + 1), trackSelectorCard);
+        new QPushButton(tr("Track %1").arg(i + 1), trackSelectorCard);
     btn->setCheckable(true);
     btn->setProperty("cssClass", "trackSelectorButton");
     btn->setMinimumHeight(30);
@@ -92,7 +92,7 @@ void TrackSettingsDialog::setupUi() {
     mainLayout->addWidget(trackSelectorCard);
 
   // Live Preview
-    QGroupBox *previewGroup = new QGroupBox(tr("Aperçu en direct"), this);
+    QGroupBox *previewGroup = new QGroupBox(tr("Live preview"), this);
     previewGroup->setObjectName("settingsGroupPreview");
   QVBoxLayout *previewLayout = new QVBoxLayout(previewGroup);
     previewLayout->setContentsMargins(14, 20, 14, 14);
@@ -104,7 +104,7 @@ void TrackSettingsDialog::setupUi() {
   m_previewWidget->setPlaying(true);
     m_previewWidget->setMinimumHeight(92);
   m_previewWidget->updateDisplay(
-      0, "Hello, voici un aperçu de la piste Rythmo...  ", 100);
+      0, tr("Hello, here is a preview of the rythmo band...") + "  ", 100);
 
   // Animate preview using its internal loop by providing changing simulated
   // position
@@ -123,18 +123,18 @@ void TrackSettingsDialog::setupUi() {
   mainLayout->addWidget(previewGroup);
 
   // Presets
-  QGroupBox *presetsGroup = new QGroupBox(tr("Préréglages"), this);
+  QGroupBox *presetsGroup = new QGroupBox(tr("Presets"), this);
   presetsGroup->setObjectName("settingsGroupPresets");
   QHBoxLayout *presetsLayout = new QHBoxLayout(presetsGroup);
   presetsLayout->setContentsMargins(14, 20, 14, 14);
   presetsLayout->setSpacing(8);
 
-  m_presetClassic = new QPushButton(tr("Classique"), presetsGroup);
-  m_presetDark = new QPushButton(tr("Sombre"), presetsGroup);
-  m_presetBlue = new QPushButton(tr("Bleu"), presetsGroup);
-  m_presetRed = new QPushButton(tr("Rouge"), presetsGroup);
-  m_presetGreen = new QPushButton(tr("Vert"), presetsGroup);
-  m_presetYellow = new QPushButton(tr("Jaune"), presetsGroup);
+  m_presetClassic = new QPushButton(tr("Classic"), presetsGroup);
+  m_presetDark = new QPushButton(tr("Dark"), presetsGroup);
+  m_presetBlue = new QPushButton(tr("Blue"), presetsGroup);
+  m_presetRed = new QPushButton(tr("Red"), presetsGroup);
+  m_presetGreen = new QPushButton(tr("Green"), presetsGroup);
+  m_presetYellow = new QPushButton(tr("Yellow"), presetsGroup);
 
   QVector<QPushButton *> presetButtons = {m_presetClassic, m_presetDark,
                                           m_presetBlue,    m_presetRed,
@@ -167,14 +167,14 @@ void TrackSettingsDialog::setupUi() {
   mainLayout->addWidget(presetsGroup);
 
   // Fine Controls
-    QGroupBox *fineGroup = new QGroupBox(tr("Réglages Fins"), this);
+    QGroupBox *fineGroup = new QGroupBox(tr("Fine Settings"), this);
     fineGroup->setObjectName("settingsGroupFine");
   QGridLayout *fineLayout = new QGridLayout(fineGroup);
     fineLayout->setContentsMargins(14, 20, 14, 14);
     fineLayout->setHorizontalSpacing(12);
     fineLayout->setVerticalSpacing(10);
 
-    QLabel *fontLabel = new QLabel(tr("Police"), fineGroup);
+    QLabel *fontLabel = new QLabel(tr("Font"), fineGroup);
     fontLabel->setProperty("cssClass", "fineLabel");
     fineLayout->addWidget(fontLabel, 0, 0);
 
@@ -191,7 +191,7 @@ void TrackSettingsDialog::setupUi() {
   fineLayout->addWidget(m_fontComboBox, 0, 1);
   fineLayout->setColumnStretch(1, 1);
 
-    QLabel *sizeLabel = new QLabel(tr("Taille globale"), fineGroup);
+    QLabel *sizeLabel = new QLabel(tr("Overall size"), fineGroup);
     sizeLabel->setProperty("cssClass", "fineLabel");
     fineLayout->addWidget(sizeLabel, 1, 0);
 
@@ -202,7 +202,7 @@ void TrackSettingsDialog::setupUi() {
           this, &TrackSettingsDialog::updateGlobalSize);
   fineLayout->addWidget(m_globalSizeSpinBox, 1, 1);
 
-    QLabel *textColorLabel = new QLabel(tr("Couleur texte"), fineGroup);
+    QLabel *textColorLabel = new QLabel(tr("Text color"), fineGroup);
     textColorLabel->setProperty("cssClass", "fineLabel");
     fineLayout->addWidget(textColorLabel, 2, 0);
 
@@ -214,7 +214,7 @@ void TrackSettingsDialog::setupUi() {
           &TrackSettingsDialog::updateTextColor);
   fineLayout->addWidget(m_textColorButton, 2, 1);
 
-    QLabel *backgroundColorLabel = new QLabel(tr("Couleur fond"), fineGroup);
+    QLabel *backgroundColorLabel = new QLabel(tr("Background color"), fineGroup);
     backgroundColorLabel->setProperty("cssClass", "fineLabel");
     fineLayout->addWidget(backgroundColorLabel, 3, 0);
 
@@ -232,7 +232,7 @@ void TrackSettingsDialog::setupUi() {
   QHBoxLayout *bottomLayout = new QHBoxLayout();
   bottomLayout->setContentsMargins(0, 4, 0, 0);
   bottomLayout->addStretch();
-  QPushButton *closeButton = new QPushButton(tr("Fermer"), this);
+  QPushButton *closeButton = new QPushButton(tr("Close"), this);
   closeButton->setObjectName("settingsCloseButton");
   closeButton->setMinimumHeight(34);
   closeButton->setMinimumWidth(110);
@@ -339,7 +339,7 @@ void TrackSettingsDialog::updateGlobalSize() {
 
 void TrackSettingsDialog::updateTextColor() {
   QColor color =
-      chooseColor(m_currentTextColor, tr("Choisir la couleur du texte"));
+      chooseColor(m_currentTextColor, tr("Choose the text color"));
   if (color.isValid() && color != m_currentTextColor) {
     m_currentTextColor = color;
     updateColorButton(m_textColorButton, color);
@@ -352,7 +352,7 @@ void TrackSettingsDialog::updateTextColor() {
 
 void TrackSettingsDialog::updateBackgroundColor() {
   QColor color =
-      chooseColor(m_currentBackgroundColor, tr("Choisir la couleur de fond"));
+      chooseColor(m_currentBackgroundColor, tr("Choose the background color"));
   if (color.isValid() && color != m_currentBackgroundColor) {
     m_currentBackgroundColor = color;
     updateColorButton(m_backgroundColorButton, color);

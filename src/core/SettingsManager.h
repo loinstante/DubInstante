@@ -32,6 +32,10 @@ public:
     int countdownDuration() const;
     void setCountdownDuration(int seconds);
 
+    // Playback starts this long before the punch-in point when recording
+    int preRollSeconds() const;
+    void setPreRollSeconds(int seconds);
+
     // Default global microphone
     QString defaultMicrophone() const;
     void setDefaultMicrophone(const QString &micName);

@@ -14,20 +14,23 @@
 #include <QVBoxLayout>
 #include <QTabWidget>
 
+/// One mixer row: a track and the take segments it contributes.
+struct ExportTrack {
+    int number = 1;                 ///< Shown to the user ("Piste N")
+    float volume = 1.0f;
+    bool muted = false;
+    QList<ExportSegment> segments;
+};
+
 class ExportDialog : public QDialog {
     Q_OBJECT
 
 public:
     explicit ExportDialog(const QString &sourceVideo,
-                          const QString &primaryAudio,
-                          const QStringList &extraAudios,
+                          const QList<ExportTrack> &tracks,
                           qint64 lastRecordedDurationMs,
                           qint64 lastRecordedStartMs,
-                          const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
-                          const QVector<float> &currentTrackVolumes,
-                          const QVector<bool> &currentTrackMutes,
-                          const QVector<int> &trackNumbers,
                           QWidget *parent = nullptr);
     ~ExportDialog() override;
 
@@ -52,21 +55,15 @@ private:
     void setupUi();
     void populateFields();
     void updateWarningText(const QString &warning);
-    void addTrackRow(QWidget *parent, const QString &title, int index);
+    void addTrackRow(QWidget *parent, int index);
 
     // Initial parameters passed from Main Window
     QString m_sourceVideoPath;
-    QString m_primaryAudioPath;
-    QStringList m_extraAudioPaths;
+    QList<ExportTrack> m_tracks;    ///< One mixer row each, same order as m_trackSliders
     qint64 m_lastRecordedDurationMs;
     qint64 m_lastRecordedStartMs;
-    QVector<qint64> m_trackOffsetsMs;
-    
+
     float m_defaultOriginalVolume;
-    QVector<float> m_defaultTrackVolumes;
-    QVector<bool> m_defaultTrackMutes;
-    // Real track numbers shown to the user, aligned with primary + extra audios
-    QVector<int> m_trackNumbers;
 
     // Track original size to calculate custom resolution aspect ratio
     int m_videoOriginalWidth;

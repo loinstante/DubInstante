@@ -31,6 +31,7 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   root["track_count"] = cleanData.trackCount;
   root["scroll_speed"] = cleanData.scrollSpeed;
   root["is_text_white"] = cleanData.isTextWhite;
+  root["next_take_id"] = cleanData.nextTakeId;
 
   // Save audio tracks
   QJsonArray audioTracksArray;
@@ -38,10 +39,21 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
     QJsonObject audioObj;
     audioObj["audio_input"] = audioTrack.audioInput;
     audioObj["audio_gain"] = audioTrack.audioGain;
-    audioObj["audioFilePath"] = audioTrack.audioFilePath;
-    audioObj["recordStartMs"] = audioTrack.recordStartMs;
-    audioObj["recordDurationMs"] = audioTrack.recordDurationMs;
-    audioObj["hasRecording"] = audioTrack.hasRecording;
+    QJsonArray takesArray;
+    for (const Take &take : audioTrack.takes.takes()) {
+      takesArray.append(QJsonObject{{"id", take.id},
+                                    {"file", take.file},
+                                    {"start_ms", take.startMs},
+                                    {"in_ms", take.inMs},
+                                    {"duration_ms", take.durationMs}});
+    }
+    QJsonArray regionsArray;
+    for (const CompRegion &region : audioTrack.takes.regions()) {
+      regionsArray.append(
+          QJsonObject{{"start_ms", region.startMs}, {"take", region.takeId}});
+    }
+    audioObj["takes"] = takesArray;
+    audioObj["regions"] = regionsArray;
     audioTracksArray.append(audioObj);
   }
   root["audio_tracks"] = audioTracksArray;
@@ -253,7 +265,7 @@ bool SaveManager::extractArchive(const QString &zipPath, const QString &destDir,
 }
 
 bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
-                                const QStringList &tempAudioPaths, QString *errorMessage) {
+                                const QList<ProjectMedia> &media, QString *errorMessage) {
 
   QString videoSource = data.videoUrl;
   if (videoSource.startsWith("file://")) {
@@ -294,14 +306,6 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QString videoFileName = videoInfo.fileName();
   zipData.videoUrl = videoFileName; // Point to local file inside ZIP
 
-  // Same for the takes: the caller's paths are temp files of this machine
-  const QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
-  for (int i = 0; i < zipData.audioTracks.size(); ++i) {
-    if (zipData.audioTracks[i].hasRecording && i < tempAudioPaths.size())
-      zipData.audioTracks[i].audioFilePath =
-          QString("%1/track_%2.wav").arg(audioDirName).arg(i + 1);
-  }
-
   if (!save(dbiPath, zipData)) {
     if (errorMessage)
       *errorMessage = QObject::tr("Échec de la sauvegarde du fichier .dbi");
@@ -320,34 +324,19 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
     }
   }
 
-  // 3.5 Copy audio tracks
+  // 3.5 Copy the takes
   QDir tempQDir(tempDir.path());
-  bool hasAnyAudio = false;
-  
-  for (int i = 0; i < data.audioTracks.size(); ++i) {
-      if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
-          hasAnyAudio = true;
-          break;
-      }
-  }
-  
-  if (hasAnyAudio) {
-      tempQDir.mkdir(audioDirName);
-      QDir tempAudioDir(tempQDir.absoluteFilePath(audioDirName));
-      
-      for (int i = 0; i < data.audioTracks.size(); ++i) {
-          if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
-              QString sourcePath = tempAudioPaths[i];
-              QString destFilename = QString("track_%1.wav").arg(i + 1);
-              if (!QFile::exists(sourcePath) ||
-                  !QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
-                  qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
-                  if (errorMessage)
-                      *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
-                  return false;
-              }
-          }
-      }
+  for (const ProjectMedia &file : media) {
+    const QString dest = tempQDir.absoluteFilePath(file.relativePath);
+    if (!QDir().mkpath(QFileInfo(dest).absolutePath()) ||
+        !QFile::exists(file.sourcePath) || !QFile::copy(file.sourcePath, dest)) {
+      qWarning() << "Failed to copy take to temp dir:" << file.sourcePath;
+      if (errorMessage)
+        *errorMessage = QObject::tr("Impossible de copier l'enregistrement %1 "
+                                    "dans l'archive.")
+                            .arg(QFileInfo(file.relativePath).fileName());
+      return false;
+    }
   }
 
   // 4. Create ZIP archive
@@ -499,6 +488,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   data.trackCount = root.value("track_count").toInt(1);
   data.scrollSpeed = root.value("scroll_speed").toInt(100);
   data.isTextWhite = root.value("is_text_white").toBool(false);
+  data.nextTakeId = root.value("next_take_id").toInt(1);
 
   // Load audio tracks
   data.audioTracks.clear();
@@ -508,10 +498,31 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     QJsonObject audioObj = val.toObject();
     audioData.audioInput = audioObj.value("audio_input").toString("");
     audioData.audioGain = (float)audioObj.value("audio_gain").toDouble(1.0);
-    audioData.audioFilePath = audioObj["audioFilePath"].toString();
-    audioData.recordStartMs = audioObj["recordStartMs"].toInteger();
-    audioData.recordDurationMs = audioObj["recordDurationMs"].toInteger();
-    audioData.hasRecording = audioObj["hasRecording"].toBool();
+    if (audioObj.contains("takes")) {
+      QList<Take> takes;
+      for (const auto &takeVal : audioObj.value("takes").toArray()) {
+        const QJsonObject t = takeVal.toObject();
+        takes.append(Take{t.value("id").toInt(), t.value("file").toString(),
+                          t.value("start_ms").toInteger(), t.value("in_ms").toInteger(),
+                          t.value("duration_ms").toInteger()});
+      }
+      QList<CompRegion> regions;
+      for (const auto &regionVal : audioObj.value("regions").toArray()) {
+        const QJsonObject r = regionVal.toObject();
+        regions.append(CompRegion{r.value("start_ms").toInteger(), r.value("take").toInt()});
+      }
+      audioData.takes = TakeTrack::fromParts(takes, regions);
+    } else if (audioObj["hasRecording"].toBool()) {
+      // Up to 0.12: one take per track, heard over its whole length
+      // A missing duration meant "until the end of the file": kept open here,
+      // the caller measures the WAV once it has located it.
+      const qint64 duration = audioObj["recordDurationMs"].toInteger();
+      const Take take{int(data.audioTracks.size()) + 1,
+                      audioObj["audioFilePath"].toString(),
+                      audioObj["recordStartMs"].toInteger(), 0,
+                      duration > 0 ? duration : kOpenEndedTakeMs};
+      audioData.takes.addRecording(take, take.startMs, take.audibleEndMs());
+    }
     data.audioTracks.append(audioData);
   }
 
@@ -562,6 +573,8 @@ SaveData SaveManager::sanitize(const SaveData &data) {
   for (int i = 0; i < clean.audioTracks.size(); ++i) {
     clean.audioTracks[i].audioGain =
         qBound(0.0f, clean.audioTracks[i].audioGain, 1.0f);
+    // A reused id would make two takes share one session file
+    clean.nextTakeId = qMax(clean.nextTakeId, clean.audioTracks[i].takes.maxTakeId() + 1);
   }
 
   // Widest legitimate grid: 50 pt at 10 px/s stays under 10 s per character

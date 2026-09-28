@@ -3,6 +3,9 @@
 #include "../src/core/TakeTrack.h"
 #include "check.h"
 
+#include <QFile>
+#include <QTemporaryDir>
+#include <QtEndian>
 #include <cstdio>
 
 static Take makeTake(int id, qint64 start, qint64 duration, qint64 in = 0) {
@@ -126,6 +129,42 @@ static int checkFromParts() {
   return 0;
 }
 
+// 16-bit stereo 48 kHz: 192000 bytes per second
+static bool writeWav(const QString &path, quint32 declaredDataSize, int actualDataSize,
+                     bool extraChunk) {
+  const auto le32 = [](quint32 v) {
+    QByteArray b(4, 0);
+    qToLittleEndian(v, b.data());
+    return b;
+  };
+  QByteArray fmt = QByteArray::fromHex("0100020080bb0000") + le32(192000) +
+                   QByteArray::fromHex("04001000");
+  QByteArray body = "WAVEfmt " + le32(fmt.size()) + fmt;
+  if (extraChunk)
+    body += "LIST" + le32(3) + QByteArray(4, 'x');   // odd size: padded
+  body += "data" + le32(declaredDataSize) + QByteArray(actualDataSize, 0);
+  QFile f(path);
+  return f.open(QIODevice::WriteOnly) &&
+         f.write("RIFF" + le32(body.size()) + body) > 0;
+}
+
+static int checkWavDuration() {
+  QTemporaryDir dir;
+  CHECK(dir.isValid());
+  const QString wav = dir.filePath("a.wav");
+  CHECK(writeWav(wav, 96000, 96000, true));
+  CHECK(wavDurationMs(wav) == 500);
+  // Writer killed mid-take: header never updated, the file length decides
+  CHECK(writeWav(wav, 0, 192000, false));
+  CHECK(wavDurationMs(wav) == 1000);
+  QFile junk(dir.filePath("b.wav"));
+  CHECK(junk.open(QIODevice::WriteOnly) && junk.write("not a wav") > 0);
+  junk.close();
+  CHECK(wavDurationMs(junk.fileName()) == -1);
+  CHECK(wavDurationMs(dir.filePath("missing.wav")) == -1);
+  return 0;
+}
+
 int main() {
   CHECK(checkPunchInMiddle() == 0);
   CHECK(checkPreRoll() == 0);
@@ -133,6 +172,7 @@ int main() {
   CHECK(checkRemoveTake() == 0);
   CHECK(checkShorterTakeLeavesSilence() == 0);
   CHECK(checkFromParts() == 0);
+  CHECK(checkWavDuration() == 0);
   std::printf("test_taketrack: OK\n");
   return 0;
 }

@@ -6,12 +6,15 @@
 #include "ExportService.h"
 
 #include <QCoreApplication>
+#include <QDir>
 #include <QDebug>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QStorageInfo>
+#include <QTemporaryFile>
+#include <limits>
 
 ExportService::ExportService(QObject *parent)
     : QObject(parent)
@@ -111,12 +114,25 @@ void ExportService::startExport(const ExportConfig &config)
     m_outputMTimeBefore = m_outputExistedBefore ? outputInfo.lastModified() : QDateTime();
 
     emit progressChanged(0);
-    
-    QStringList args = buildFFmpegArgs(config);
-    
+
     // Empty when nothing was found: QProcess then fails to start, which is the
     // same path as a missing ffmpeg and is already reported to the user.
     const QString program = toolPath("ffmpeg");
+
+    // Kept until the next export: ffmpeg reads it while the process runs
+    m_filterScript = std::make_unique<QTemporaryFile>(
+        QDir::temp().filePath("dubinstante_filter_XXXXXX.txt"));
+    QStringList unused;
+    if (!m_filterScript->open() ||
+        m_filterScript->write(buildAudioGraph(config, &unused).toUtf8()) < 0 ||
+        !m_filterScript->flush()) {
+        emit exportFinished(false, "Erreur: Impossible d'écrire le graphe audio temporaire.");
+        return;
+    }
+    m_filterScript->close();
+
+    QStringList args = buildFFmpegArgs(config, m_filterScript->fileName(),
+                                       ffmpegMajorVersion(program));
     qDebug() << "[ExportService] Starting FFmpeg:" << program << args;
     m_process->setStandardOutputFile(QProcess::nullDevice());
     m_process->start(program, args);
@@ -276,20 +292,10 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
         return false;
     }
     
-    // Audio lists are renumbered for export (first recorded track = primary): name the file,
-    // a track number here would not match what the user sees.
-    const auto missingAudioMessage = [](const QString &path) {
-        return QString("Erreur: L'enregistrement audio est introuvable : %1").arg(path);
-    };
-
-    if (!QFile::exists(config.audioPath)) {
-        errorMessage = missingAudioMessage(config.audioPath);
-        return false;
-    }
-
-    for (const QString &extraPath : config.extraAudioPaths) {
-        if (!extraPath.isEmpty() && !QFile::exists(extraPath)) {
-            errorMessage = missingAudioMessage(extraPath);
+    for (const ExportSegment &segment : config.segments) {
+        if (!QFile::exists(segment.path)) {
+            errorMessage = QString("Erreur: L'enregistrement audio est introuvable : %1")
+                               .arg(segment.path);
             return false;
         }
     }
@@ -312,36 +318,133 @@ bool ExportService::validateConfig(const ExportConfig &config, QString &errorMes
     return true;
 }
 
-QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
+QList<ExportSegment> ExportService::clipSegments(const QList<ExportSegment> &segments,
+                                                qint64 rangeStartMs, qint64 durationMs)
+{
+    const qint64 rangeEnd = durationMs > 0 ? rangeStartMs + durationMs
+                                           : std::numeric_limits<qint64>::max();
+    QList<ExportSegment> clipped;
+    for (ExportSegment segment : segments) {
+        const qint64 from = qMax(segment.timelineStartMs, rangeStartMs);
+        const qint64 to = qMin(segment.timelineStartMs + segment.durationMs, rangeEnd);
+        if (from >= to || segment.volume < 0.01f)
+            continue;
+        segment.sourceOffsetMs += from - segment.timelineStartMs;
+        segment.timelineStartMs = from - rangeStartMs;
+        segment.durationMs = to - from;
+        clipped.append(segment);
+    }
+    return clipped;
+}
+
+QString ExportService::buildAudioGraph(const ExportConfig &config, QStringList *audioInputs)
+{
+    const auto seconds = [](qint64 ms) { return QString::number(ms / 1000.0, 'f', 3); };
+    const QList<ExportSegment> segments =
+        clipSegments(config.segments, config.rangeStartMs, config.durationMs);
+
+    // One input per file: a take heard in several comp regions is split, not reopened
+    audioInputs->clear();
+    QList<int> inputOfSegment;
+    QVector<int> usesPerInput;
+    for (const ExportSegment &segment : segments) {
+        int input = audioInputs->indexOf(segment.path);
+        if (input < 0) {
+            audioInputs->append(segment.path);
+            usesPerInput.append(0);
+            input = audioInputs->size() - 1;
+        }
+        ++usesPerInput[input];
+        inputOfSegment.append(input);
+    }
+
+    QStringList chains;
+    QStringList mixInputs;
+    if (config.originalVolume >= 0.01f) {
+        // [0:a] needs no shift: the input-side -ss already aligned it
+        chains << QString("[0:a]volume=%1[orig]").arg(config.originalVolume);
+        mixInputs << "[orig]";
+    }
+
+    QVector<QStringList> pads(audioInputs->size());
+    for (int input = 0; input < audioInputs->size(); ++input) {
+        const QString label = QString("[%1:a]").arg(input + 1);
+        if (usesPerInput[input] == 1) {
+            pads[input] << label;
+            continue;
+        }
+        QString split = label + QString("asplit=%1").arg(usesPerInput[input]);
+        for (int k = 0; k < usesPerInput[input]; ++k) {
+            const QString pad = QString("[in%1_%2]").arg(input + 1).arg(k);
+            split += pad;
+            pads[input] << pad;
+        }
+        chains << split;
+    }
+
+    // amix discards input timestamps: each piece is placed with atrim + adelay
+    for (int i = 0; i < segments.size(); ++i) {
+        const ExportSegment &segment = segments[i];
+        QString chain = pads[inputOfSegment[i]].takeFirst();
+        chain += QString("atrim=start=%1:duration=%2,asetpts=PTS-STARTPTS")
+                     .arg(seconds(segment.sourceOffsetMs), seconds(segment.durationMs));
+        if (segment.timelineStartMs > 0)
+            chain += QString(",adelay=%1:all=1").arg(segment.timelineStartMs);
+        chain += QString(",volume=%1[seg%2]").arg(segment.volume).arg(i);
+        chains << chain;
+        mixInputs << QString("[seg%1]").arg(i);
+    }
+
+    if (mixInputs.isEmpty()) {
+        // Everything muted: silence, cut by -t / -shortest like the mix would be
+        chains << "anullsrc=r=48000:cl=stereo[aout]";
+    } else {
+        // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N.
+        // apad: the mix ends with the last take when the original audio is muted, and -shortest
+        // would cut the video there; padding lets the video stream set the end.
+        chains << mixInputs.join(QString()) +
+                      QString("amix=inputs=%1:duration=longest:normalize=0,apad[aout]")
+                          .arg(mixInputs.size());
+    }
+    return chains.join(";\n");
+}
+
+int ExportService::ffmpegMajorVersion(const QString &program)
+{
+    QProcess probe;
+    probe.start(program, {"-hide_banner", "-version"});
+    if (!probe.waitForFinished(5000) || probe.exitStatus() != QProcess::NormalExit)
+        return 0;
+    // "ffmpeg version 6.1.1-3ubuntu5", "ffmpeg version n7.1", "ffmpeg version N-118000-g..."
+    const QRegularExpressionMatch match =
+        QRegularExpression(R"(ffmpeg version (N-|n?(\d+)))")
+            .match(QString::fromUtf8(probe.readAllStandardOutput()));
+    if (!match.hasMatch())
+        return 0;
+    return match.captured(1) == "N-" ? 99 : match.captured(2).toInt();
+}
+
+QStringList ExportService::buildFFmpegArgs(const ExportConfig &config,
+                                           const QString &filterScriptPath, int ffmpegMajor)
 {
     QStringList args;
-    
+
     // Overwrite output, use all threads
     args << "-y";
     args << "-threads" << "0";
-    
+
     // Input-side seek: frame-accurate when re-encoding and resets output timestamps to zero
     if (config.rangeStartMs > 0) {
         args << "-ss" << QString::number(config.rangeStartMs / 1000.0, 'f', 3);
     }
     args << "-i" << config.videoPath;   // [0]
 
-    // Timeline offsets are applied with adelay/atrim in the filter graph:
-    // amix discards input timestamps, so an input-side offset would be lost there.
-    // trackOffsetsMs[0] is the primary track, trackOffsetsMs[j] the j-th audio input.
-    QVector<qint64> audioOffsetsMs;
-    args << "-i" << config.audioPath;   // [1]
-    audioOffsetsMs.append(config.trackOffsetsMs.value(0, 0));
-
-    // Add extra audio tracks: [2], [3], ...
-    for (int i = 0; i < config.extraAudioPaths.size(); ++i) {
-        if (!config.extraAudioPaths[i].isEmpty()) {
-            args << "-i" << config.extraAudioPaths[i];
-            audioOffsetsMs.append(config.trackOffsetsMs.value(i + 1, 0));
-        }
+    QStringList audioInputs;
+    buildAudioGraph(config, &audioInputs);
+    for (const QString &input : audioInputs) {
+        args << "-i" << input;          // [1..N]
     }
-    int extraCount = audioOffsetsMs.size() - 1;
-    
+
     if (config.expertMode) {
         // Video Codec
         args << "-c:v" << config.videoCodec;
@@ -374,43 +477,10 @@ QStringList ExportService::buildFFmpegArgs(const ExportConfig &config) const
         args << "-vf" << QString("scale=%1").arg(config.scaleResolution);
     }
     
-    // Build audio filter complex
-    QString filterComplex;
-    bool includeOriginal = (config.originalVolume >= 0.01f);
-    
-    if (includeOriginal) {
-        filterComplex += QString("[0:a]volume=%1[a0];").arg(config.originalVolume);
-    }
-    
-    // Recorded tracks: input indices start at 1. [0:a] needs no shift, the input -ss already aligned it.
-    for (int j = 1; j <= audioOffsetsMs.size(); ++j) {
-        float vol = config.trackVolumes.value(j - 1, 1.0f);
-        qint64 shiftMs = audioOffsetsMs[j - 1] - config.rangeStartMs;
-        QString timing;
-        if (shiftMs > 0) {
-            timing = QString("adelay=%1:all=1,").arg(shiftMs);
-        } else if (shiftMs < 0) {
-            // Take started before the exported range: drop the part that precedes it
-            timing = QString("atrim=start=%1,asetpts=PTS-STARTPTS,").arg(QString::number(-shiftMs / 1000.0, 'f', 3));
-        }
-        filterComplex += QString("[%1:a]%2volume=%3[a%1];").arg(j).arg(timing).arg(vol);
-    }
-    
-    // AMIX: combine all audio streams
-    QString inputsStr;
-    if (includeOriginal) inputsStr += "[a0]";
-    inputsStr += "[a1]";
-    for (int i = 0; i < extraCount; ++i) {
-        inputsStr += QString("[a%1]").arg(i + 2);
-    }
-    
-    int amixInputs = (includeOriginal ? 1 : 0) + 1 + extraCount;
-    // normalize=0 (FFmpeg >= 4.4): keep user-set volumes, amix otherwise divides each input by N.
-    // apad: the mix ends with the last take when the original audio is muted, and -shortest
-    // would cut the video there; padding lets the video stream set the end.
-    filterComplex += inputsStr + QString("amix=inputs=%1:duration=longest:normalize=0,apad[aout]").arg(amixInputs);
-    
-    args << "-filter_complex" << filterComplex;
+    // "-filter_complex_script" is deprecated since ffmpeg 7.0, which reads any
+    // option value from a file with the "-/" prefix instead.
+    args << (ffmpegMajor >= 7 ? "-/filter_complex" : "-filter_complex_script")
+         << filterScriptPath;
     args << "-map" << "0:v:0";
     args << "-map" << "[aout]";
     

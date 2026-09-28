@@ -13,7 +13,6 @@
 #define MAINWINDOW_H
 
 #include <QAudioDevice>
-#include <QAudioOutput>
 #include <QCloseEvent>
 #include <QElapsedTimer>
 #include <QTimer>
@@ -39,13 +38,17 @@
 #include <QToolButton>
 #include <QWidgetAction>
 
+#include "../core/TakeTrack.h"
+
 // Forward declarations - Core layer
 class PlaybackEngine;
 class RythmoManager;
 class AudioRecorder;
 class ExportService;
 class SaveManager;
+class TrackPlayer;
 struct SaveData;
+struct ProjectMedia;
 
 // GUI includes
 class VideoWidget;
@@ -120,9 +123,8 @@ private slots:
   void onCountdownTick();
   void startRecordingProcess();
 
-  // Preview playback sync
-  void handlePreviewSync(qint64 masterPosition);
-  void handlePreviewStateChange(QMediaPlayer::PlaybackState state);
+  // Take playback follows the video
+  void syncTrackPlayers();
 
 private:
   enum class PendingSave { None, Save, SaveAs };
@@ -136,8 +138,12 @@ private:
   void enterFullscreenRecording();
   void exitFullscreenRecording();
   void updateVolumeIcon(int value);
-  void releasePreviewSource(int trackIndex);
-  void refreshPreviewSources();
+  // Single entry point for every take/comp change (a future undo command)
+  void applyTrackEdit(int trackIndex, const TakeTrack &takes);
+  QString sessionDir() const;
+  QString sessionTakePath(int trackIndex, int takeId) const;
+  // Rewrites take files relative to the project and lists the copies to make
+  QList<ProjectMedia> attachProjectMedia(SaveData &saveData, const QString &audioDirName) const;
   void showPostRecordBar(const QString &message = QString());
   void checkRecordedTake(int trackIndex);
   void hidePostRecordBar();
@@ -238,12 +244,11 @@ private:
   int m_previousVolume;
   bool m_isRecording;
   bool m_isFullscreenRecording;
-  QStringList m_tempAudioPaths;
   QElapsedTimer m_recordingTimer;
   QTimer *m_recordDurationTimer;
+  // Punch range of the last take (pre-roll excluded)
   qint64 m_lastRecordedDurationMs;
   qint64 m_lastRecordedStartMs;
-  qint64 m_recordingStartTimeMs;
 
   // Project state & Autosave recovery
   bool m_isDirty;
@@ -256,19 +261,16 @@ private:
   QLockFile m_autosaveLock{autosaveFilePath() + QStringLiteral(".lock")};
   bool m_ownsAutosave = false;
 
-  // Per-track recording state
-  QVector<bool> m_hasRecording;
-  QVector<qint64> m_trackRecordStartMs;
-  QVector<qint64> m_trackRecordDurationMs;
+  // Takes and comp of each track; their WAVs live in sessionDir()
+  QVector<TakeTrack> m_takeTracks;
+  QVector<TrackPlayer *> m_trackPlayers;
+  int m_nextTakeId = 1;
+  // Take being written by each armed track, added once its WAV is finalized
+  QHash<int, Take> m_recordingTakes;
   // Armed tracks whose recorder has not reached StoppedState yet, and takes found empty
   QList<int> m_pendingTakeChecks;
   QList<int> m_failedTakeTracks;
   PendingSave m_pendingSave = PendingSave::None;
-
-  // Preview playback
-  QVector<QMediaPlayer *> m_previewPlayers;
-  QVector<QAudioOutput *> m_previewOutputs;
-  QVector<QElapsedTimer> m_trackSyncThrottle;
 
   // Advanced settings members
   QTimer *m_autoSaveTimer;

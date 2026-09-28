@@ -74,6 +74,8 @@ set(CORE_SOURCES
     src/core/SaveManager.cpp
     src/core/TakeTrack.h
     src/core/TakeTrack.cpp
+    src/core/TrackPlayer.h
+    src/core/TrackPlayer.cpp
     src/core/SettingsManager.h
     src/core/SettingsManager.cpp
 )

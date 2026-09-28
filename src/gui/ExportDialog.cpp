@@ -12,27 +12,17 @@
 #include <QRegularExpression>
 
 ExportDialog::ExportDialog(const QString &sourceVideo,
-                          const QString &primaryAudio,
-                          const QStringList &extraAudios,
+                          const QList<ExportTrack> &tracks,
                           qint64 lastRecordedDurationMs,
                           qint64 lastRecordedStartMs,
-                          const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
-                          const QVector<float> &currentTrackVolumes,
-                          const QVector<bool> &currentTrackMutes,
-                          const QVector<int> &trackNumbers,
                           QWidget *parent)
     : QDialog(parent)
     , m_sourceVideoPath(sourceVideo)
-    , m_primaryAudioPath(primaryAudio)
-    , m_extraAudioPaths(extraAudios)
+    , m_tracks(tracks)
     , m_lastRecordedDurationMs(lastRecordedDurationMs)
     , m_lastRecordedStartMs(lastRecordedStartMs)
-    , m_trackOffsetsMs(trackOffsetsMs)
     , m_defaultOriginalVolume(currentOriginalVolume)
-    , m_defaultTrackVolumes(currentTrackVolumes)
-    , m_defaultTrackMutes(currentTrackMutes)
-    , m_trackNumbers(trackNumbers)
     , m_videoOriginalWidth(0)
     , m_videoOriginalHeight(0)
     , m_videoAspectRatio(1.777f)
@@ -437,13 +427,8 @@ void ExportDialog::setupUi()
     m_audioTracksLayout->addWidget(origRow);
 
     // Mic tracks
-    if (!m_primaryAudioPath.isEmpty()) {
-        addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(0, 1)), 0);
-    }
-    for (int i = 0; i < m_extraAudioPaths.size(); ++i) {
-        if (!m_extraAudioPaths[i].isEmpty()) {
-            addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(i + 1, i + 2)), i + 1);
-        }
+    for (int i = 0; i < m_tracks.size(); ++i) {
+        addTrackRow(scrollWidget, i);
     }
 
     m_audioTracksLayout->addStretch();
@@ -511,8 +496,10 @@ void ExportDialog::setupUi()
     connect(m_btnExport, &QPushButton::clicked, this, &QDialog::accept);
 }
 
-void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
+void ExportDialog::addTrackRow(QWidget *parent, int index)
 {
+    const ExportTrack &track = m_tracks[index];
+    const QString title = tr("Piste %1").arg(track.number);
     QWidget *row = new QWidget(parent);
     QHBoxLayout *rowLayout = new QHBoxLayout(row);
     rowLayout->setContentsMargins(0, 0, 0, 0);
@@ -523,14 +510,8 @@ void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
     lbl->setProperty("cssClass", "fineLabel");
     rowLayout->addWidget(lbl);
 
-    float defaultVolume = 1.0f;
-    if (m_defaultTrackVolumes.size() > index) {
-        defaultVolume = m_defaultTrackVolumes[index];
-    }
-    bool defaultMute = false;
-    if (m_defaultTrackMutes.size() > index) {
-        defaultMute = m_defaultTrackMutes[index];
-    }
+    const float defaultVolume = track.volume;
+    const bool defaultMute = track.muted;
 
     QSlider *slider = new QSlider(Qt::Horizontal, row);
     slider->setRange(0, 200);
@@ -855,7 +836,7 @@ void ExportDialog::onMuteToggled()
             if (muted) {
                 m_trackSliders[idx]->setValue(0);
             } else {
-                float defVol = (m_defaultTrackVolumes.size() > idx) ? m_defaultTrackVolumes[idx] : 1.0f;
+                const float defVol = m_tracks.value(idx).volume;
                 m_trackSliders[idx]->setValue(qBound(10, static_cast<int>(defVol * 100), 100));
             }
         }
@@ -866,17 +847,16 @@ ExportConfig ExportDialog::exportConfig() const
 {
     ExportConfig config;
     config.videoPath = m_sourceVideoPath;
-    config.audioPath = m_primaryAudioPath;
-    config.extraAudioPaths = m_extraAudioPaths;
     config.outputPath = m_outputPathEdit->text().trimmed();
     
     config.originalVolume = m_originalMuteBtn->isChecked() ? 0.0f : (m_originalVolumeSlider->value() / 100.0f);
     for (int i = 0; i < m_trackSliders.size(); ++i) {
-        float vol = m_trackMuteBtns[i]->isChecked() ? 0.0f : (m_trackSliders[i]->value() / 100.0f);
-        config.trackVolumes.append(vol);
+        const float vol = m_trackMuteBtns[i]->isChecked() ? 0.0f : (m_trackSliders[i]->value() / 100.0f);
+        for (ExportSegment segment : m_tracks[i].segments) {
+            segment.volume = vol;
+            config.segments.append(segment);
+        }
     }
-
-    config.trackOffsetsMs = m_trackOffsetsMs;
 
     // Time Range
     if (m_rangeCombo->currentData().toString() == "last") {

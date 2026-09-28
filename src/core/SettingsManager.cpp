@@ -84,6 +84,16 @@ void SettingsManager::setCountdownDuration(int seconds) {
     settings.setValue("countdown", seconds);
 }
 
+int SettingsManager::preRollSeconds() const {
+    QSettings settings;
+    return settings.value("recording/pre_roll", 2).toInt();
+}
+
+void SettingsManager::setPreRollSeconds(int seconds) {
+    QSettings settings;
+    settings.setValue("recording/pre_roll", seconds);
+}
+
 QString SettingsManager::defaultMicrophone() const {
     QSettings settings;
     return settings.value("audio/default_microphone", "").toString();

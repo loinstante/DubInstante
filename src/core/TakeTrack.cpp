@@ -1,6 +1,8 @@
 #include "TakeTrack.h"
 
+#include <QFile>
 #include <QSet>
+#include <QtEndian>
 #include <algorithm>
 #include <limits>
 
@@ -107,10 +109,14 @@ void TakeTrack::removeTake(int takeId) {
   mergeSilence();
 }
 
-void TakeTrack::setTakeFile(int takeId, const QString &file) {
-  for (Take &t : m_takes)
-    if (t.id == takeId)
+void TakeTrack::setTakeMedia(int takeId, const QString &file, qint64 durationMs) {
+  for (Take &t : m_takes) {
+    if (t.id == takeId) {
       t.file = file;
+      if (durationMs > t.inMs)
+        t.durationMs = durationMs;
+    }
+  }
 }
 
 int TakeTrack::regionIndexAt(qint64 timeMs) const {
@@ -161,4 +167,39 @@ void TakeTrack::mergeSilence() {
   for (int i = m_regions.size() - 1; i > 0; --i)
     if (m_regions[i].takeId == 0 && m_regions[i - 1].takeId == 0)
       m_regions.removeAt(i);
+}
+
+qint64 wavDurationMs(const QString &path) {
+  QFile file(path);
+  if (!file.open(QIODevice::ReadOnly))
+    return -1;
+  const QByteArray riff = file.read(12);
+  if (riff.size() != 12 || !riff.startsWith("RIFF") || riff.mid(8, 4) != "WAVE")
+    return -1;
+
+  quint32 byteRate = 0;
+  while (!file.atEnd()) {
+    const QByteArray chunk = file.read(8);
+    if (chunk.size() != 8)
+      return -1;
+    const quint32 size = qFromLittleEndian<quint32>(chunk.constData() + 4);
+    if (chunk.startsWith("fmt ")) {
+      const QByteArray fmt = file.read(size);
+      if (fmt.size() < 16)
+        return -1;
+      byteRate = qFromLittleEndian<quint32>(fmt.constData() + 8);
+    } else if (chunk.startsWith("data")) {
+      if (byteRate == 0)
+        return -1;
+      // A writer killed mid-take leaves the size unset: trust the file length
+      const qint64 available = file.size() - file.pos();
+      const qint64 dataSize = (size == 0 || size > available) ? available : size;
+      return dataSize * 1000 / byteRate;
+    } else if (!file.seek(file.pos() + size)) {
+      return -1;
+    }
+    if (size & 1)
+      file.seek(file.pos() + 1);
+  }
+  return -1;
 }

@@ -55,6 +55,12 @@ struct Segment {
   qint64 timelineEndMs() const { return timelineStartMs + durationMs; }
 };
 
+/// Length of a legacy take whose duration was never stored, until measured.
+constexpr qint64 kOpenEndedTakeMs = 24LL * 3600 * 1000;
+
+/// Duration of a PCM WAV read from its header, or -1 if it cannot be parsed.
+qint64 wavDurationMs(const QString &path);
+
 class TakeTrack {
 public:
   TakeTrack();
@@ -79,8 +85,8 @@ public:
   void choose(qint64 timeMs, int takeId);
   /// Drops the take; its regions fall back to the newest remaining take covering them.
   void removeTake(int takeId);
-  /// Every file path, e.g. to relocate takes after a load.
-  void setTakeFile(int takeId, const QString &file);
+  /// Relocates a take after a load and sets its measured length.
+  void setTakeMedia(int takeId, const QString &file, qint64 durationMs);
 
   int regionIndexAt(qint64 timeMs) const;
   qint64 regionEndMs(int index) const;   ///< Exclusive; max qint64 for the last region

@@ -87,7 +87,7 @@ void GlobalSettingsDialog::setupUi() {
     // Sidebar
     QFrame *sidebar = new QFrame(this);
     sidebar->setObjectName("settingsSidebarCard");
-    sidebar->setFixedWidth(160);
+    sidebar->setMinimumWidth(160);
     QVBoxLayout *sidebarLayout = new QVBoxLayout(sidebar);
     sidebarLayout->setContentsMargins(8, 8, 8, 8);
     sidebarLayout->setSpacing(6);

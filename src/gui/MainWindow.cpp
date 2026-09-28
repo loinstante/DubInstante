@@ -471,6 +471,11 @@ void MainWindow::setupUi() {
   m_rythmoOverlay = new RythmoOverlay(m_videoFrame);
   m_rythmoOverlay->show();
 
+  // Time runs left to right in every language, Arabic included: set on the
+  // widgets themselves, which the fullscreen recording reparents
+  m_videoWidget->setLayoutDirection(Qt::LeftToRight);
+  m_rythmoOverlay->setLayoutDirection(Qt::LeftToRight);
+
   // Takes timeline under the video, resizable against it
   QScrollArea *timelineScroll = new QScrollArea(this);
   timelineScroll->setObjectName("takeTimelineScroll");
@@ -478,6 +483,7 @@ void MainWindow::setupUi() {
   timelineScroll->setFrameShape(QFrame::NoFrame);
   timelineScroll->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
   m_takeTimeline = new TakeTimeline(timelineScroll);
+  m_takeTimeline->setLayoutDirection(Qt::LeftToRight);
   timelineScroll->setWidget(m_takeTimeline);
 
   QSplitter *videoSplitter = new QSplitter(Qt::Vertical, this);
@@ -519,6 +525,8 @@ void MainWindow::setupUi() {
   controlBar->setMinimumHeight(72);
   controlBar->setAttribute(Qt::WA_StyledBackground, true);
   controlBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
+  // Transport reads like a player: back on the left, forward on the right
+  controlBar->setLayoutDirection(Qt::LeftToRight);
 
   auto *controlShadow = new QGraphicsDropShadowEffect(controlBar);
   controlShadow->setBlurRadius(20);

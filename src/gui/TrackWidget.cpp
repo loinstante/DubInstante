@@ -68,7 +68,6 @@ void TrackWidget::setupUi(const QString& title)
     
     QLabel *inLabel = new QLabel(tr("IN:"), this);
     inLabel->setProperty("cssClass", "track-control-label");
-    inLabel->setFixedWidth(30);
 
     m_inputCombo = new QComboBox(this);
     m_inputCombo->setProperty("cssClass", "track-control-select");
@@ -85,7 +84,10 @@ void TrackWidget::setupUi(const QString& title)
 
     QLabel *volLabel = new QLabel(tr("VOL:"), this);
     volLabel->setProperty("cssClass", "track-control-label");
-    volLabel->setFixedWidth(30);
+    // Same width so both controls line up, whatever the language's labels
+    const int labelWidth = qMax(inLabel->sizeHint().width(), volLabel->sizeHint().width());
+    inLabel->setMinimumWidth(labelWidth);
+    volLabel->setMinimumWidth(labelWidth);
 
     m_volumeSlider = new QSlider(Qt::Horizontal, this);
     m_volumeSlider->setRange(0, 100);

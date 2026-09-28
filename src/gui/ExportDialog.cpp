@@ -405,7 +405,7 @@ void ExportDialog::setupUi()
     origRowLayout->setSpacing(8);
 
     QLabel *origTitle = new QLabel(tr("Original audio:"), origRow);
-    origTitle->setFixedWidth(100);
+    origTitle->setMinimumWidth(100);
     origTitle->setProperty("cssClass", "fineLabel");
     origRowLayout->addWidget(origTitle);
 
@@ -415,7 +415,7 @@ void ExportDialog::setupUi()
     origRowLayout->addWidget(m_originalVolumeSlider);
 
     m_originalVolPercentLabel = new QLabel(percentText(m_originalVolumeSlider->value()), origRow);
-    m_originalVolPercentLabel->setFixedWidth(34);
+    m_originalVolPercentLabel->setMinimumWidth(40);
     m_originalVolPercentLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     origRowLayout->addWidget(m_originalVolPercentLabel);
 
@@ -509,7 +509,7 @@ void ExportDialog::addTrackRow(QWidget *parent, int index)
     rowLayout->setSpacing(8);
 
     QLabel *lbl = new QLabel(tr("%1:").arg(title), row);
-    lbl->setFixedWidth(100);
+    lbl->setMinimumWidth(100);
     lbl->setProperty("cssClass", "fineLabel");
     rowLayout->addWidget(lbl);
 
@@ -523,7 +523,7 @@ void ExportDialog::addTrackRow(QWidget *parent, int index)
     rowLayout->addWidget(slider);
 
     QLabel *pct = new QLabel(percentText(slider->value()), row);
-    pct->setFixedWidth(34);
+    pct->setMinimumWidth(40);
     pct->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     rowLayout->addWidget(pct);
 

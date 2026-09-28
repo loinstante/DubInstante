@@ -193,8 +193,17 @@ QColor TakeTimeline::trackColor(int track) const {
 // Painting
 // =============================================================================
 
+// Translated labels run longer than the English the header was sized for
+static void drawFitted(QPainter &p, const QRect &rect, const QString &text) {
+  p.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter,
+             p.fontMetrics().elidedText(text, Qt::ElideRight, rect.width()));
+}
+
 void TakeTimeline::paintEvent(QPaintEvent *) {
   QPainter p(this);
+  // A painter takes the application direction, not the widget's: Arabic would
+  // right-align every label against the time axis
+  p.setLayoutDirection(layoutDirection());
   const QPalette pal = palette();
   const QColor base = pal.color(QPalette::Base);
   const QColor headerBg = pal.color(QPalette::AlternateBase);
@@ -248,14 +257,12 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       if (row.track == m_selectedTrack)
         p.fillRect(QRect(0, row.y, 3, row.height), color);
       p.setPen(text);
-      p.drawText(header.adjusted(10, 3, -6, -row.height / 2),
-                 Qt::AlignLeft | Qt::AlignVCenter,
+      drawFitted(p, header.adjusted(10, 3, -6, -row.height / 2),
                  QString("%1  %2").arg(m_expanded.value(row.track) ? "▾" : "▸",
                                        tr("Track %1").arg(row.track + 1)));
       p.setPen(muted);
       p.setFont(small);
-      p.drawText(header.adjusted(24, row.height / 2, -6, -3),
-                 Qt::AlignLeft | Qt::AlignVCenter,
+      drawFitted(p, header.adjusted(24, row.height / 2, -6, -3),
                  //: A take is one recording pass of a track (audio, not a film shot)
                  tr("%n take(s)", nullptr, int(track.takes().size())));
       p.setFont(font());
@@ -267,7 +274,7 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       p.fillRect(lane, laneBg);
       if (track.isEmpty()) {
         p.setPen(muted);
-        p.drawText(lane.adjusted(10, 0, 0, 0), Qt::AlignLeft | Qt::AlignVCenter,
+        drawFitted(p, lane.adjusted(10, 0, -10, 0),
                    tr("No take: arm the track and start recording"));
       }
       for (const Segment &segment : segments) {
@@ -297,7 +304,7 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
       if (!take)
         continue;
       p.setPen(muted);
-      p.drawText(header.adjusted(24, 0, -6, 0), Qt::AlignLeft | Qt::AlignVCenter,
+      drawFitted(p, header.adjusted(24, 0, -6, 0),
                  tr("Take %1").arg(takeNumber(row.track, row.takeId)));
 
       p.save();

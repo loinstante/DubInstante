@@ -1,6 +1,7 @@
 #include "SettingsManager.h"
 
 #include <QDir>
+#include <QFileInfo>
 #include <QTranslator>
 
 SettingsManager& SettingsManager::instance() {
@@ -79,18 +80,26 @@ void SettingsManager::setLanguage(const QString &language) {
     settings.setValue("language", language);
 }
 
+// dubinstante_<code>.qm: the file name is the code, not the language the .ts
+// declares inside ("fr_FR", "es_ES"), which names a region
+static QString languageCode(const QString &qmPath) {
+    const QString file = QFileInfo(qmPath).completeBaseName();
+    return file.mid(file.indexOf('_') + 1);
+}
+
 QStringList SettingsManager::shippedLanguages() {
     QStringList codes;
     const QStringList files = QDir(":/i18n").entryList({"dubinstante_*.qm"}, QDir::Files);
     for (const QString &file : files)
-        codes << file.mid(12, file.size() - 12 - 3); // dubinstante_<code>.qm
+        codes << languageCode(file);
     return codes;
 }
 
 QString SettingsManager::shippedLanguage(const QLocale &locale) {
     // QTranslator walks the locale's UI languages: fr-CA falls back to fr
     QTranslator probe;
-    return probe.load(locale, "dubinstante", "_", ":/i18n") ? probe.language() : QString();
+    return probe.load(locale, "dubinstante", "_", ":/i18n") ? languageCode(probe.filePath())
+                                                             : QString();
 }
 
 bool SettingsManager::autoSaveEnabled() const {

@@ -205,7 +205,7 @@ void ExportDialog::setupUi()
     QLabel *expAcLbl = new QLabel(tr("Audio Codec"), tabCodecs); expAcLbl->setProperty("cssClass", "fineLabel");
     layoutCodecs->addRow(expAcLbl, m_expAudioCodecCombo);
 
-    m_expertWidget->addTab(tabCodecs, tr("Streams & Codecs"));
+    m_expertWidget->addTab(tabCodecs, tr("Streams & Codecs").replace('&', "&&"));
 
     // ==========================================
     // TAB 2: Image & Quality
@@ -309,7 +309,7 @@ void ExportDialog::setupUi()
     QLabel *expPresetLbl = new QLabel(tr("Speed Preset"), tabVideo); expPresetLbl->setProperty("cssClass", "fineLabel");
     layoutVideo->addRow(expPresetLbl, m_expPresetCombo);
 
-    m_expertWidget->addTab(tabVideo, tr("Picture & Quality"));
+    m_expertWidget->addTab(tabVideo, tr("Picture & Quality").replace('&', "&&"));
 
     // ==========================================
     // TAB 3: Audio & Advanced
@@ -343,7 +343,7 @@ void ExportDialog::setupUi()
     QLabel *expFlagsLbl = new QLabel(tr("FFmpeg Flags"), tabAudio); expFlagsLbl->setProperty("cssClass", "fineLabel");
     layoutAudio->addRow(expFlagsLbl, m_expCustomFlagsEdit);
 
-    m_expertWidget->addTab(tabAudio, tr("Audio & Flags"));
+    m_expertWidget->addTab(tabAudio, tr("Audio & Flags").replace('&', "&&"));
     
     leftColumn->addWidget(m_expertWidget);
 

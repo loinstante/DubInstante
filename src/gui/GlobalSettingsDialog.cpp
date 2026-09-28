@@ -9,6 +9,7 @@
 #include <QFormLayout>
 #include <QGroupBox>
 #include <QLabel>
+#include <QHash>
 #include <QLocale>
 #include <QMessageBox>
 #include <QFrame>
@@ -97,7 +98,8 @@ void GlobalSettingsDialog::setupUi() {
 
     QStringList tabLabels = { tr("General"), tr("Audio & Microphones"), tr("Keyboard Shortcuts") };
     for (int i = 0; i < tabLabels.size(); ++i) {
-        QPushButton *btn = new QPushButton(tabLabels[i], sidebar);
+        // "&" would turn into a keyboard mnemonic and vanish
+        QPushButton *btn = new QPushButton(QString(tabLabels[i]).replace('&', "&&"), sidebar);
         btn->setCheckable(true);
         btn->setProperty("cssClass", "settingsTabButton");
         btn->setMinimumHeight(34);
@@ -530,13 +532,15 @@ void GlobalSettingsDialog::updateShortcutButtons() {
 
 // Empty code: no shipped translation matches, the English source is shown
 QString GlobalSettingsDialog::languageName(const QString &code) {
-    if (code.isEmpty() || code == "en")
-        return QStringLiteral("English");
-    const QLocale locale(code);
-    QString name = locale.nativeLanguageName();
-    // pt_BR reads "Português (Brasil)"; zh_CN already names its variant
-    if (code.contains('_') && name == QLocale(locale.language()).nativeLanguageName())
-        name += " (" + locale.nativeTerritoryName() + ")";
+    // QLocale names a region ("español de España", "American English"): the
+    // shipped languages get the name their speakers expect
+    static const QHash<QString, QString> names = {
+        {"en", "English"},  {"fr", "Français"}, {"es", "Español"},
+        {"pt_BR", "Português (Brasil)"}, {"de", "Deutsch"}, {"it", "Italiano"},
+        {"ja", "日本語"},   {"zh_CN", "简体中文"}, {"ru", "Русский"}, {"ar", "العربية"}};
+    if (code.isEmpty())
+        return names.value("en");
+    const QString name = names.value(code, QLocale(code).nativeLanguageName());
     return name.left(1).toUpper() + name.mid(1);
 }
 

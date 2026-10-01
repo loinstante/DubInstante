@@ -184,7 +184,7 @@ int TakeTimeline::takeNumber(int track, int takeId) const {
 }
 
 QColor TakeTimeline::trackColor(int track) const {
-  static const QColor colors[] = {QColor("#7c56f5"), QColor("#e8a33d"),
+  static const QColor colors[] = {QColor("#5f8fbf"), QColor("#e8a33d"),
                                   QColor("#2fb49c"), QColor("#e0567a")};
   return colors[track % 4];
 }
@@ -197,6 +197,19 @@ QColor TakeTimeline::trackColor(int track) const {
 static void drawFitted(QPainter &p, const QRect &rect, const QString &text) {
   p.drawText(rect, Qt::AlignLeft | Qt::AlignVCenter,
              p.fontMetrics().elidedText(text, Qt::ElideRight, rect.width()));
+}
+
+// White or near-black, whichever reads better on the block as painted (alpha
+// over the lane). 0.2 is the luminance where both contrast equally.
+static QColor labelColor(const QColor &block, const QColor &lane) {
+  auto channel = [&](qreal fg, qreal bg) {
+    const qreal v = fg * block.alphaF() + bg * (1 - block.alphaF());
+    return v <= 0.03928 ? v / 12.92 : std::pow((v + 0.055) / 1.055, 2.4);
+  };
+  const qreal luminance = 0.2126 * channel(block.redF(), lane.redF()) +
+                          0.7152 * channel(block.greenF(), lane.greenF()) +
+                          0.0722 * channel(block.blueF(), lane.blueF());
+  return luminance > 0.2 ? QColor("#1d1d1d") : QColor(Qt::white);
 }
 
 void TakeTimeline::paintEvent(QPaintEvent *) {
@@ -286,7 +299,7 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
         path.addRoundedRect(block, 3, 3);
         p.fillPath(path, fill);
         if (block.width() > 28) {
-          p.setPen(Qt::white);
+          p.setPen(labelColor(fill, base));
           p.drawText(block.adjusted(6, 0, -2, 0), Qt::AlignLeft | Qt::AlignVCenter,
                      //: Very short "Take %1", drawn inside small timeline blocks
                      tr("T%1").arg(takeNumber(row.track, segment.takeId)));
@@ -331,15 +344,19 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
   // Playhead
   const int x = xAt(m_positionMs);
   if (x >= kHeaderWidth && x <= width()) {
-    const QColor playhead("#ff4d66");
-    p.setPen(QPen(playhead, 2));
+    // Neutral, with a halo: any track colour (or an accent) can sit under it
+    QColor halo = base;
+    halo.setAlpha(160);
+    p.setPen(QPen(halo, 4));
+    p.drawLine(x, 0, x, height());
+    p.setPen(QPen(text, 2));
     p.drawLine(x, 0, x, height());
     QPainterPath marker;
     marker.moveTo(x - 5, 0);
     marker.lineTo(x + 5, 0);
     marker.lineTo(x, 7);
     marker.closeSubpath();
-    p.fillPath(marker, playhead);
+    p.fillPath(marker, text);
   }
 }
 

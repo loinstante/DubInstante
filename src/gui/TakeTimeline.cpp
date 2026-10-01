@@ -222,7 +222,9 @@ void TakeTimeline::paintEvent(QPaintEvent *) {
   const QColor headerBg = pal.color(QPalette::AlternateBase);
   const QColor line = pal.color(QPalette::Mid);
   const QColor text = pal.color(QPalette::Text);
-  const QColor muted = pal.color(QPalette::PlaceholderText);
+  // Not PlaceholderText: a QSS `color` makes Qt derive it as 60% of Text (4.3:1 on the light theme)
+  QColor muted = text;
+  muted.setAlpha(180);
   const QRect lanes(kHeaderWidth, 0, laneWidth(), height());
 
   p.fillRect(rect(), base);

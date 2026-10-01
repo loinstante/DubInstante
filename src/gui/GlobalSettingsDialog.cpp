@@ -1,6 +1,5 @@
 #include "GlobalSettingsDialog.h"
 #include "../core/SettingsManager.h"
-#include "Palette.h"
 
 #include <QMediaDevices>
 #include <QAudioDevice>
@@ -519,13 +518,11 @@ void GlobalSettingsDialog::updateShortcutButtons() {
         
         QPushButton *btn = m_shortcutButtons.value(actionId, nullptr);
         if (btn) {
-            if (seq.isEmpty()) {
-                btn->setText(tr("None"));
-                btn->setStyleSheet(QStringLiteral("color: %1; font-style: italic;").arg(QLatin1String(Brand::TextMuted)));
-            } else {
-                btn->setText(seq.toString(QKeySequence::NativeText));
-                btn->setStyleSheet(""); // reset to stylesheet default
-            }
+            const bool empty = seq.isEmpty();
+            btn->setText(empty ? tr("None") : seq.toString(QKeySequence::NativeText));
+            btn->setProperty("empty", empty);
+            btn->style()->unpolish(btn);
+            btn->style()->polish(btn);
         }
     }
 }

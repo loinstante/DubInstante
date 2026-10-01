@@ -17,7 +17,7 @@ TrackWidget::TrackWidget(int trackIndex, const QString& title, QWidget *parent)
     auto *shadow = new QGraphicsDropShadowEffect(this);
     shadow->setBlurRadius(16);
     shadow->setOffset(0, 4);
-    shadow->setColor(QColor(17, 24, 39, 18));
+    shadow->setColor(QColor(20, 20, 20, 18));
     setGraphicsEffect(shadow);
 
     setupUi(title);
@@ -37,7 +37,7 @@ void TrackWidget::setupUi(const QString& title)
     m_titleLabel = new QLabel(title, this);
     m_titleLabel->setProperty("cssClass", "track-header-title");
 
-    m_optionsButton = new QPushButton("⚙️", this);
+    m_optionsButton = new QPushButton(QStringLiteral(u"\u2699\uFE0E"), this); // text glyph: the emoji one ignores the QSS colour
     m_optionsButton->setFixedSize(28, 28);
     m_optionsButton->setFlat(true);
     m_optionsButton->setProperty("cssClass", "track-header-btn");

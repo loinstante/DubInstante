@@ -251,11 +251,11 @@ void TrackSettingsDialog::updateColorButton(QPushButton *btn,
     isDark = (palette().color(QPalette::Window).value() < 128);
   }
 
-  QString borderCol = isDark ? Brand::SurfaceAlt : "#cbd5e1";
+  QString borderCol = isDark ? Brand::SurfaceAlt : "#c2c0ba";
 
   if (color.alpha() == 0) {
-    QString bgCol = isDark ? "#161622" : "#ffffff";
-    QString fgCol = isDark ? Brand::TextMuted : "#64748b";
+    QString bgCol = isDark ? "#242424" : "#f7f6f3";
+    QString fgCol = isDark ? Brand::TextMuted : "#64625e";
     btn->setStyleSheet(QString("background-color: %1;"
                                "border: 1px dashed %2;"
                                "border-radius: 8px;"
@@ -264,7 +264,7 @@ void TrackSettingsDialog::updateColorButton(QPushButton *btn,
                            .arg(bgCol, borderCol, fgCol));
     btn->setText(tr("Transparent"));
   } else {
-    const QString textColor = color.lightnessF() > 0.55 ? "#0f172a" : "#ffffff";
+    const QString textColor = color.lightnessF() > 0.55 ? "#1d1d1d" : "#ffffff";
     btn->setStyleSheet(
         QString("background-color: %1;"
                 "border: 1px solid %2;"
@@ -381,17 +381,17 @@ void TrackSettingsDialog::applyPreset() {
     style.textColor = QColor(255, 255, 255);
     style.backgroundColor = QColor(34, 34, 34);
   } else if (btn == m_presetBlue) {
-    style.textColor = QColor(0, 120, 215);
+    style.textColor = QColor(0, 104, 192);
     style.backgroundColor = QColor(255, 255, 255);
   } else if (btn == m_presetRed) {
     style.textColor = QColor(194, 57, 52);
     style.backgroundColor = QColor(255, 255, 255);
   } else if (btn == m_presetGreen) {
     style.textColor = QColor(39, 174, 96);
-    style.backgroundColor = QColor(255, 255, 255);
+    style.backgroundColor = QColor(34, 34, 34);
   } else if (btn == m_presetYellow) {
     style.textColor = QColor(241, 196, 15);
-    style.backgroundColor = QColor(255, 255, 255);
+    style.backgroundColor = QColor(34, 34, 34);
   }
 
   m_rythmoManager->setTrackStyle(m_currentTrackIndex, style);

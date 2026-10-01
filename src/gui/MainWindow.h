@@ -57,6 +57,7 @@ class TrackWidget;
 class ClickableSlider;
 class TakeTimeline;
 class QUndoStack;
+class QSplitter;
 class QVBoxLayout;
 class QHBoxLayout;
 class QGridLayout;
@@ -134,6 +135,8 @@ private:
   enum class PendingSave { None, Save, SaveAs };
 
   void setupUi();
+  // Grows the timeline panel to show every track; never shrinks a panel the user enlarged
+  void fitTimeline();
   void createMenus();
   void setupConnections();
   void setupShortcuts();
@@ -230,6 +233,7 @@ private:
   QPushButton *m_exportCancelBtn;
 
   // Fullscreen recording
+  QSplitter *m_videoSplitter;
   QFrame *m_videoFrame;
   QWidget *m_fullscreenContainer;
 

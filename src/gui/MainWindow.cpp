@@ -179,7 +179,7 @@ MainWindow::MainWindow(QWidget *parent)
   // Window configuration
   updateWindowTitle();
   resize(900, 600);
-  setMinimumSize(800, 500);
+  setMinimumSize(800, 540);
   setWindowState(Qt::WindowMaximized);
 
   // Construire l'interface a émis des signaux de mutation (peuplement des combos,
@@ -464,6 +464,7 @@ void MainWindow::setupUi() {
   m_videoFrame->setObjectName("videoFrame");
   m_videoFrame->setFrameStyle(QFrame::NoFrame);
   m_videoFrame->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
+  m_videoFrame->setMinimumHeight(100);
 
   m_videoWidget = new VideoWidget(m_videoFrame);
   m_videoWidget->show();
@@ -486,20 +487,21 @@ void MainWindow::setupUi() {
   m_takeTimeline->setLayoutDirection(Qt::LeftToRight);
   timelineScroll->setWidget(m_takeTimeline);
 
-  QSplitter *videoSplitter = new QSplitter(Qt::Vertical, this);
-  videoSplitter->setObjectName("videoSplitter");
-  videoSplitter->setChildrenCollapsible(false);
-  videoSplitter->addWidget(m_videoFrame);
-  videoSplitter->addWidget(timelineScroll);
-  videoSplitter->setStretchFactor(0, 1);
-  videoSplitter->setStretchFactor(1, 0);
-  if (!videoSplitter->restoreState(QSettings().value("ui/video_splitter").toByteArray()))
-    videoSplitter->setSizes({1000, m_takeTimeline->sizeHint().height()});
-  connect(videoSplitter, &QSplitter::splitterMoved, this, [videoSplitter]() {
-    QSettings().setValue("ui/video_splitter", videoSplitter->saveState());
+  m_videoSplitter = new QSplitter(Qt::Vertical, this);
+  m_videoSplitter->setObjectName("videoSplitter");
+  m_videoSplitter->setChildrenCollapsible(false);
+  m_videoSplitter->addWidget(m_videoFrame);
+  m_videoSplitter->addWidget(timelineScroll);
+  m_videoSplitter->setStretchFactor(0, 1);
+  m_videoSplitter->setStretchFactor(1, 0);
+  m_videoSplitter->restoreState(QSettings().value("ui/video_splitter").toByteArray());
+  connect(m_videoSplitter, &QSplitter::splitterMoved, this, [this]() {
+    QSettings().setValue("ui/video_splitter", m_videoSplitter->saveState());
   });
+  connect(m_takeTimeline, &TakeTimeline::contentHeightChanged, this,
+          &MainWindow::fitTimeline);
 
-  mainLayout->addWidget(videoSplitter, 1);
+  mainLayout->addWidget(m_videoSplitter, 1);
 
   // Watch for resize events
   m_videoFrame->installEventFilter(this);
@@ -517,12 +519,12 @@ void MainWindow::setupUi() {
 
   QWidget *controlBarHost = new QWidget(this);
   QHBoxLayout *controlBarHostLayout = new QHBoxLayout(controlBarHost);
-  controlBarHostLayout->setContentsMargins(12, 10, 12, 0);
+  controlBarHostLayout->setContentsMargins(12, 8, 12, 0);
   controlBarHostLayout->setSpacing(0);
 
   QWidget *controlBar = new QWidget(controlBarHost);
   controlBar->setObjectName("controlBar");
-  controlBar->setMinimumHeight(72);
+  controlBar->setMinimumHeight(56);
   controlBar->setAttribute(Qt::WA_StyledBackground, true);
   controlBar->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
   // Transport reads like a player: back on the left, forward on the right
@@ -536,7 +538,7 @@ void MainWindow::setupUi() {
   controlBarHostLayout->addWidget(controlBar);
 
   QHBoxLayout *controlBarLayout = new QHBoxLayout(controlBar);
-  controlBarLayout->setContentsMargins(18, 12, 18, 12);
+  controlBarLayout->setContentsMargins(18, 8, 18, 8);
   controlBarLayout->setSpacing(12);
 
   m_stepBackButton = new QPushButton(QIcon(":/resources/icons/arrow_left.svg"), "", controlBar);
@@ -610,7 +612,7 @@ void MainWindow::setupUi() {
   m_recordButton = new QPushButton(recordIdleText(), controlBar);
   m_recordButton->setObjectName("recordButton");
   m_recordButton->setCheckable(true);
-  m_recordButton->setMinimumHeight(34);
+  m_recordButton->setMinimumHeight(30);
   m_recordButton->setMinimumWidth(132);
   m_recordButton->setCursor(Qt::PointingHandCursor);
   group2Layout->addWidget(m_recordButton);
@@ -689,18 +691,17 @@ void MainWindow::setupUi() {
 
   controlBarLayout->addLayout(group3Layout);
 
-  mainLayout->addWidget(controlBarHost);
-
   // =========================================================================
   // Post-Record Notification Bar
   // =========================================================================
 
   m_postRecordBar = new QWidget(centralWidget);
   m_postRecordBar->setObjectName("postRecordBar");
+  m_postRecordBar->setFixedHeight(34);
   m_postRecordBar->setVisible(false);
 
   QHBoxLayout *prLayout = new QHBoxLayout(m_postRecordBar);
-  prLayout->setContentsMargins(12, 6, 12, 6);
+  prLayout->setContentsMargins(12, 3, 12, 3);
 
   m_postRecordLabel = new QLabel(tr("✅ Recording finished!"), m_postRecordBar);
   m_postRecordLabel->setProperty("cssClass", "settingsLabel");
@@ -726,11 +727,13 @@ void MainWindow::setupUi() {
 
   QPushButton *closeBtn = new QPushButton(tr("✕"), m_postRecordBar);
   closeBtn->setProperty("cssClass", "iconButton");
-  closeBtn->setFixedSize(28, 28);
+  closeBtn->setFixedSize(24, 24);
   connect(closeBtn, &QPushButton::clicked, this, &MainWindow::hidePostRecordBar);
   prLayout->addWidget(closeBtn);
 
+  // Above the transport: showing it shrinks the video, the controls stay put
   mainLayout->addWidget(m_postRecordBar);
+  mainLayout->addWidget(controlBarHost);
 
   // =========================================================================
   // Mixer Zone
@@ -738,24 +741,38 @@ void MainWindow::setupUi() {
 
   QWidget *mixerHost = new QWidget(this);
   QHBoxLayout *mixerHostLayout = new QHBoxLayout(mixerHost);
-  mixerHostLayout->setContentsMargins(12, 10, 12, 12);
+  mixerHostLayout->setContentsMargins(12, 8, 12, 8);
   mixerHostLayout->setSpacing(0);
 
+  // Height follows the track panels
   QWidget *mixerZone = new QWidget(mixerHost);
   mixerZone->setObjectName("mixerZone");
-  mixerZone->setFixedHeight(240);
+  mixerZone->setSizePolicy(QSizePolicy::Preferred, QSizePolicy::Fixed);
   mixerZone->setAttribute(Qt::WA_StyledBackground, true);
   m_tracksLayout = new QHBoxLayout(mixerZone);
-  m_tracksLayout->setContentsMargins(18, 18, 18, 18);
-  m_tracksLayout->setSpacing(14);
+  m_tracksLayout->setContentsMargins(10, 10, 10, 10);
+  m_tracksLayout->setSpacing(10);
 
   mixerHostLayout->addWidget(mixerZone);
 
   mainLayout->addWidget(mixerHost);
 
+  // Created now so its height is reserved, not taken from the layout at the first message
+  statusBar();
+
   // Initial sync
   m_rythmoOverlay->setSpeed(m_speedSpinBox->value());
   m_rythmoManager->setSpeed(m_speedSpinBox->value());
+}
+
+void MainWindow::fitTimeline() {
+  const QList<int> sizes = m_videoSplitter->sizes();
+  const int total = sizes[0] + sizes[1];
+  if (total <= 0)
+    return;
+  const int wanted = qMin(m_takeTimeline->sizeHint().height(), total * 65 / 100);
+  if (sizes[1] < wanted)
+    m_videoSplitter->setSizes({total - wanted, wanted});
 }
 
 void MainWindow::createMenus() {
@@ -2162,7 +2179,11 @@ bool MainWindow::event(QEvent *event) {
       return true;
     }
   }
-  return QMainWindow::event(event);
+  const bool handled = QMainWindow::event(event);
+  // The splitter only has its real height once the window is laid out
+  if (event->type() == QEvent::Show)
+    fitTimeline();
+  return handled;
 }
 
 bool MainWindow::eventFilter(QObject *watched, QEvent *event) {

@@ -11,7 +11,7 @@ TrackWidget::TrackWidget(int trackIndex, const QString& title, QWidget *parent)
     setObjectName(QString("track_%1").arg(trackIndex));
     setProperty("cssClass", "track");
     setAttribute(Qt::WA_StyledBackground, true);
-    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+    setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
     setMinimumWidth(160);
 
     auto *shadow = new QGraphicsDropShadowEffect(this);
@@ -27,12 +27,12 @@ TrackWidget::TrackWidget(int trackIndex, const QString& title, QWidget *parent)
 void TrackWidget::setupUi(const QString& title)
 {
     QVBoxLayout *mainLayout = new QVBoxLayout(this);
-    mainLayout->setContentsMargins(16, 16, 16, 16);
-    mainLayout->setSpacing(12);
+    mainLayout->setContentsMargins(12, 12, 12, 12);
+    mainLayout->setSpacing(8);
 
     // --- Header ---
     QHBoxLayout *headerLayout = new QHBoxLayout();
-    headerLayout->setContentsMargins(0, 0, 0, 6);
+    headerLayout->setContentsMargins(0, 0, 0, 2);
     
     m_titleLabel = new QLabel(title, this);
     m_titleLabel->setProperty("cssClass", "track-header-title");
@@ -109,6 +109,11 @@ void TrackWidget::setupUi(const QString& title)
     m_recordingStateLabel = new QLabel("", this);
     m_recordingStateLabel->setAlignment(Qt::AlignCenter);
     m_recordingStateLabel->setObjectName("recordingStateLabel");
+    // Hidden at rest, but its row stays reserved so the mixer height never changes
+    m_recordingStateLabel->setFixedHeight(14);
+    QSizePolicy stateLabelPolicy = m_recordingStateLabel->sizePolicy();
+    stateLabelPolicy.setRetainSizeWhenHidden(true);
+    m_recordingStateLabel->setSizePolicy(stateLabelPolicy);
     m_recordingStateLabel->setVisible(false);
     mainLayout->addWidget(m_recordingStateLabel);
 }

@@ -137,7 +137,7 @@ QFrame[cssClass="track"] QPushButton {
     background: transparent;
     color: #3d3c3a;
     border-radius: 8px;
-    padding: 9px 12px;
+    padding: 6px 12px;
     font-size: 12px;
     font-weight: 600;
 }
@@ -213,7 +213,7 @@ QWidget#controlBar QPushButton#btnPlayPause {
     background: #1d1d1d;
     color: #ffffff;
     border-radius: 10px;
-    padding: 9px 14px;
+    padding: 6px 14px;
 }
 
 QWidget#controlBar QPushButton#btnPlayPause:hover {
@@ -229,7 +229,7 @@ QWidget#controlBar QPushButton#btnStop {
     color: #3d3c3a;
     border: 1px solid #c2c0ba;
     border-radius: 10px;
-    padding: 9px 12px;
+    padding: 6px 12px;
 }
 
 QWidget#controlBar QPushButton#btnStop:hover {
@@ -878,6 +878,41 @@ QWidget#controlBar QLabel#recordDurationLabel {
 QWidget#postRecordBar {
     background: #dedcd7;
     border-bottom: 1px solid #c2c0ba;
+}
+
+QWidget#postRecordBar QLabel {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QWidget#postRecordBar QPushButton {
+    background: #eceae6;
+    color: #3d3c3a;
+    border: 1px solid #c2c0ba;
+    border-radius: 6px;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+QWidget#postRecordBar QPushButton:hover {
+    background: #e3e1dd;
+}
+
+QWidget#postRecordBar QPushButton[cssClass="iconButton"] {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+/* Video / timeline splitter handle */
+QSplitter#videoSplitter::handle:vertical {
+    height: 6px;
+    background: #d9d7d2;
+}
+
+QSplitter#videoSplitter::handle:vertical:hover {
+    background: #c2c0ba;
 }
 
 

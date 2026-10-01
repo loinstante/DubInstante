@@ -116,7 +116,12 @@ int TakeTimeline::contentHeight() const {
 
 void TakeTimeline::relayout() {
   // Fixed height inside the scroll area: unfolded tracks scroll vertically
-  setFixedHeight(contentHeight());
+  const int needed = contentHeight();
+  if (needed != m_contentHeight) {
+    m_contentHeight = needed;
+    setFixedHeight(needed);
+    emit contentHeightChanged(needed);
+  }
   update();
 }
 

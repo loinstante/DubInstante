@@ -38,6 +38,7 @@ signals:
   void seekRequested(qint64 positionMs);
   void playRequested();
   void trackEdited(int index, const TakeTrack &takes);
+  void contentHeightChanged(int height);
 
 protected:
   void paintEvent(QPaintEvent *event) override;
@@ -77,6 +78,7 @@ private:
   QVector<TakeTrack> m_tracks;
   QVector<bool> m_expanded;
   int m_selectedTrack = 0;
+  int m_contentHeight = 0;
   qint64 m_durationMs = 0;
   qint64 m_positionMs = 0;
   bool m_playing = false;

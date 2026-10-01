@@ -242,19 +242,21 @@ QWidget#controlBar QPushButton#btnStop:pressed {
 }
 
 QWidget#controlBar QPushButton#recordButton {
-    background: #2c1a16;
-    color: #ff6a4d;
+    background: #1b1b1b;
+    color: #b3b1ac;
+    border: 1px solid #434343;
     border-radius: 8px;
     font-weight: 700;
 }
 
 QWidget#controlBar QPushButton#recordButton:hover {
-    background: #3a201a;
+    background: #2d2d2d;
 }
 
 QWidget#controlBar QPushButton#recordButton:checked {
-    background: #ff6a4d;
+    background: #d9381e;
     color: #ffffff;
+    border: 1px solid #d9381e;
 }
 
 /* Inputs — hide built-in spinbox arrows */
@@ -330,13 +332,13 @@ QSlider {
 
 QSlider::groove:horizontal {
     border: none;
-    background: #2f2f2f;
+    background: #727069;
     height: 4px;
     border-radius: 2px;
 }
 
 QSlider::sub-page:horizontal {
-    background: #979590;
+    background: #b3b1ac;
     border-radius: 2px;
 }
 
@@ -373,14 +375,16 @@ QFrame[cssClass="track"] QLabel[cssClass="track-header-title"] {
 QFrame[cssClass="track"] QPushButton[cssClass="track-header-btn"] {
     border: none;
     background: transparent;
-    color: #5c5b58;
+    color: #979590;
+    font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans";
+    font-size: 16px;
     border-radius: 6px;
     padding: 2px;
 }
 
 QFrame[cssClass="track"] QPushButton[cssClass="track-header-btn"]:hover {
     background: #2d2d2d;
-    color: #979590;
+    color: #e8e6e1;
 }
 
 QFrame[cssClass="track"] QFrame[cssClass="track-header-line"] {
@@ -553,6 +557,11 @@ QDialog#exportSettingsDialog QPushButton[cssClass="presetButton"]:pressed {
     background: #2f2f2f;
 }
 
+QDialog#globalSettingsDialog QPushButton[cssClass="presetButton"][empty="true"] {
+    color: #979590;
+    font-style: italic;
+}
+
 QDialog#globalSettingsDialog QPushButton[cssClass="presetButton"][capturing="true"] {
     background-color: #383838;
     color: #e8e6e1;
@@ -576,7 +585,7 @@ QDialog#globalSettingsDialog QPushButton[cssClass="shortcutClearButton"]:hover {
 
 QDialog#globalSettingsDialog QPushButton[cssClass="shortcutClearButton"]:pressed {
     background: #5a2a20;
-    color: #e5533a;
+    color: #ff8a73;
 }
 
 QDialog#trackSettingsDialog QLabel[cssClass="fineLabel"],
@@ -637,7 +646,7 @@ QDialog#trackSettingsDialog QPushButton[cssClass="colorPickerButton"] {
 QDialog#trackSettingsDialog QPushButton#settingsCloseButton,
 QDialog#globalSettingsDialog QPushButton#settingsSaveButton,
 QDialog#exportSettingsDialog QPushButton#settingsExportButton {
-    background: #b65a5f;
+    background: #a94e53;
     color: #ffffff;
     border: none;
     border-radius: 8px;
@@ -649,7 +658,7 @@ QDialog#exportSettingsDialog QPushButton#settingsExportButton {
 QDialog#trackSettingsDialog QPushButton#settingsCloseButton:hover,
 QDialog#globalSettingsDialog QPushButton#settingsSaveButton:hover,
 QDialog#exportSettingsDialog QPushButton#settingsExportButton:hover {
-    background: #c4666b;
+    background: #b65a5f;
 }
 
 QDialog#trackSettingsDialog QPushButton#settingsCloseButton:pressed,
@@ -785,7 +794,7 @@ QLabel[cssClass="warning-text"] {
 }
 
 QLabel#countdownLabel {
-    color: #b65a5f;
+    color: #e8e6e1;
     font-size: 80px;
     font-weight: bold;
     background-color: rgba(27, 27, 27, 0.75);
@@ -823,7 +832,7 @@ QMessageBox QPushButton:pressed {
 
 /* Record Arm Button — Armed (checked) */
 QFrame[cssClass="track"] QPushButton#recordArmButton:checked {
-    background: #e5533a;
+    background: #d9381e;
     color: #ffffff;
     border: none;
     border-radius: 6px;
@@ -847,15 +856,21 @@ QFrame[cssClass="track"] QPushButton#recordArmButton:hover {
 
 /* Recording State Labels */
 QLabel#recordingStateLabel[state="recording"] {
-    color: #e5533a;
+    color: #ff6a4d;
     font-weight: 700;
     font-size: 10px;
 }
 
 QLabel#recordingStateLabel[state="playing"] {
-    color: #22c55e;
+    color: #12c582;
     font-weight: 700;
     font-size: 10px;
+}
+
+QWidget#controlBar QLabel#recordDurationLabel {
+    color: #ff6a4d;
+    font-weight: bold;
+    margin-left: 8px;
 }
 
 /* Post-Record Notification Bar */

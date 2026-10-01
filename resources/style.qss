@@ -242,19 +242,21 @@ QWidget#controlBar QPushButton#btnStop:pressed {
 }
 
 QWidget#controlBar QPushButton#recordButton {
-    background: #fbe9e4;
-    color: #d9381e;
+    background: #eceae6;
+    color: #3d3c3a;
+    border: 1px solid #c2c0ba;
     border-radius: 8px;
     font-weight: 700;
 }
 
 QWidget#controlBar QPushButton#recordButton:hover {
-    background: #f0c4ba;
+    background: #e3e1dd;
 }
 
 QWidget#controlBar QPushButton#recordButton:checked {
     background: #d9381e;
     color: #ffffff;
+    border: 1px solid #d9381e;
 }
 
 /* Inputs — hide built-in spinbox arrows (custom +/- buttons exist) */
@@ -330,13 +332,13 @@ QSlider {
 
 QSlider::groove:horizontal {
     border: none;
-    background: #d9d7d2;
+    background: #85837d;
     height: 4px;
     border-radius: 2px;
 }
 
 QSlider::sub-page:horizontal {
-    background: #64625e;
+    background: #3d3c3a;
     border-radius: 2px;
 }
 
@@ -373,14 +375,16 @@ QFrame[cssClass="track"] QLabel[cssClass="track-header-title"] {
 QFrame[cssClass="track"] QPushButton[cssClass="track-header-btn"] {
     border: none;
     background: transparent;
-    color: #9c9a95;
+    color: #64625e;
+    font-family: "Segoe UI Symbol", "Apple Symbols", "DejaVu Sans";
+    font-size: 16px;
     border-radius: 6px;
     padding: 2px;
 }
 
 QFrame[cssClass="track"] QPushButton[cssClass="track-header-btn"]:hover {
     background: #e3e1dd;
-    color: #64625e;
+    color: #1d1d1d;
 }
 
 QFrame[cssClass="track"] QFrame[cssClass="track-header-line"] {
@@ -553,6 +557,11 @@ QDialog#exportSettingsDialog QPushButton[cssClass="presetButton"]:pressed {
     background: #d9d7d2;
 }
 
+QDialog#globalSettingsDialog QPushButton[cssClass="presetButton"][empty="true"] {
+    color: #64625e;
+    font-style: italic;
+}
+
 QDialog#globalSettingsDialog QPushButton[cssClass="presetButton"][capturing="true"] {
     background-color: #dedcd7;
     color: #1d1d1d;
@@ -571,12 +580,12 @@ QDialog#globalSettingsDialog QPushButton[cssClass="shortcutClearButton"] {
 
 QDialog#globalSettingsDialog QPushButton[cssClass="shortcutClearButton"]:hover {
     background: #fbe9e4;
-    color: #d9381e;
+    color: #a82814;
 }
 
 QDialog#globalSettingsDialog QPushButton[cssClass="shortcutClearButton"]:pressed {
     background: #f0b4a8;
-    color: #b82e17;
+    color: #7d1f0e;
 }
 
 QDialog#trackSettingsDialog QLabel[cssClass="fineLabel"],
@@ -787,10 +796,10 @@ QLabel[cssClass="warning-text"] {
 }
 
 QLabel#countdownLabel {
-    color: #a3454a;
+    color: #e8e6e1;
     font-size: 80px;
     font-weight: bold;
-    background-color: rgba(236, 234, 230, 0.85);
+    background-color: rgba(27, 27, 27, 0.75);
     border-radius: 20px;
 }
 
@@ -848,15 +857,21 @@ QFrame[cssClass="track"] QPushButton#recordArmButton:hover {
 
 /* Recording State Labels */
 QLabel#recordingStateLabel[state="recording"] {
-    color: #d9381e;
+    color: #a82814;
     font-weight: 700;
     font-size: 10px;
 }
 
 QLabel#recordingStateLabel[state="playing"] {
-    color: #22c55e;
+    color: #087648;
     font-weight: 700;
     font-size: 10px;
+}
+
+QWidget#controlBar QLabel#recordDurationLabel {
+    color: #a82814;
+    font-weight: bold;
+    margin-left: 8px;
 }
 
 /* Post-Record Notification Bar */

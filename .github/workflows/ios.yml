@@ -2,13 +2,13 @@ name: iPadOS Build & IPA Package
 
 on:
   push:
-    branches: [ master, main, android, 'loimathos/**' ]
+    branches: [ master, main, android, 'loimathos/**', 'feat/**' ]
     paths:
       - 'src/ipad/**'
       - '.github/workflows/ios.yml'
     tags: [ 'v*' ]
   pull_request:
-    branches: [ master, main ]
+    branches: [ master, main, android ]
     paths:
       - 'src/ipad/**'
       - '.github/workflows/ios.yml'

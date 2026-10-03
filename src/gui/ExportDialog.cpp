@@ -11,28 +11,21 @@
 #include <QProcess>
 #include <QRegularExpression>
 
+// French puts a space before "%": the translation decides
+static QString percentText(int value) { return ExportDialog::tr("%1%").arg(value); }
+
 ExportDialog::ExportDialog(const QString &sourceVideo,
-                          const QString &primaryAudio,
-                          const QStringList &extraAudios,
+                          const QList<ExportTrack> &tracks,
                           qint64 lastRecordedDurationMs,
                           qint64 lastRecordedStartMs,
-                          const QVector<qint64> &trackOffsetsMs,
                           float currentOriginalVolume,
-                          const QVector<float> &currentTrackVolumes,
-                          const QVector<bool> &currentTrackMutes,
-                          const QVector<int> &trackNumbers,
                           QWidget *parent)
     : QDialog(parent)
     , m_sourceVideoPath(sourceVideo)
-    , m_primaryAudioPath(primaryAudio)
-    , m_extraAudioPaths(extraAudios)
+    , m_tracks(tracks)
     , m_lastRecordedDurationMs(lastRecordedDurationMs)
     , m_lastRecordedStartMs(lastRecordedStartMs)
-    , m_trackOffsetsMs(trackOffsetsMs)
     , m_defaultOriginalVolume(currentOriginalVolume)
-    , m_defaultTrackVolumes(currentTrackVolumes)
-    , m_defaultTrackMutes(currentTrackMutes)
-    , m_trackNumbers(trackNumbers)
     , m_videoOriginalWidth(0)
     , m_videoOriginalHeight(0)
     , m_videoAspectRatio(1.777f)
@@ -55,7 +48,7 @@ ExportDialog::~ExportDialog()
 void ExportDialog::setupUi()
 {
     setObjectName("exportSettingsDialog");
-    setWindowTitle(tr("Paramètres d'Exportation"));
+    setWindowTitle(tr("Export Settings"));
     setMinimumSize(860, 600);
     resize(860, 620);
 
@@ -64,11 +57,11 @@ void ExportDialog::setupUi()
     mainLayout->setSpacing(12);
 
     // 1. Header (Title & Subtitle)
-    QLabel *titleLabel = new QLabel(tr("Exporter le Projet"), this);
+    QLabel *titleLabel = new QLabel(tr("Export Project"), this);
     titleLabel->setObjectName("settingsDialogTitle");
     mainLayout->addWidget(titleLabel);
 
-    QLabel *subtitleLabel = new QLabel(tr("Configurez les options d'export et le mixage final pour votre doublage."), this);
+    QLabel *subtitleLabel = new QLabel(tr("Set the export options and the final mix of your dub."), this);
     subtitleLabel->setObjectName("settingsDialogSubtitle");
     mainLayout->addWidget(subtitleLabel);
 
@@ -79,7 +72,7 @@ void ExportDialog::setupUi()
     destLayout->setContentsMargins(14, 10, 14, 10);
     destLayout->setSpacing(6);
 
-    QLabel *destTitle = new QLabel(tr("Fichier de Destination"), destCard);
+    QLabel *destTitle = new QLabel(tr("Destination File"), destCard);
     destTitle->setProperty("cssClass", "fineLabel");
     destLayout->addWidget(destTitle);
 
@@ -87,12 +80,12 @@ void ExportDialog::setupUi()
     destInputsLayout->setSpacing(8);
 
     m_outputPathEdit = new QLineEdit(destCard);
-    m_outputPathEdit->setPlaceholderText(tr("Chemin de sortie..."));
+    m_outputPathEdit->setPlaceholderText(tr("Output path..."));
     destInputsLayout->addWidget(m_outputPathEdit);
 
     m_browseButton = new QPushButton(destCard);
     m_browseButton->setIcon(QIcon(":/resources/icons/folder_open.svg"));
-    m_browseButton->setToolTip(tr("Parcourir..."));
+    m_browseButton->setToolTip(tr("Browse..."));
     m_browseButton->setFixedSize(32, 32);
     m_browseButton->setProperty("cssClass", "iconButton");
     destInputsLayout->addWidget(m_browseButton);
@@ -117,7 +110,7 @@ void ExportDialog::setupUi()
     basicCardLayout->setContentsMargins(14, 14, 14, 14);
     basicCardLayout->setSpacing(10);
 
-    QLabel *basicCardTitle = new QLabel(tr("Paramètres d'Encodage"), m_basicWidget);
+    QLabel *basicCardTitle = new QLabel(tr("Encoding Settings"), m_basicWidget);
     basicCardTitle->setProperty("cssClass", "settingsLabel");
     basicCardLayout->addWidget(basicCardTitle);
 
@@ -134,36 +127,36 @@ void ExportDialog::setupUi()
     m_formatCombo->addItem("AVI", "avi");
     
     m_resolutionCombo = new QComboBox(basicFormWidget);
-    m_resolutionCombo->addItem(tr("Originale (Pas d'échelle)"), "");
+    m_resolutionCombo->addItem(tr("Original (no scaling)"), "");
     m_resolutionCombo->addItem(tr("Full HD (1080p)"), "1920:-2");
     m_resolutionCombo->addItem(tr("HD (720p)"), "1280:-2");
 
     m_videoQualityCombo = new QComboBox(basicFormWidget);
-    m_videoQualityCombo->addItem(tr("Rapide (Qualité standard - CRF 26)"), "superfast");
-    m_videoQualityCombo->addItem(tr("Standard (Recommandé - CRF 21)"), "medium");
-    m_videoQualityCombo->addItem(tr("Haute (Traitement lent - CRF 16)"), "slow");
+    m_videoQualityCombo->addItem(tr("Fast (standard quality - CRF 26)"), "superfast");
+    m_videoQualityCombo->addItem(tr("Standard (recommended - CRF 21)"), "medium");
+    m_videoQualityCombo->addItem(tr("High (slow processing - CRF 16)"), "slow");
     m_videoQualityCombo->setCurrentIndex(1);
 
     m_audioQualityCombo = new QComboBox(basicFormWidget);
-    m_audioQualityCombo->addItem(tr("Économique (128 kbps)"), 128);
+    m_audioQualityCombo->addItem(tr("Economy (128 kbps)"), 128);
     m_audioQualityCombo->addItem(tr("Standard (192 kbps)"), 192);
-    m_audioQualityCombo->addItem(tr("Supérieure (256 kbps)"), 256);
+    m_audioQualityCombo->addItem(tr("Superior (256 kbps)"), 256);
     m_audioQualityCombo->addItem(tr("Studio (320 kbps)"), 320);
     m_audioQualityCombo->setCurrentIndex(1);
 
-    QLabel *fmtLabel = new QLabel(tr("Format Conteneur"), basicFormWidget);
+    QLabel *fmtLabel = new QLabel(tr("Container Format"), basicFormWidget);
     fmtLabel->setProperty("cssClass", "fineLabel");
     basicLayout->addRow(fmtLabel, m_formatCombo);
 
-    QLabel *resLabel = new QLabel(tr("Résolution"), basicFormWidget);
+    QLabel *resLabel = new QLabel(tr("Resolution"), basicFormWidget);
     resLabel->setProperty("cssClass", "fineLabel");
     basicLayout->addRow(resLabel, m_resolutionCombo);
 
-    QLabel *vqLabel = new QLabel(tr("Qualité vidéo"), basicFormWidget);
+    QLabel *vqLabel = new QLabel(tr("Video quality"), basicFormWidget);
     vqLabel->setProperty("cssClass", "fineLabel");
     basicLayout->addRow(vqLabel, m_videoQualityCombo);
 
-    QLabel *aqLabel = new QLabel(tr("Qualité audio"), basicFormWidget);
+    QLabel *aqLabel = new QLabel(tr("Audio quality"), basicFormWidget);
     aqLabel->setProperty("cssClass", "fineLabel");
     basicLayout->addRow(aqLabel, m_audioQualityCombo);
 
@@ -195,24 +188,24 @@ void ExportDialog::setupUi()
     m_expVideoCodecCombo->addItem("HEVC / H.265 (libx265)", "libx265");
     m_expVideoCodecCombo->addItem("VP9 (libvpx-vp9)", "libvpx-vp9");
     m_expVideoCodecCombo->addItem("ProRes (prores)", "prores");
-    m_expVideoCodecCombo->addItem("Pas d'encodage (Copy)", "copy");
+    m_expVideoCodecCombo->addItem(tr("No encoding (copy)"), "copy");
 
     m_expAudioCodecCombo = new QComboBox(tabCodecs);
-    m_expAudioCodecCombo->addItem("AAC (Standard)", "aac");
+    m_expAudioCodecCombo->addItem(tr("AAC (standard)"), "aac");
     m_expAudioCodecCombo->addItem("MP3 (Lame)", "libmp3lame");
     m_expAudioCodecCombo->addItem("AC-3 (Dolby Digital)", "ac3");
-    m_expAudioCodecCombo->addItem("PCM 16-bit uncompressed", "pcm_s16le");
-    m_expAudioCodecCombo->addItem("PCM 24-bit uncompressed", "pcm_s24le");
-    m_expAudioCodecCombo->addItem("Pas d'encodage (Copy)", "copy");
+    m_expAudioCodecCombo->addItem(tr("PCM 16-bit uncompressed"), "pcm_s16le");
+    m_expAudioCodecCombo->addItem(tr("PCM 24-bit uncompressed"), "pcm_s24le");
+    m_expAudioCodecCombo->addItem(tr("No encoding (copy)"), "copy");
 
-    QLabel *expFmtLbl = new QLabel(tr("Format Conteneur"), tabCodecs); expFmtLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expFmtLbl = new QLabel(tr("Container Format"), tabCodecs); expFmtLbl->setProperty("cssClass", "fineLabel");
     layoutCodecs->addRow(expFmtLbl, m_expFormatCombo);
-    QLabel *expVcLbl = new QLabel(tr("Codec Vidéo"), tabCodecs); expVcLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expVcLbl = new QLabel(tr("Video Codec"), tabCodecs); expVcLbl->setProperty("cssClass", "fineLabel");
     layoutCodecs->addRow(expVcLbl, m_expVideoCodecCombo);
-    QLabel *expAcLbl = new QLabel(tr("Codec Audio"), tabCodecs); expAcLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expAcLbl = new QLabel(tr("Audio Codec"), tabCodecs); expAcLbl->setProperty("cssClass", "fineLabel");
     layoutCodecs->addRow(expAcLbl, m_expAudioCodecCombo);
 
-    m_expertWidget->addTab(tabCodecs, tr("Flux & Codecs"));
+    m_expertWidget->addTab(tabCodecs, tr("Streams & Codecs").replace('&', "&&"));
 
     // ==========================================
     // TAB 2: Image & Quality
@@ -224,14 +217,14 @@ void ExportDialog::setupUi()
     layoutVideo->setHorizontalSpacing(14);
 
     m_expResolutionCombo = new QComboBox(tabVideo);
-    m_expResolutionCombo->addItem(tr("Originale (Pas d'échelle)"), "");
+    m_expResolutionCombo->addItem(tr("Original (no scaling)"), "");
     m_expResolutionCombo->addItem("4K Ultra HD (3840x2160)", "3840:2160");
     m_expResolutionCombo->addItem("2K Quad HD (2560x1440)", "2560:1440");
     m_expResolutionCombo->addItem("Full HD 1080p (1920x1080)", "1920:1080");
     m_expResolutionCombo->addItem("HD 720p (1280x720)", "1280:720");
     m_expResolutionCombo->addItem("SD PAL 576p (768x576)", "768:576");
     m_expResolutionCombo->addItem("SD NTSC 480p (640x480)", "640:480");
-    m_expResolutionCombo->addItem(tr("Personnalisée..."), "custom");
+    m_expResolutionCombo->addItem(tr("Custom..."), "custom");
 
     // Custom resolution widget
     m_expCustomResContainer = new QWidget(tabVideo);
@@ -256,13 +249,13 @@ void ExportDialog::setupUi()
     m_customHeightSpin->setValue(1080);
     customResLayout->addWidget(m_customHeightSpin);
 
-    m_aspectLockCheck = new QCheckBox(tr("Lier ratio"), m_expCustomResContainer);
+    m_aspectLockCheck = new QCheckBox(tr("Link ratio"), m_expCustomResContainer);
     m_aspectLockCheck->setChecked(true);
     customResLayout->addWidget(m_aspectLockCheck);
 
     m_expRateControlCombo = new QComboBox(tabVideo);
-    m_expRateControlCombo->addItem(tr("Qualité constante (CRF)"), "crf");
-    m_expRateControlCombo->addItem(tr("Débit cible (VBR)"), "bitrate");
+    m_expRateControlCombo->addItem(tr("Constant quality (CRF)"), "crf");
+    m_expRateControlCombo->addItem(tr("Target bitrate (VBR)"), "bitrate");
 
     // CRF container
     m_expCrfContainer = new QWidget(tabVideo);
@@ -304,19 +297,19 @@ void ExportDialog::setupUi()
     m_expPresetCombo->addItem("Placebo", "placebo");
     m_expPresetCombo->setCurrentIndex(5);
 
-    QLabel *expResLbl = new QLabel(tr("Résolution"), tabVideo); expResLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expResLbl = new QLabel(tr("Resolution"), tabVideo); expResLbl->setProperty("cssClass", "fineLabel");
     layoutVideo->addRow(expResLbl, m_expResolutionCombo);
     layoutVideo->addRow("", m_expCustomResContainer);
     
-    QLabel *expRcLbl = new QLabel(tr("Débit Mode"), tabVideo); expRcLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expRcLbl = new QLabel(tr("Bitrate Mode"), tabVideo); expRcLbl->setProperty("cssClass", "fineLabel");
     layoutVideo->addRow(expRcLbl, m_expRateControlCombo);
-    layoutVideo->addRow(tr("Qualité (CRF)"), m_expCrfContainer);
-    layoutVideo->addRow(tr("Débit cible"), m_expBitrateContainer);
+    layoutVideo->addRow(tr("Quality (CRF)"), m_expCrfContainer);
+    layoutVideo->addRow(tr("Target bitrate"), m_expBitrateContainer);
 
-    QLabel *expPresetLbl = new QLabel(tr("Preset Vitesse"), tabVideo); expPresetLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expPresetLbl = new QLabel(tr("Speed Preset"), tabVideo); expPresetLbl->setProperty("cssClass", "fineLabel");
     layoutVideo->addRow(expPresetLbl, m_expPresetCombo);
 
-    m_expertWidget->addTab(tabVideo, tr("Image & Qualité"));
+    m_expertWidget->addTab(tabVideo, tr("Picture & Quality").replace('&', "&&"));
 
     // ==========================================
     // TAB 3: Audio & Advanced
@@ -339,18 +332,18 @@ void ExportDialog::setupUi()
     m_expSampleRateCombo->addItem("96.0 kHz", 96000);
 
     m_expCustomFlagsEdit = new QLineEdit(tabAudio);
-    m_expCustomFlagsEdit->setPlaceholderText(tr("Flags additionnels (ex. -preset slow)..."));
+    m_expCustomFlagsEdit->setPlaceholderText(tr("Additional flags (e.g. -preset slow)..."));
 
-    QLabel *expAbLbl = new QLabel(tr("Débit Audio"), tabAudio); expAbLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expAbLbl = new QLabel(tr("Audio Bitrate"), tabAudio); expAbLbl->setProperty("cssClass", "fineLabel");
     layoutAudio->addRow(expAbLbl, m_expAudioBitrateSpin);
     
     QLabel *expSrLbl = new QLabel(tr("Sample Rate"), tabAudio); expSrLbl->setProperty("cssClass", "fineLabel");
     layoutAudio->addRow(expSrLbl, m_expSampleRateCombo);
     
-    QLabel *expFlagsLbl = new QLabel(tr("Flags FFmpeg"), tabAudio); expFlagsLbl->setProperty("cssClass", "fineLabel");
+    QLabel *expFlagsLbl = new QLabel(tr("FFmpeg Flags"), tabAudio); expFlagsLbl->setProperty("cssClass", "fineLabel");
     layoutAudio->addRow(expFlagsLbl, m_expCustomFlagsEdit);
 
-    m_expertWidget->addTab(tabAudio, tr("Audio & Flags"));
+    m_expertWidget->addTab(tabAudio, tr("Audio & Flags").replace('&', "&&"));
     
     leftColumn->addWidget(m_expertWidget);
 
@@ -361,13 +354,13 @@ void ExportDialog::setupUi()
     rangeForm->setContentsMargins(14, 10, 14, 10);
     rangeForm->setHorizontalSpacing(12);
 
-    QLabel *rngTitle = new QLabel(tr("Plage temporelle"), rangeCard);
+    QLabel *rngTitle = new QLabel(tr("Time range"), rangeCard);
     rngTitle->setProperty("cssClass", "fineLabel");
     
     m_rangeCombo = new QComboBox(rangeCard);
-    m_rangeCombo->addItem(tr("Tout le projet (Vidéo complète)"), "all");
+    m_rangeCombo->addItem(tr("Whole project (full video)"), "all");
     if (m_lastRecordedDurationMs > 0) {
-        m_rangeCombo->addItem(tr("Dernier enregistrement uniquement"), "last");
+        m_rangeCombo->addItem(tr("Last recording only"), "last");
         m_rangeCombo->setCurrentIndex(1);
     } else {
         m_rangeCombo->setCurrentIndex(0);
@@ -388,7 +381,7 @@ void ExportDialog::setupUi()
     // =========================================================================
     // RIGHT COLUMN: Audio Mixer
     // =========================================================================
-    QGroupBox *mixGroup = new QGroupBox(tr("Mixage Audio des Volumes"), this);
+    QGroupBox *mixGroup = new QGroupBox(tr("Volume Mix"), this);
     mixGroup->setMinimumWidth(370);
     QVBoxLayout *mixGroupLayout = new QVBoxLayout(mixGroup);
     mixGroupLayout->setContentsMargins(10, 18, 10, 10);
@@ -411,8 +404,8 @@ void ExportDialog::setupUi()
     origRowLayout->setContentsMargins(0, 0, 0, 0);
     origRowLayout->setSpacing(8);
 
-    QLabel *origTitle = new QLabel(tr("Son original :"), origRow);
-    origTitle->setFixedWidth(100);
+    QLabel *origTitle = new QLabel(tr("Original audio:"), origRow);
+    origTitle->setMinimumWidth(100);
     origTitle->setProperty("cssClass", "fineLabel");
     origRowLayout->addWidget(origTitle);
 
@@ -421,8 +414,8 @@ void ExportDialog::setupUi()
     m_originalVolumeSlider->setValue(qBound(0, static_cast<int>(m_defaultOriginalVolume * 100), 200));
     origRowLayout->addWidget(m_originalVolumeSlider);
 
-    m_originalVolPercentLabel = new QLabel(QString("%1%").arg(m_originalVolumeSlider->value()), origRow);
-    m_originalVolPercentLabel->setFixedWidth(34);
+    m_originalVolPercentLabel = new QLabel(percentText(m_originalVolumeSlider->value()), origRow);
+    m_originalVolPercentLabel->setMinimumWidth(40);
     m_originalVolPercentLabel->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     origRowLayout->addWidget(m_originalVolPercentLabel);
 
@@ -437,13 +430,8 @@ void ExportDialog::setupUi()
     m_audioTracksLayout->addWidget(origRow);
 
     // Mic tracks
-    if (!m_primaryAudioPath.isEmpty()) {
-        addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(0, 1)), 0);
-    }
-    for (int i = 0; i < m_extraAudioPaths.size(); ++i) {
-        if (!m_extraAudioPaths[i].isEmpty()) {
-            addTrackRow(scrollWidget, tr("Piste %1").arg(m_trackNumbers.value(i + 1, i + 2)), i + 1);
-        }
+    for (int i = 0; i < m_tracks.size(); ++i) {
+        addTrackRow(scrollWidget, i);
     }
 
     m_audioTracksLayout->addStretch();
@@ -458,18 +446,18 @@ void ExportDialog::setupUi()
     QHBoxLayout *bottomLayout = new QHBoxLayout();
     bottomLayout->setContentsMargins(0, 4, 0, 0);
 
-    m_advancedCheck = new QCheckBox(tr("Activer le Mode Expert (Ingénieur Son & Vidéo)"), this);
+    m_advancedCheck = new QCheckBox(tr("Enable Expert Mode (sound & video engineer)"), this);
     m_advancedCheck->setObjectName("advancedCheck");
     bottomLayout->addWidget(m_advancedCheck);
 
     bottomLayout->addStretch();
 
-    m_btnCancel = new QPushButton(tr("Annuler"), this);
+    m_btnCancel = new QPushButton(tr("Cancel"), this);
     m_btnCancel->setMinimumSize(90, 32);
     m_btnCancel->setProperty("cssClass", "presetButton");
     bottomLayout->addWidget(m_btnCancel);
 
-    m_btnExport = new QPushButton(tr("Exporter"), this);
+    m_btnExport = new QPushButton(tr("Export"), this);
     m_btnExport->setObjectName("settingsExportButton");
     m_btnExport->setMinimumSize(100, 32);
     m_btnExport->setDefault(true);
@@ -511,26 +499,22 @@ void ExportDialog::setupUi()
     connect(m_btnExport, &QPushButton::clicked, this, &QDialog::accept);
 }
 
-void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
+void ExportDialog::addTrackRow(QWidget *parent, int index)
 {
+    const ExportTrack &track = m_tracks[index];
+    const QString title = tr("Track %1").arg(track.number);
     QWidget *row = new QWidget(parent);
     QHBoxLayout *rowLayout = new QHBoxLayout(row);
     rowLayout->setContentsMargins(0, 0, 0, 0);
     rowLayout->setSpacing(8);
 
-    QLabel *lbl = new QLabel(title + " :", row);
-    lbl->setFixedWidth(100);
+    QLabel *lbl = new QLabel(tr("%1:").arg(title), row);
+    lbl->setMinimumWidth(100);
     lbl->setProperty("cssClass", "fineLabel");
     rowLayout->addWidget(lbl);
 
-    float defaultVolume = 1.0f;
-    if (m_defaultTrackVolumes.size() > index) {
-        defaultVolume = m_defaultTrackVolumes[index];
-    }
-    bool defaultMute = false;
-    if (m_defaultTrackMutes.size() > index) {
-        defaultMute = m_defaultTrackMutes[index];
-    }
+    const float defaultVolume = track.volume;
+    const bool defaultMute = track.muted;
 
     QSlider *slider = new QSlider(Qt::Horizontal, row);
     slider->setRange(0, 200);
@@ -538,8 +522,8 @@ void ExportDialog::addTrackRow(QWidget *parent, const QString &title, int index)
     slider->setProperty("trackIndex", index);
     rowLayout->addWidget(slider);
 
-    QLabel *pct = new QLabel(QString("%1%").arg(slider->value()), row);
-    pct->setFixedWidth(34);
+    QLabel *pct = new QLabel(percentText(slider->value()), row);
+    pct->setMinimumWidth(40);
     pct->setAlignment(Qt::AlignRight | Qt::AlignVCenter);
     rowLayout->addWidget(pct);
 
@@ -667,7 +651,7 @@ void ExportDialog::onBrowseClicked()
     QString startDir = currentPath.isEmpty() ? QDir::homePath() : QFileInfo(currentPath).absolutePath();
 
     QString selectedFile = QFileDialog::getSaveFileName(
-        this, tr("Choisir le fichier d'export"), startDir, filter);
+        this, tr("Choose the export file"), startDir, filter);
 
     if (!selectedFile.isEmpty()) {
         if (!selectedFile.endsWith("." + formatExt, Qt::CaseInsensitive)) {
@@ -754,51 +738,51 @@ void ExportDialog::validateSettings()
 
         if (format == "mp4") {
             if (vCodec == "prores") {
-                warning += tr("⚠️ ProRes n'est pas standard dans un conteneur MP4. Utilisez MOV ou MKV.\n");
+                warning += tr("⚠️ ProRes is not standard in an MP4 container. Use MOV or MKV.\n");
             }
             if (aCodec.startsWith("pcm")) {
-                warning += tr("⚠️ Le son non compressé (PCM) n'est pas standard dans un conteneur MP4. Utilisez MOV ou MKV.\n");
+                warning += tr("⚠️ Uncompressed audio (PCM) is not standard in an MP4 container. Use MOV or MKV.\n");
             }
         } else if (format == "avi") {
             if (aCodec == "aac") {
-                warning += tr("⚠️ Le codec audio AAC n'est pas standard dans un conteneur AVI. Utilisez MP3 ou PCM.\n");
+                warning += tr("⚠️ The AAC audio codec is not standard in an AVI container. Use MP3 or PCM.\n");
             }
             if (vCodec == "libx265" || vCodec == "libvpx-vp9") {
-                warning += tr("⚠️ HEVC ou VP9 ne sont pas recommandés dans AVI. Utilisez MP4 ou MKV.\n");
+                warning += tr("⚠️ HEVC and VP9 are not recommended in AVI. Use MP4 or MKV.\n");
             }
         }
 
         if (vCodec == "copy" && m_rangeCombo->currentData().toString() == "last") {
-            warning += tr("⚠️ Copie du flux vidéo : la découpe sera calée sur l'image-clé la plus proche, le début peut décaler de quelques images.\n");
+            warning += tr("⚠️ Video stream copy: the cut snaps to the nearest keyframe, so the start may be off by a few frames.\n");
         }
 
         if (vCodec == "copy" && !m_expResolutionCombo->currentData().toString().isEmpty()) {
-            warning += tr("⚠️ Le redimensionnement est ignoré en copie de flux vidéo (copy) : la résolution d'origine est conservée.\n");
+            warning += tr("⚠️ Resizing is ignored when copying the video stream: the original resolution is kept.\n");
         }
 
         if (m_expResolutionCombo->currentData().toString() == "custom" && vCodec != "copy") {
             int w = m_customWidthSpin->value();
             int h = m_customHeightSpin->value();
             if (w % 2 != 0 || h % 2 != 0) {
-                warning += tr("⚠️ FFmpeg requiert des dimensions paires (divisibles par 2) pour l'encodage H.264/H.265.\n");
+                warning += tr("⚠️ FFmpeg needs even dimensions (divisible by 2) to encode H.264/H.265.\n");
             }
         }
 
         if (m_expRateControlCombo->currentData().toString() == "crf" && vCodec != "copy") {
             int crf = m_expCrfSlider->value();
             if (crf < 10) {
-                warning += tr("⚠️ CRF très bas (%1) : La vidéo aura une taille de fichier énorme.\n").arg(crf);
+                warning += tr("⚠️ Very low CRF (%1): the video file will be huge.\n").arg(crf);
             } else if (crf > 35) {
-                warning += tr("⚠️ CRF très élevé (%1) : La vidéo sera fortement pixelisée.\n").arg(crf);
+                warning += tr("⚠️ Very high CRF (%1): the video will be heavily pixelated.\n").arg(crf);
             }
         }
 
         if (aCodec != "copy" && !aCodec.startsWith("pcm")) {
             int aBitrate = m_expAudioBitrateSpin->value();
             if (aBitrate < 64) {
-                warning += tr("⚠️ Débit audio faible (%1 kbps) : Présence d'artefacts de compression.\n").arg(aBitrate);
+                warning += tr("⚠️ Low audio bitrate (%1 kbps): compression artifacts will be audible.\n").arg(aBitrate);
             } else if (aBitrate > 320 && aCodec == "aac") {
-                warning += tr("⚠️ Débit audio superflu (%1 kbps) : Inutile d'excéder 320 kbps avec l'AAC.\n").arg(aBitrate);
+                warning += tr("⚠️ Unnecessary audio bitrate (%1 kbps): AAC gains nothing above 320 kbps.\n").arg(aBitrate);
             }
         }
     }
@@ -816,7 +800,7 @@ void ExportDialog::onVolumeSliderChanged(int value)
 {
     QObject *snd = sender();
     if (snd == m_originalVolumeSlider) {
-        m_originalVolPercentLabel->setText(QString("%1%").arg(value));
+        m_originalVolPercentLabel->setText(percentText(value));
         if (value > 0 && m_originalMuteBtn->isChecked()) {
             m_originalMuteBtn->blockSignals(true);
             m_originalMuteBtn->setChecked(false);
@@ -825,7 +809,7 @@ void ExportDialog::onVolumeSliderChanged(int value)
     } else {
         for (int i = 0; i < m_trackSliders.size(); ++i) {
             if (snd == m_trackSliders[i]) {
-                m_trackPercentLabels[i]->setText(QString("%1%").arg(value));
+                m_trackPercentLabels[i]->setText(percentText(value));
                 if (value > 0 && m_trackMuteBtns[i]->isChecked()) {
                     m_trackMuteBtns[i]->blockSignals(true);
                     m_trackMuteBtns[i]->setChecked(false);
@@ -855,7 +839,7 @@ void ExportDialog::onMuteToggled()
             if (muted) {
                 m_trackSliders[idx]->setValue(0);
             } else {
-                float defVol = (m_defaultTrackVolumes.size() > idx) ? m_defaultTrackVolumes[idx] : 1.0f;
+                const float defVol = m_tracks.value(idx).volume;
                 m_trackSliders[idx]->setValue(qBound(10, static_cast<int>(defVol * 100), 100));
             }
         }
@@ -866,17 +850,16 @@ ExportConfig ExportDialog::exportConfig() const
 {
     ExportConfig config;
     config.videoPath = m_sourceVideoPath;
-    config.audioPath = m_primaryAudioPath;
-    config.extraAudioPaths = m_extraAudioPaths;
     config.outputPath = m_outputPathEdit->text().trimmed();
     
     config.originalVolume = m_originalMuteBtn->isChecked() ? 0.0f : (m_originalVolumeSlider->value() / 100.0f);
     for (int i = 0; i < m_trackSliders.size(); ++i) {
-        float vol = m_trackMuteBtns[i]->isChecked() ? 0.0f : (m_trackSliders[i]->value() / 100.0f);
-        config.trackVolumes.append(vol);
+        const float vol = m_trackMuteBtns[i]->isChecked() ? 0.0f : (m_trackSliders[i]->value() / 100.0f);
+        for (ExportSegment segment : m_tracks[i].segments) {
+            segment.volume = vol;
+            config.segments.append(segment);
+        }
     }
-
-    config.trackOffsetsMs = m_trackOffsetsMs;
 
     // Time Range
     if (m_rangeCombo->currentData().toString() == "last") {

@@ -226,6 +226,7 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   Q_UNUSED(event)
 
   QPainter painter(this);
+  painter.setLayoutDirection(layoutDirection()); // LTR time axis, see MainWindow
   painter.setRenderHint(QPainter::Antialiasing);
 
   // 1. Calculate layout dimensions
@@ -285,7 +286,9 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
   }
 
   const bool isDark = isDarkTheme();
-  const QColor accent = isDark ? QColor(Brand::AccentLight) : QColor(Brand::Accent);
+  // The band colour is the user's, not the UI theme's: only the lighter accent
+  // holds 3:1 on both the default dark band and a white one
+  const QColor accent(Brand::AccentLight);
 
   // 5. Draw band border
   QPen borderPen(accent, 2);
@@ -337,12 +340,12 @@ void RythmoWidget::paintEvent(QPaintEvent *event) {
 
     // Draw a subtle translucent background pill for the timestamp (always readable over video)
     QRectF pillRect(cursorScreenX - tw / 2.0 - 6, bandY - 12 - th + 2, tw + 12, th + 4);
-    painter.setBrush(QColor(13, 13, 18, 160)); // 62% opacity dark background
+    painter.setBrush(QColor(20, 20, 20, 160)); // 62% opacity dark background
     painter.setPen(Qt::NoPen);
     painter.drawRoundedRect(pillRect, 4, 4);
 
     // Draw text
-    painter.setPen(isDark ? QColor(243, 243, 246) : QColor(255, 255, 255));
+    painter.setPen(isDark ? QColor(232, 230, 225) : QColor(255, 255, 255));
     painter.drawText(cursorScreenX - tw / 2, bandY - 12, timeStr);
   }
 }

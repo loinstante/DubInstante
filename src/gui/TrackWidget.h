@@ -20,7 +20,10 @@ public:
     void setVuLevel(int percentage); // 0 to 100
     void populateInputDevices(const QList<QAudioDevice> &devices);
     
-    QString currentInputDevice() const { return m_inputCombo->currentText(); }
+    /// Device description, or empty for "no input" (never the translated label)
+    QString currentInputDevice() const {
+        return m_inputCombo->currentIndex() > 0 ? m_inputCombo->currentText() : QString();
+    }
     int currentVolume() const { return m_volumeSlider->value(); }
     bool isArmed() const { return m_recordArmButton->isChecked(); }
     void setArmed(bool armed) { m_recordArmButton->setChecked(armed); }

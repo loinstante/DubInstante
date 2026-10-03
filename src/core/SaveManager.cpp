@@ -31,6 +31,7 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
   root["track_count"] = cleanData.trackCount;
   root["scroll_speed"] = cleanData.scrollSpeed;
   root["is_text_white"] = cleanData.isTextWhite;
+  root["next_take_id"] = cleanData.nextTakeId;
 
   // Save audio tracks
   QJsonArray audioTracksArray;
@@ -38,10 +39,21 @@ bool SaveManager::save(const QString &filePath, const SaveData &data) {
     QJsonObject audioObj;
     audioObj["audio_input"] = audioTrack.audioInput;
     audioObj["audio_gain"] = audioTrack.audioGain;
-    audioObj["audioFilePath"] = audioTrack.audioFilePath;
-    audioObj["recordStartMs"] = audioTrack.recordStartMs;
-    audioObj["recordDurationMs"] = audioTrack.recordDurationMs;
-    audioObj["hasRecording"] = audioTrack.hasRecording;
+    QJsonArray takesArray;
+    for (const Take &take : audioTrack.takes.takes()) {
+      takesArray.append(QJsonObject{{"id", take.id},
+                                    {"file", take.file},
+                                    {"start_ms", take.startMs},
+                                    {"in_ms", take.inMs},
+                                    {"duration_ms", take.durationMs}});
+    }
+    QJsonArray regionsArray;
+    for (const CompRegion &region : audioTrack.takes.regions()) {
+      regionsArray.append(
+          QJsonObject{{"start_ms", region.startMs}, {"take", region.takeId}});
+    }
+    audioObj["takes"] = takesArray;
+    audioObj["regions"] = regionsArray;
     audioTracksArray.append(audioObj);
   }
   root["audio_tracks"] = audioTracksArray;
@@ -109,18 +121,18 @@ bool SaveManager::isZipAvailable(QString *errorMessage) {
   if (!checkZip.waitForStarted()) {
     if (errorMessage) {
 #ifdef Q_OS_MAC
-      *errorMessage = QObject::tr(
-          "L'utilitaire 'zip' est introuvable.\n\n"
-          "Veuillez l'installer pour utiliser cette fonctionnalité.\n"
-          "Lien : https://formulae.brew.sh/formula/zip");
+      *errorMessage = SaveManager::tr(
+          "The 'zip' utility was not found.\n\n"
+          "Please install it to use this feature.\n"
+          "Link: https://formulae.brew.sh/formula/zip");
 #else
       *errorMessage =
-          QObject::tr("L'utilitaire 'zip' est introuvable.\n\n"
-                      "Veuillez l'installer via votre terminal :\n"
-                      "Debian/Ubuntu : sudo apt install zip\n"
-                      "Fedora : sudo dnf install zip\n"
-                      "Arch : sudo pacman -S zip\n\n"
-                      "Ou consultez : https://command-not-found.com/zip");
+          SaveManager::tr("The 'zip' utility was not found.\n\n"
+                          "Please install it from your terminal:\n"
+                          "Debian/Ubuntu: sudo apt install zip\n"
+                          "Fedora: sudo dnf install zip\n"
+                          "Arch: sudo pacman -S zip\n\n"
+                          "Or see: https://command-not-found.com/zip");
 #endif
     }
     return false;
@@ -160,23 +172,23 @@ bool SaveManager::isUnzipAvailable(QString *errorMessage) {
 
   if (errorMessage) {
 #if defined(Q_OS_WIN)
-    *errorMessage = QObject::tr(
-        "Aucun utilitaire d'extraction n'est disponible.\n\n"
-        "'tar' est fourni avec Windows 10 (version 1803) et suivants.\n"
-        "Mettez Windows à jour ou installez 'unzip'.");
+    *errorMessage = SaveManager::tr(
+        "No extraction utility is available.\n\n"
+        "'tar' ships with Windows 10 (version 1803) and later.\n"
+        "Update Windows or install 'unzip'.");
 #elif defined(Q_OS_MAC)
-    *errorMessage = QObject::tr(
-        "L'utilitaire 'unzip' est introuvable.\n\n"
-        "Veuillez l'installer pour utiliser cette fonctionnalité.\n"
-        "Lien : https://formulae.brew.sh/formula/unzip");
+    *errorMessage = SaveManager::tr(
+        "The 'unzip' utility was not found.\n\n"
+        "Please install it to use this feature.\n"
+        "Link: https://formulae.brew.sh/formula/unzip");
 #else
     *errorMessage =
-        QObject::tr("L'utilitaire 'unzip' est introuvable.\n\n"
-                    "Veuillez l'installer via votre terminal :\n"
-                    "Debian/Ubuntu : sudo apt install unzip\n"
-                    "Fedora : sudo dnf install unzip\n"
-                    "Arch : sudo pacman -S unzip\n\n"
-                    "Ou consultez : https://command-not-found.com/unzip");
+        SaveManager::tr("The 'unzip' utility was not found.\n\n"
+                        "Please install it from your terminal:\n"
+                        "Debian/Ubuntu: sudo apt install unzip\n"
+                        "Fedora: sudo dnf install unzip\n"
+                        "Arch: sudo pacman -S unzip\n\n"
+                        "Or see: https://command-not-found.com/unzip");
 #endif
   }
   return false;
@@ -193,19 +205,19 @@ bool SaveManager::extractArchive(const QString &zipPath, const QString &destDir,
 
   const QFileInfo zipInfo(zipPath);
   if (!zipInfo.isFile() || !zipInfo.isReadable())
-    return fail(QObject::tr("Impossible de lire l'archive :\n%1")
+    return fail(SaveManager::tr("Could not read the archive:\n%1")
                     .arg(QDir::toNativeSeparators(zipPath)));
 
   if (!QDir().mkpath(destDir))
-    return fail(QObject::tr("Impossible de créer le dossier d'extraction."));
+    return fail(SaveManager::tr("Could not create the extraction folder."));
 
   // Written with zip -0: the extracted size is close to the archive size
   const qint64 needed = zipInfo.size() + zipInfo.size() / 5;
   const QStorageInfo storage(destDir);
   if (storage.isValid() && storage.isReady() &&
       storage.bytesAvailable() < needed)
-    return fail(QObject::tr("Espace disque insuffisant pour extraire "
-                            "l'archive.\nIl faut environ %1 Mo libres.")
+    return fail(SaveManager::tr("Not enough disk space to extract the archive.\n"
+                                "About %1 MB must be free.")
                     .arg(needed / (1024 * 1024) + 1));
 
   const QString tool = findExtractTool();
@@ -226,34 +238,35 @@ bool SaveManager::extractArchive(const QString &zipPath, const QString &destDir,
   process.setProcessChannelMode(QProcess::MergedChannels);
   process.start(tool, args);
   if (!process.waitForStarted())
-    return fail(QObject::tr("Impossible de lancer '%1'.").arg(tool));
+    return fail(SaveManager::tr("Could not start '%1'.").arg(tool));
 
   // Videos can weigh several GB, and the archive may sit on a network share
   constexpr int kExtractTimeoutMs = 2 * 60 * 60 * 1000;
   if (!process.waitForFinished(kExtractTimeoutMs)) {
     process.kill();
     process.waitForFinished();
-    return fail(QObject::tr(
-        "L'extraction a échoué (délai dépassé ou erreur interne)."));
+    return fail(SaveManager::tr(
+        "Extraction failed (timeout or internal error)."));
   }
 
   if (process.exitStatus() != QProcess::NormalExit || process.exitCode() != 0) {
     const QString output =
         QString::fromLocal8Bit(process.readAll()).trimmed().left(400);
-    return fail(QObject::tr("L'extraction a échoué (code %1).\n"
-                            "L'archive est peut-être corrompue ou incomplète.\n\n%2")
+    return fail(SaveManager::tr("Extraction failed (code %1).\n"
+                                "The archive may be corrupted or incomplete.\n\n"
+                                "%2")
                     .arg(process.exitCode())
                     .arg(output));
   }
 
   if (QDir(destAbs).entryList({"*.dbi"}, QDir::Files).isEmpty())
-    return fail(QObject::tr("Cette archive ne contient pas de projet DubInstante."));
+    return fail(SaveManager::tr("This archive does not contain a DubInstante project."));
 
   return true;
 }
 
 bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
-                                const QStringList &tempAudioPaths, QString *errorMessage) {
+                                const QList<ProjectMedia> &media, QString *errorMessage) {
 
   QString videoSource = data.videoUrl;
   if (videoSource.startsWith("file://")) {
@@ -267,9 +280,9 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
       storage.bytesAvailable() < 2 * videoSize + 64LL * 1024 * 1024) {
     qWarning() << "Not enough space on destination volume for zip archive";
     if (errorMessage)
-      *errorMessage = QObject::tr(
-          "Espace disque insuffisant sur le volume de destination.\n"
-          "L'archive nécessite environ %1 Mo libres.")
+      *errorMessage = SaveManager::tr(
+          "Not enough disk space on the destination drive.\n"
+          "The archive needs about %1 MB free.")
           .arg((2 * videoSize + 64LL * 1024 * 1024) / (1024 * 1024));
     return false;
   }
@@ -280,7 +293,7 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   if (!tempDir.isValid()) {
     qWarning() << "Failed to create temporary directory";
     if (errorMessage)
-      *errorMessage = QObject::tr("Impossible de créer le dossier temporaire.");
+      *errorMessage = SaveManager::tr("Could not create the temporary folder.");
     return false;
   }
 
@@ -294,17 +307,9 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
   QString videoFileName = videoInfo.fileName();
   zipData.videoUrl = videoFileName; // Point to local file inside ZIP
 
-  // Same for the takes: the caller's paths are temp files of this machine
-  const QString audioDirName = QFileInfo(zipPath).completeBaseName() + "_audio";
-  for (int i = 0; i < zipData.audioTracks.size(); ++i) {
-    if (zipData.audioTracks[i].hasRecording && i < tempAudioPaths.size())
-      zipData.audioTracks[i].audioFilePath =
-          QString("%1/track_%2.wav").arg(audioDirName).arg(i + 1);
-  }
-
   if (!save(dbiPath, zipData)) {
     if (errorMessage)
-      *errorMessage = QObject::tr("Échec de la sauvegarde du fichier .dbi");
+      *errorMessage = SaveManager::tr("Could not save the .dbi file");
     return false;
   }
 
@@ -315,39 +320,23 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
       qWarning() << "Failed to copy video file to temp dir:" << videoSource;
       if (errorMessage)
         *errorMessage =
-            QObject::tr("Impossible de copier la vidéo dans l'archive.");
+            SaveManager::tr("Could not copy the video into the archive.");
       return false;
     }
   }
 
-  // 3.5 Copy audio tracks
+  // 3.5 Copy the takes
   QDir tempQDir(tempDir.path());
-  bool hasAnyAudio = false;
-  
-  for (int i = 0; i < data.audioTracks.size(); ++i) {
-      if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
-          hasAnyAudio = true;
-          break;
-      }
-  }
-  
-  if (hasAnyAudio) {
-      tempQDir.mkdir(audioDirName);
-      QDir tempAudioDir(tempQDir.absoluteFilePath(audioDirName));
-      
-      for (int i = 0; i < data.audioTracks.size(); ++i) {
-          if (data.audioTracks[i].hasRecording && i < tempAudioPaths.size()) {
-              QString sourcePath = tempAudioPaths[i];
-              QString destFilename = QString("track_%1.wav").arg(i + 1);
-              if (!QFile::exists(sourcePath) ||
-                  !QFile::copy(sourcePath, tempAudioDir.absoluteFilePath(destFilename))) {
-                  qWarning() << "Failed to copy audio track to temp dir:" << sourcePath;
-                  if (errorMessage)
-                      *errorMessage = QObject::tr("Impossible de copier l'enregistrement de la piste %1 dans l'archive.").arg(i + 1);
-                  return false;
-              }
-          }
-      }
+  for (const ProjectMedia &file : media) {
+    const QString dest = tempQDir.absoluteFilePath(file.relativePath);
+    if (!QDir().mkpath(QFileInfo(dest).absolutePath()) ||
+        !QFile::exists(file.sourcePath) || !QFile::copy(file.sourcePath, dest)) {
+      qWarning() << "Failed to copy take to temp dir:" << file.sourcePath;
+      if (errorMessage)
+        *errorMessage = SaveManager::tr("Could not copy recording %1 into the archive.")
+                            .arg(QFileInfo(file.relativePath).fileName());
+      return false;
+    }
   }
 
   // 4. Create ZIP archive
@@ -398,8 +387,8 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
     qWarning() << "Zip process failed to finish";
     discardPartial();
     if (errorMessage)
-      *errorMessage = QObject::tr(
-          "Le processus de compression a échoué (timeout ou erreur interne).");
+      *errorMessage = SaveManager::tr(
+          "The compression process failed (timeout or internal error).");
     return false;
   }
 
@@ -408,7 +397,7 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
     qDebug() << zipProcess.readAllStandardError();
     discardPartial();
     if (errorMessage)
-      *errorMessage = QObject::tr("Erreur lors de la compression (Code: %1)")
+      *errorMessage = SaveManager::tr("Compression error (code: %1)")
                           .arg(zipProcess.exitCode());
     return false;
   }
@@ -418,7 +407,7 @@ bool SaveManager::saveWithMedia(const QString &zipPath, const SaveData &data,
     if (!QFile::rename(zipTarget, zipPath)) {
       discardPartial();
       if (errorMessage)
-        *errorMessage = QObject::tr("Impossible d'écrire l'archive :\n%1")
+        *errorMessage = SaveManager::tr("Could not write the archive:\n%1")
                             .arg(QDir::toNativeSeparators(zipPath));
       return false;
     }
@@ -499,6 +488,7 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
   data.trackCount = root.value("track_count").toInt(1);
   data.scrollSpeed = root.value("scroll_speed").toInt(100);
   data.isTextWhite = root.value("is_text_white").toBool(false);
+  data.nextTakeId = root.value("next_take_id").toInt(1);
 
   // Load audio tracks
   data.audioTracks.clear();
@@ -508,10 +498,31 @@ bool SaveManager::load(const QString &filePath, SaveData &data) {
     QJsonObject audioObj = val.toObject();
     audioData.audioInput = audioObj.value("audio_input").toString("");
     audioData.audioGain = (float)audioObj.value("audio_gain").toDouble(1.0);
-    audioData.audioFilePath = audioObj["audioFilePath"].toString();
-    audioData.recordStartMs = audioObj["recordStartMs"].toInteger();
-    audioData.recordDurationMs = audioObj["recordDurationMs"].toInteger();
-    audioData.hasRecording = audioObj["hasRecording"].toBool();
+    if (audioObj.contains("takes")) {
+      QList<Take> takes;
+      for (const auto &takeVal : audioObj.value("takes").toArray()) {
+        const QJsonObject t = takeVal.toObject();
+        takes.append(Take{t.value("id").toInt(), t.value("file").toString(),
+                          t.value("start_ms").toInteger(), t.value("in_ms").toInteger(),
+                          t.value("duration_ms").toInteger()});
+      }
+      QList<CompRegion> regions;
+      for (const auto &regionVal : audioObj.value("regions").toArray()) {
+        const QJsonObject r = regionVal.toObject();
+        regions.append(CompRegion{r.value("start_ms").toInteger(), r.value("take").toInt()});
+      }
+      audioData.takes = TakeTrack::fromParts(takes, regions);
+    } else if (audioObj["hasRecording"].toBool()) {
+      // Up to 0.12: one take per track, heard over its whole length
+      // A missing duration meant "until the end of the file": kept open here,
+      // the caller measures the WAV once it has located it.
+      const qint64 duration = audioObj["recordDurationMs"].toInteger();
+      const Take take{int(data.audioTracks.size()) + 1,
+                      audioObj["audioFilePath"].toString(),
+                      audioObj["recordStartMs"].toInteger(), 0,
+                      duration > 0 ? duration : kOpenEndedTakeMs};
+      audioData.takes.addRecording(take, take.startMs, take.audibleEndMs());
+    }
     data.audioTracks.append(audioData);
   }
 
@@ -562,6 +573,8 @@ SaveData SaveManager::sanitize(const SaveData &data) {
   for (int i = 0; i < clean.audioTracks.size(); ++i) {
     clean.audioTracks[i].audioGain =
         qBound(0.0f, clean.audioTracks[i].audioGain, 1.0f);
+    // A reused id would make two takes share one session file
+    clean.nextTakeId = qMax(clean.nextTakeId, clean.audioTracks[i].takes.maxTakeId() + 1);
   }
 
   // Widest legitimate grid: 50 pt at 10 px/s stays under 10 s per character

@@ -6,6 +6,7 @@
 #include <QStringList>
 #include <QSettings>
 #include <QKeySequence>
+#include <QLocale>
 
 /**
  * @class SettingsManager
@@ -21,6 +22,14 @@ public:
     QString theme() const;
     void setTheme(const QString &theme);
 
+    // Language: "system" or a shipped translation code ("fr", "pt_BR"...)
+    QString language() const;
+    void setLanguage(const QString &language);
+    /// Codes of the translations compiled into the resources
+    static QStringList shippedLanguages();
+    /// Shipped translation the locale resolves to, or empty (English source)
+    static QString shippedLanguage(const QLocale &locale);
+
     // Auto-save config
     bool autoSaveEnabled() const;
     void setAutoSaveEnabled(bool enabled);
@@ -31,6 +40,10 @@ public:
     // Countdown before recording (in seconds: 0, 3, 5)
     int countdownDuration() const;
     void setCountdownDuration(int seconds);
+
+    // Playback starts this long before the punch-in point when recording
+    int preRollSeconds() const;
+    void setPreRollSeconds(int seconds);
 
     // Default global microphone
     QString defaultMicrophone() const;
@@ -56,6 +69,8 @@ public:
     QKeySequence shortcut(const QString &actionId) const;
     void setShortcut(const QString &actionId, const QKeySequence &sequence);
     QKeySequence defaultShortcut(const QString &actionId) const;
+    /// Two actions allowed on the same key: the settings do not report it as a conflict
+    static bool sharesKeyByDesign(const QString &a, const QString &b);
 
 private:
     explicit SettingsManager(QObject *parent = nullptr);

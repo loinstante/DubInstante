@@ -4,10 +4,10 @@
 // Brand colors shared by C++ code. The QSS files cannot reference these
 // (no variables in QSS): keep style.qss / style_dark.qss in sync by hand.
 namespace Brand {
-inline constexpr const char *Accent = "#7c56f5";
-inline constexpr const char *AccentLight = "#926bff";
-inline constexpr const char *TextMuted = "#8a8a9e";
-inline constexpr const char *SurfaceAlt = "#3b3b52";
+inline constexpr const char *Accent = "#a3454a";
+inline constexpr const char *AccentLight = "#b65a5f";
+inline constexpr const char *TextMuted = "#979590";
+inline constexpr const char *SurfaceAlt = "#434343";
 }
 
 #endif // PALETTE_H

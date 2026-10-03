@@ -11,6 +11,7 @@
 #include <QUrl>
 
 #include "RythmoManager.h"
+#include "TakeTrack.h"
 
 /**
  * @struct TrackSaveData
@@ -26,15 +27,19 @@ struct TrackSaveData {
 
 /**
  * @struct TrackAudioSaveData
- * @brief Saves audio input and gain for a track.
+ * @brief Saves audio input, gain, takes and comp of a track.
  */
 struct TrackAudioSaveData {
   QString audioInput;
   float audioGain = 1.0f;
-  QString audioFilePath;
-  qint64 recordStartMs = 0;
-  qint64 recordDurationMs = 0;
-  bool hasRecording = false;
+  // Take files are project-relative, or absolute session paths in the autosave
+  TakeTrack takes;
+};
+
+/// A file written into a project: session WAV -> path relative to the project root.
+struct ProjectMedia {
+  QString sourcePath;
+  QString relativePath;
 };
 
 /**
@@ -47,6 +52,7 @@ struct SaveData {
   int trackCount = 1;
   int scrollSpeed = 100;
   bool isTextWhite = false; // conservé pour compatibilité ascendante, plus exposé dans l'interface
+  int nextTakeId = 1;
 
   QList<TrackSaveData> tracks;
   QList<TrackAudioSaveData> audioTracks;
@@ -69,8 +75,12 @@ public:
    * @return True if successful.
    */
   bool save(const QString &filePath, const SaveData &data);
-  bool saveWithMedia(const QString &zipPath, const SaveData &data, 
-                     const QStringList &tempAudioPaths, QString *errorMessage = nullptr);
+  /**
+   * @brief Writes a .zip holding the .dbi, the video and every take.
+   * @param data Take files must already be the relative paths of @p media.
+   */
+  bool saveWithMedia(const QString &zipPath, const SaveData &data,
+                     const QList<ProjectMedia> &media, QString *errorMessage = nullptr);
 
   /**
    * @brief Checks if the 'zip' utility is available (Unix only).
@@ -136,7 +146,9 @@ private:
   QByteArray calculateChecksum(const QByteArray &data);
 
   const QByteArray m_header = "DubInstanteFile";
-  const quint8 m_version = 1;
+  // 2: several takes per track. Older builds refuse the file instead of
+  // silently dropping every take but one.
+  const quint8 m_version = 2;
   /// Masque XOR appliqué au payload du .dbi.
   /// Ce n'est PAS du chiffrement : la clé est dans le binaire et l'opération
   /// est trivialement réversible. Son seul rôle est de décourager l'édition

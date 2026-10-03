@@ -83,12 +83,12 @@ bool FFmpegWorker::openFile(const QString &filePath) {
     QByteArray filePathUtf8 = filePath.toUtf8();
     
     if (avformat_open_input(&m_formatContext, filePathUtf8.constData(), nullptr, nullptr) != 0) {
-        emit errorOccurred("Could not open file with FFmpeg: " + filePath);
+        emit errorOccurred(tr("Could not open the file with FFmpeg: %1").arg(filePath));
         return false;
     }
 
     if (avformat_find_stream_info(m_formatContext, nullptr) < 0) {
-        emit errorOccurred("Could not find stream info");
+        emit errorOccurred(tr("Could not find the stream info"));
         return false;
     }
 
@@ -101,42 +101,42 @@ bool FFmpegWorker::openFile(const QString &filePath) {
     }
 
     if (m_videoStreamIndex == -1) {
-        emit errorOccurred("Could not find video stream");
+        emit errorOccurred(tr("Could not find a video stream"));
         return false;
     }
 
     AVCodecParameters *codecParams = m_formatContext->streams[m_videoStreamIndex]->codecpar;
     const AVCodec *codec = avcodec_find_decoder(codecParams->codec_id);
     if (!codec) {
-        emit errorOccurred("Unsupported codec");
+        emit errorOccurred(tr("Unsupported codec"));
         return false;
     }
 
     m_codecContext = avcodec_alloc_context3(codec);
     if (!m_codecContext) {
-        emit errorOccurred("Could not allocate codec context");
+        emit errorOccurred(tr("Could not allocate the codec context"));
         return false;
     }
 
     if (avcodec_parameters_to_context(m_codecContext, codecParams) < 0) {
-        emit errorOccurred("Could not copy codec params");
+        emit errorOccurred(tr("Could not copy the codec parameters"));
         return false;
     }
 
     if (avcodec_open2(m_codecContext, codec, nullptr) < 0) {
-        emit errorOccurred("Could not open codec");
+        emit errorOccurred(tr("Could not open the codec"));
         return false;
     }
 
     // Allocate RGB buffer
     int numBytes = av_image_get_buffer_size(AV_PIX_FMT_BGRA, m_codecContext->width, m_codecContext->height, 1);
     if (numBytes <= 0) {
-        emit errorOccurred("Invalid video dimensions");
+        emit errorOccurred(tr("Invalid video dimensions"));
         return false;
     }
     m_rgbBuffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
     if (!m_rgbBuffer) {
-        emit errorOccurred("Could not allocate frame buffer");
+        emit errorOccurred(tr("Could not allocate the frame buffer"));
         return false;
     }
 
@@ -147,7 +147,7 @@ bool FFmpegWorker::openFile(const QString &filePath) {
                                   m_codecContext->width, m_codecContext->height, AV_PIX_FMT_BGRA,
                                   SWS_BILINEAR, nullptr, nullptr, nullptr);
     if (!m_swsContext) {
-        emit errorOccurred("Could not initialize video scaler");
+        emit errorOccurred(tr("Could not initialize the video scaler"));
         return false;
     }
 

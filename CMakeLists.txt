@@ -25,6 +25,7 @@ find_package(Qt6 REQUIRED COMPONENTS
     OpenGLWidgets
     OpenGL
     Concurrent
+    LinguistTools
 )
 
 # =============================================================================
@@ -72,6 +73,10 @@ set(CORE_SOURCES
     src/core/Constants.h
     src/core/SaveManager.h
     src/core/SaveManager.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
+    src/core/TrackPlayer.h
+    src/core/TrackPlayer.cpp
     src/core/SettingsManager.h
     src/core/SettingsManager.cpp
 )
@@ -96,6 +101,8 @@ set(GUI_SOURCES
     src/gui/GlobalSettingsDialog.cpp
     src/gui/ExportDialog.h
     src/gui/ExportDialog.cpp
+    src/gui/TakeTimeline.h
+    src/gui/TakeTimeline.cpp
     src/gui/ClickableSlider.h
     src/gui/Palette.h
 )
@@ -176,6 +183,21 @@ target_link_libraries(DubInstante PRIVATE
 )
 
 # =============================================================================
+# Translations (compiled into the resources under :/i18n)
+# =============================================================================
+
+# Update the .ts files from the sources: target DubInstante_lupdate (Qt 6.5)
+# or update_translations (Qt 6.7+)
+set(DUBINSTANTE_LANGUAGES en fr es pt_BR de it ja zh_CN ru ar)
+list(TRANSFORM DUBINSTANTE_LANGUAGES
+     REPLACE "(.+)" "translations/dubinstante_\\1.ts" OUTPUT_VARIABLE DUBINSTANTE_TS_FILES)
+qt_add_translations(DubInstante
+    TS_FILES ${DUBINSTANTE_TS_FILES}
+    RESOURCE_PREFIX "/i18n"
+    LUPDATE_OPTIONS -no-obsolete
+)
+
+# =============================================================================
 # Tests (ctest)
 # =============================================================================
 
@@ -185,6 +207,8 @@ add_executable(test_savemanager
     tests/test_savemanager.cpp
     src/core/SaveManager.h
     src/core/SaveManager.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
     src/core/RythmoManager.h
     src/core/RythmoManager.cpp
 )
@@ -193,6 +217,14 @@ target_include_directories(test_savemanager PRIVATE
 )
 target_link_libraries(test_savemanager PRIVATE Qt6::Gui)
 add_test(NAME test_savemanager COMMAND test_savemanager)
+
+add_executable(test_taketrack
+    tests/test_taketrack.cpp
+    src/core/TakeTrack.h
+    src/core/TakeTrack.cpp
+)
+target_link_libraries(test_taketrack PRIVATE Qt6::Core)
+add_test(NAME test_taketrack COMMAND test_taketrack)
 
 add_executable(test_settingsmanager
     tests/test_settingsmanager.cpp
@@ -245,6 +277,12 @@ target_include_directories(test_rythmowidget PRIVATE
 )
 target_link_libraries(test_rythmowidget PRIVATE Qt6::Widgets)
 add_test(NAME test_rythmowidget COMMAND test_rythmowidget)
+
+add_executable(test_translations tests/test_translations.cpp)
+target_compile_definitions(test_translations PRIVATE
+    TRANSLATIONS_DIR="${CMAKE_CURRENT_SOURCE_DIR}/translations")
+target_link_libraries(test_translations PRIVATE Qt6::Core)
+add_test(NAME test_translations COMMAND test_translations)
 
 # Les tests construisent un QGuiApplication : sans plugin de plateforme, ils
 # meurent sur une machine sans écran (CI comprise).

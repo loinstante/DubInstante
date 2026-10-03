@@ -61,12 +61,33 @@ Conçu pour s'intégrer instantanément dans vos réflexes de studio :
 |:---|:---|:---|
 | **Lecture / Pause** | Play / Pause | `Espace` / `Space` |
 | **Démarrer l'enregistrement** | Start recording | `Ctrl+R` |
-| **Arrêt de l'enregistrement** | Stop recording | `Échap` / `Esc` |
-| **Insérer espace & lecture** (hors enregistrement) | Insert space & play (when not recording) | `Échap` / `Esc` |
+| **Arrêt de l'enregistrement** | Stop recording | `Espace` / `Space` (`Échap` / `Esc` en plein écran) |
+| **Insérer espace & lecture** (bande rythmo, hors enregistrement) | Insert space & play (rythmo band, when not recording) | `Échap` / `Esc` |
+| **Annuler / Rétablir** | Undo / Redo | `Ctrl+Z` / `Ctrl+Shift+Z` |
+| **Ajouter une coupe au montage** | Add a comp cut at the playhead | `S` |
+| **Ouvrir un projet / une vidéo** | Open project / video | `Ctrl+O` / `Ctrl+Shift+O` |
 | **Sauvegarder le projet** | Save project | `Ctrl+S` |
+| **Exporter le doublage** | Export the dub | `Ctrl+E` |
+| **Aller au début** | Go to start | `Début` / `Home` |
+| **Plein écran** | Fullscreen | `F11` |
 | **Navigation image par image** | Frame-by-frame navigation | `←` / `→` |
 | **Retour arrière rapide (-5s)** | Quick seek back (-5s) | `Shift + ←` |
 | **Avance rapide (+5s)** | Quick seek forward (+5s) | `Shift + →` |
+
+---
+
+## 🌍 Langues / Languages
+
+* **FR :** DubInstante suit la langue de votre système, ou celle choisie dans *Application → Paramètre global → Général → Langue* (redémarrage requis). Les langues non traduites s'affichent en anglais.
+* **EN :** DubInstante follows your system language, or the one chosen in *Application → Global settings → General → Language* (restart required). Untranslated languages fall back to English.
+
+| Langue / Language | État / Status |
+|:---|:---|
+| English, Français | Relu / Reviewed |
+| Español, Português (Brasil), Deutsch, Italiano, 日本語, 简体中文, Русский, العربية | Traduction automatique, à relire / Machine translation, needs review |
+
+Les traductions sont dans [`translations/`](translations/) (fichiers Qt Linguist `.ts`). Une correction ? Ouvrez le fichier de votre langue avec Qt Linguist ou un éditeur de texte et proposez une PR.
+Translations live in [`translations/`](translations/) (Qt Linguist `.ts` files). Spotted a mistake? Open your language's file in Qt Linguist or a text editor and send a PR.
 
 ---
 

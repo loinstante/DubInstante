@@ -36,8 +36,8 @@ int main(int argc, char *argv[]) {
   qputenv("PATH", QDir::toNativeSeparators(dir.path()).toLocal8Bit());
 
   for (int i = 0; i < 3; ++i) {
-    auto *dialog = new ExportDialog(videoPath, dir.filePath("track1.wav"), {}, 0, 0, {0},
-                                    1.0f, {1.0f}, {false}, {1});
+    const ExportTrack track{1, 1.0f, false, {{dir.filePath("track1.wav"), 0, 0, 1000}}};
+    auto *dialog = new ExportDialog(videoPath, {track}, 0, 0, 1.0f);
     // No event loop: the probe exits and its finished() stays undelivered.
     QThread::msleep(300);
     delete dialog;

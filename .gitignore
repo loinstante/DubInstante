@@ -35,7 +35,7 @@ moc_predefs.h
 *.dll
 *.so
 *.dylib
-DubInstante
+/DubInstante
 *.AppImage
 
 # Deployment & Packaging
@@ -75,3 +75,9 @@ src/tablet/jdk-*/
 src/tablet/.env
 *.apk
 *.aab
+
+# iOS & Xcode build artifacts
+*.ipa
+*.xcarchive
+*.xcuserstate
+DerivedData/

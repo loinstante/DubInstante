@@ -448,7 +448,7 @@ Two AppImage builds are available from the **Actions** tab:
 
 ### Android App
 
-The Android version of DubInstante is located in `src/phonegui`. It is a high-performance native application built with **Kotlin** and **Jetpack Compose**, interfacing with the C++ Core via **JNI**.
+The Android version of DubInstante is located in `src/tablet`. It is a high-performance native application built with **Kotlin** and **Jetpack Compose**, interfacing with the C++ Core via **JNI**.
 
 #### Automated Build (GitHub Actions)
 The easiest way to get the APK is via **GitHub Actions**:
@@ -458,14 +458,14 @@ The easiest way to get the APK is via **GitHub Actions**:
 
 #### Local Build
 To build the APK locally:
-1. Open the project in **Android Studio** (point to `src/phonegui`).
+1. Open the project in **Android Studio** (point to `src/tablet`).
 2. Or use the command line:
    ```bash
-   cd src/phonegui
+   cd src/tablet
    ./gradlew assembleDebug
    ```
 
-The resulting APK will be located in `src/phonegui/build-android/android-build/build/outputs/apk/`.
+The resulting APK will be located in `src/tablet/app/build/outputs/apk/debug/app-debug.apk`.
 
 ---
 

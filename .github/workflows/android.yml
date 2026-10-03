@@ -1,0 +1,52 @@
+name: Android Tablet CI
+
+on:
+  push:
+    branches: [ master, main, android, 'loimathos/**' ]
+    tags: [ 'v*' ]
+  pull_request:
+    branches: [ master, main, android ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-android:
+    name: Build Android Tablet APK
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK & CMake
+        run: |
+          yes | sdkmanager --licenses || true
+          sdkmanager --install "ndk;26.1.10909125" "cmake;3.22.1" "platforms;android-34" "build-tools;34.0.0"
+
+      - name: Set up Gradle Cache
+        uses: gradle/actions/setup-gradle@v3
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x src/tablet/gradlew
+
+      - name: Build Android Tablet Debug APK
+        working-directory: src/tablet
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Upload Debug APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DubInstante-Tablet-debug
+          path: src/tablet/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error

@@ -1,0 +1,347 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		F20000010000000000000001 /* DubInstanteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000001 /* DubInstanteApp.swift */; };
+		F20000010000000000000002 /* RythmoStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000002 /* RythmoStyle.swift */; };
+		F20000010000000000000003 /* AudioTake.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000003 /* AudioTake.swift */; };
+		F20000010000000000000004 /* VideoPlayerService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000004 /* VideoPlayerService.swift */; };
+		F20000010000000000000005 /* AudioRecordingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000005 /* AudioRecordingService.swift */; };
+		F20000010000000000000006 /* VideoExportService.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000006 /* VideoExportService.swift */; };
+		F20000010000000000000007 /* StudioPlaybackViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000007 /* StudioPlaybackViewModel.swift */; };
+		F20000010000000000000008 /* RythmoBandView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000008 /* RythmoBandView.swift */; };
+		F20000010000000000000009 /* VideoStageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000009 /* VideoStageView.swift */; };
+		F2000001000000000000000A /* TransportBarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000A /* TransportBarView.swift */; };
+		F2000001000000000000000B /* SingleTrackPanelView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000B /* SingleTrackPanelView.swift */; };
+		F2000001000000000000000C /* TopStudioBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000C /* TopStudioBar.swift */; };
+		F2000001000000000000000D /* StyleCustomizationSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000D /* StyleCustomizationSheet.swift */; };
+		F2000001000000000000000E /* MainStudioView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1000001000000000000000E /* MainStudioView.swift */; };
+		F20000010000000000000010 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000010 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F40000010000000000000001 /* DubInstante.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DubInstante.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000010000000000000001 /* DubInstanteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DubInstanteApp.swift; sourceTree = "<group>"; };
+		F10000010000000000000002 /* RythmoStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RythmoStyle.swift; sourceTree = "<group>"; };
+		F10000010000000000000003 /* AudioTake.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioTake.swift; sourceTree = "<group>"; };
+		F10000010000000000000004 /* VideoPlayerService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoPlayerService.swift; sourceTree = "<group>"; };
+		F10000010000000000000005 /* AudioRecordingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioRecordingService.swift; sourceTree = "<group>"; };
+		F10000010000000000000006 /* VideoExportService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExportService.swift; sourceTree = "<group>"; };
+		F10000010000000000000007 /* StudioPlaybackViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioPlaybackViewModel.swift; sourceTree = "<group>"; };
+		F10000010000000000000008 /* RythmoBandView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RythmoBandView.swift; sourceTree = "<group>"; };
+		F10000010000000000000009 /* VideoStageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoStageView.swift; sourceTree = "<group>"; };
+		F1000001000000000000000A /* TransportBarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportBarView.swift; sourceTree = "<group>"; };
+		F1000001000000000000000B /* SingleTrackPanelView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SingleTrackPanelView.swift; sourceTree = "<group>"; };
+		F1000001000000000000000C /* TopStudioBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TopStudioBar.swift; sourceTree = "<group>"; };
+		F1000001000000000000000D /* StyleCustomizationSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StyleCustomizationSheet.swift; sourceTree = "<group>"; };
+		F1000001000000000000000E /* MainStudioView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainStudioView.swift; sourceTree = "<group>"; };
+		F1000001000000000000000F /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F10000010000000000000010 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		F90000010000000000000002 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		F60000010000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				F60000010000000000000002 /* DubInstante */,
+				F40000010000000000000001 /* DubInstante.app */,
+			);
+			sourceTree = "<group>";
+		};
+		F60000010000000000000002 /* DubInstante */ = {
+			isa = PBXGroup;
+			children = (
+				F60000010000000000000003 /* App */,
+				F60000010000000000000004 /* Models */,
+				F60000010000000000000005 /* Services */,
+				F60000010000000000000006 /* ViewModels */,
+				F60000010000000000000007 /* Views */,
+				F60000010000000000000008 /* Resources */,
+			);
+			path = DubInstante;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000003 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000001 /* DubInstanteApp.swift */,
+				F1000001000000000000000F /* Info.plist */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000004 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000002 /* RythmoStyle.swift */,
+				F10000010000000000000003 /* AudioTake.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000005 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000004 /* VideoPlayerService.swift */,
+				F10000010000000000000005 /* AudioRecordingService.swift */,
+				F10000010000000000000006 /* VideoExportService.swift */,
+			);
+			path = Services;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000006 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000007 /* StudioPlaybackViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000007 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F1000001000000000000000E /* MainStudioView.swift */,
+				F1000001000000000000000C /* TopStudioBar.swift */,
+				F10000010000000000000009 /* VideoStageView.swift */,
+				F10000010000000000000008 /* RythmoBandView.swift */,
+				F1000001000000000000000A /* TransportBarView.swift */,
+				F1000001000000000000000B /* SingleTrackPanelView.swift */,
+				F1000001000000000000000D /* StyleCustomizationSheet.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		F60000010000000000000008 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000010 /* Assets.xcassets */,
+			);
+			path = Resources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		F30000010000000000000001 /* DubInstante */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = F80000010000000000000001 /* Build configuration list for PBXNativeTarget "DubInstante" */;
+			buildPhases = (
+				F90000010000000000000001 /* Sources */,
+				F90000010000000000000002 /* Frameworks */,
+				F90000010000000000000003 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = DubInstante;
+			productName = DubInstante;
+			productReference = F40000010000000000000001 /* DubInstante.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		F50000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastUpgradeCheck = 1520;
+				TargetAttributes = {
+					F30000010000000000000001 = {
+						CreatedOnToolsVersion = 15.2;
+					};
+				};
+			};
+			buildConfigurationList = F70000010000000000000001 /* Build configuration list for PBXProject "DubInstante" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = F60000010000000000000001;
+			productRefGroup = F60000010000000000000001;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				F30000010000000000000001 /* DubInstante */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		F90000010000000000000003 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F20000010000000000000010 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		F90000010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				F20000010000000000000001 /* DubInstanteApp.swift in Sources */,
+				F20000010000000000000002 /* RythmoStyle.swift in Sources */,
+				F20000010000000000000003 /* AudioTake.swift in Sources */,
+				F20000010000000000000004 /* VideoPlayerService.swift in Sources */,
+				F20000010000000000000005 /* AudioRecordingService.swift in Sources */,
+				F20000010000000000000006 /* VideoExportService.swift in Sources */,
+				F20000010000000000000007 /* StudioPlaybackViewModel.swift in Sources */,
+				F20000010000000000000008 /* RythmoBandView.swift in Sources */,
+				F20000010000000000000009 /* VideoStageView.swift in Sources */,
+				F2000001000000000000000A /* TransportBarView.swift in Sources */,
+				F2000001000000000000000B /* SingleTrackPanelView.swift in Sources */,
+				F2000001000000000000000C /* TopStudioBar.swift in Sources */,
+				F2000001000000000000000D /* StyleCustomizationSheet.swift in Sources */,
+				F2000001000000000000000E /* MainStudioView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		F70000010000000000000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		F70000010000000000000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_OPTIMIZATION_LEVEL = s;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		F80000010000000000000002 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DubInstante/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dubinstante.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Debug;
+		};
+		F80000010000000000000003 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = DubInstante/App/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.dubinstante.app;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "2";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		F70000010000000000000001 /* Build configuration list for PBXProject "DubInstante" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F70000010000000000000002 /* Debug */,
+				F70000010000000000000003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		F80000010000000000000001 /* Build configuration list for PBXNativeTarget "DubInstante" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				F80000010000000000000002 /* Debug */,
+				F80000010000000000000003 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+	};
+	rootObject = F50000010000000000000001 /* Project object */;
+}
